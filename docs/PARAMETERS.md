@@ -4,7 +4,7 @@
 > Regenerate with `npm run registry:emit`; `npm run registry:check` fails the build if
 > this file and the registry have drifted apart. See `tools/registry/GRAMMAR.md`.
 
-Generator version `0.1.0` · schema `1`
+Generator version `0.2.0` · schema `1`
 
 **Code reads the registry. No scientific constant may appear in source or UI copy that
 is absent from it** — a Tier 0 acceptance check, **enforced by `tools/lint/literals.mjs`**
@@ -302,6 +302,14 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 
 **`tilt_mod_settling_ratio`.** Resolves pending decision P3 by showing it is not answerable as posed. Build both interpolation schemes behind one interface and let G4 choose.
 
+## 6. Tilt filter
+
+| Key | Value | Units | Standing | Source | States |
+|---|---|---|---|---|---|
+| `tilt_block_s` | 0.75 | s | `derived` | The SMALLEST BLOCK THAT STILL HIDES ITS OWN SETTLING TRANSIENT, then confirmed not to deposit a comb. Lower bound: each block filters from zero state, so its startup transient is masked only while the crossfade region (overlap = B/4) exceeds the pole cascade's t99 = 0.164 s (Finding 5), giving B >= 4 * 0.164 = 0.66 s. Among viable block lengths, 0.75 s maximises detectability at the respiratory rate: measured minimum detectable chi_mod_depth 0.061 at B = 0.75 s against 0.129 at B = 2.0 s, a 2.1x gain, with the noise floor unchanged. Verified comb-free: narrowband excess at the hop rate and its first two harmonics is -0.03 dB at B = 0.75 s against +0.20 dB at B = 2.0 s. See Finding 15; prep/reference/t1m2_tilt_block_sweep.py and t1m2_tilt_block_comb.py. | all |
+
+**`tilt_block_s`.** THE COEFFICIENT-HOLD LENGTH OF THE BLOCKWISE TILT SCHEME, and it decides how much of a requested chi modulation is generated AT ALL. `tiltBlockwise` averages delta-chi over each block and applies one fixed tilt, then overlap-adds at a hop of 0.75*B -- two stacked smoothings. At the previously hardcoded 2.0 s only 48% of the requested modulation survived at the RESPIRATORY RATE of 0.25 Hz, and 11% at 0.40 Hz. That loss is entirely generator-side, before any estimator sees the signal, which is why it went unnoticed through all of Tier 0. G4 COULD NOT HAVE CAUGHT IT. The gate runs at g4_f1 = 0.10 Hz, where the 2.0 s hold retains 95%; the defect lives at the respiratory rate, which G4 deliberately keeps clear of so that f1 and f2 stay separable. A gate can only see the frequencies it probes. THE LITERAL LINTER COULD NOT HAVE CAUGHT IT EITHER. The constant was written `Math.round(2 * fs)`, and `2` is on the linter's arithmetic-furniture allowlist. This is the documented cost of that allowlist, paid: the most consequential unregistered constant in the generator was a `2`. Recorded in D15's own limitations rather than left implicit.
+
 ## 9. Artifacts
 
 | Key | Value | Units | Standing | Source | States |
@@ -449,7 +457,7 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 | `definitional` | 11 |
 | `chosen` | 51 |
 | `literature` | 8 |
-| `derived` | 8 |
+| `derived` | 9 |
 | `invented` | 104 |
 | `absent` | 11 |
-| **total** | **193** |
+| **total** | **194** |

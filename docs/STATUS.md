@@ -1,4 +1,4 @@
-# Status — Tier 0
+# Status — Tier 0 complete, Tier 1 in progress
 
 *Written 2026-07-29. Facts here are measured, not estimated; every number has a probe in
 `prep/reference/` that reproduces it. Companion to `Execution-Scheme.md`, which is the plan.*
@@ -13,16 +13,18 @@ implemented with their matched nulls and `--allow-partial` is gone**, so the run
 to start if a gate goes missing. All three demonstrations work: Demo 1 moves 100% → 1% across
 the clinical cutoff range against a measured noise floor.
 
-**Tier 0 is complete.** The literal acceptance check — the last outstanding item — now runs in
-`npm run verify` (D15), which closes the register's top-rated risk: no scientific constant ships
-outside the registry unnoticed.
+**Tier 0 is complete and Tier 1 has started.** The literal acceptance check closed the register's
+top-rated risk (D15), and T1-M2's first measurement immediately found a Tier 0 generator defect
+that no Tier 0 check could have caught: **the generator was delivering 48% of the requested χ
+modulation at the respiratory rate**, because of a hardcoded 2 s coefficient hold in the tilt
+filter. Fixed and derived (D16, Finding 15); `generator_version` → 0.2.0.
 
-The work packages kept ending by correcting a claim rather than confirming one, and the most
-important results came out of the checks *while they were being built*: the shipped χ modulation
-is invisible to the estimator that reads it, narrowband χ cannot resolve the spacing between
-adjacent states, and the generator held two dead copies of registry values in its HTML. All
-point the same way — the estimators need characterizing (T1-M2) before the parameters are worth
-fitting (T1-M1).
+The pattern has held throughout: **the most valuable results came out of checks while they were
+being built, and most of them corrected a claim rather than confirming one.** Narrowband χ cannot
+resolve the spacing between adjacent states (G1b's null). The generator held two dead copies of
+registry values in its HTML (the linter). Half the χ modulation was never generated (T1-M2). Each
+was invisible to the check that should have owned it, and each is recorded with the reason it was
+missed.
 
 ---
 
@@ -30,7 +32,7 @@ fitting (T1-M1).
 
 | Area | State | Evidence |
 |---|---|---|
-| Registry mechanism | **done** | 193 rows; source discipline + circularity rule enforced; fixed-point check in CI |
+| Registry mechanism | **done** | 194 rows; source discipline + circularity rule enforced; fixed-point check in CI |
 | Seams 1, 2, 4, 7, 9 | **done** | `test/rng.test.ts`, `test/exponent.test.ts`, `prep/test_epochio.py` |
 | Aperiodic + knee | **done** | χ recovery −0.03…+0.11 via `specparam` (Finding 2 correction) |
 | Oscillations | **done** | alpha as a damped bistable oscillator, non-sinusoidal (D13, P7) |
@@ -45,7 +47,7 @@ fitting (T1-M1).
 | ``--allow-partial`` | **removed** | the runner now refuses to start if a gate goes missing |
 | Literal acceptance check | **done** | ``tools/lint/literals.mjs`` in ``verify``; self-tested (D15) |
 
-`npm run verify` — 5 checks, 40 TS tests, 36 harness tests, all 14 gate arms, green.
+`npm run verify` — 6 checks, 48 TS tests, 36 harness tests, all 14 gate arms, green.
 
 ## Measured against real EEG
 
@@ -65,17 +67,20 @@ PhysioNet EEGMAT, 8 resting adults, same 19-channel 10-20 montage, same linked-e
 
 ## What is wrong, in priority order
 
-### 1. The shipped χ modulation is invisible to the estimator that measures it
+### 1. The shipped χ modulation is marginal against its own detection floor
 
-G4 established this while being built (D14, Finding 13). At `chi_mod_depth` = 0.15 the
-recovered line is **1.02× its own null** — the gate has to inject 13× that depth to have
-anything to attribute, and it correctly **fails** at the shipped depth. So the exponent half of
-respiratory mechanism (c) is present in the generator and absent from every readout, and
-Demo 1's (c) row is mostly reading the *amplitude* half instead.
+G4 found this while being built (D14, Finding 13): at `chi_mod_depth` = 0.15 the recovered line
+was **1.02× its own null**, so the gate injects 13× that depth to have anything to attribute.
 
-This is a property of the cheap two-band χ proxy (floor ~0.10 in its own units over 300 s), not
-of the generator. Replacing it is T1-M2 estimator-characterization work, and until then **no
-claim may rest on recovered χ modulation.**
+**T1-M2 has since split the cause in two, and one half is fixed** (Finding 15). Half the loss was
+never the estimator: a 2 s tilt-coefficient hold meant only 48% of the requested modulation was
+*generated* at the respiratory rate. `tilt_block_s` = 0.75 s recovers 2.1× of that. What remains
+is genuinely the estimator — the cheap two-band proxy's floor is ~0.06 in true-χ units at the
+respiratory rate against a provisional depth of 0.15, so the margin is ~2.5× and fragile.
+
+Demo 1's (c) row still reads mostly mechanism (c)'s *amplitude* half, and **no claim may rest on
+recovered χ modulation** until the proxy is replaced. The remaining T1-M2 work is the replacement
+(specparam-per-window, i.e. SPRiNT's algorithm) and P12, the tilt-scheme decision.
 
 ### 2. Narrowband χ cannot resolve the spacing between states
 
@@ -88,8 +93,8 @@ not help if the estimator used to *check* the ordering cannot resolve it. It is 
 record artifact — 30–45 Hz is 0.176 decades of leverage, and a slope over that span scatters
 however long the record.
 
-Both are estimator-characterization problems (T1-M2), not generator defects. Nothing in the
-Tier 0 build list remains open.
+Nothing in the Tier 0 build list remains open. Both items above are T1-M2 work, and the first has
+already had its generator-side half fixed there (D16).
 
 ---
 
@@ -118,9 +123,9 @@ characterization).
 |---|---|
 | `Build-Plan.md`, `Validation-Harness_Spec.md` | the original specification, unmodified |
 | `PARAMETERS.md` | **generated** from `registry/parameters.yaml`; never edit |
-| `DECISIONS.md` | D1–D15 and pending P1–P10, append-only |
+| `DECISIONS.md` | D1–D16 and pending P1–P12, append-only |
 | `Execution-Scheme.md` | the plan: gate ledger, work packages, build order |
-| `Tier0-Estimator-Probe.md` | Findings 1–14, every one reproducible from `prep/reference/` |
+| `Tier0-Estimator-Probe.md` | Findings 1–15, every one reproducible from `prep/reference/` |
 | `STATUS.md` | this file |
 
 Corrections are marked in place rather than rewritten: Finding 2 carries a correction block
@@ -133,11 +138,19 @@ records what the adversarial review withdrew from D8 and D9.
 
 Tier 0 is closed. Everything below is Tier 1.
 
-1. **T1-M2, estimator characterization — promoted above T1-M1.** The milestone ordering puts
-   corpus fitting first, and both problems above say that is backwards. A χ proxy whose floor
-   exceeds the injected modulation (§1) and a narrowband fit whose noise exceeds the state
-   spacing (§2) mean that fitting parameters more carefully cannot be verified with the
-   estimators we would verify them with. Characterize the estimators, then fit.
+1. **T1-M2, estimator characterization — IN PROGRESS, promoted above T1-M1.** The milestone
+   ordering puts corpus fitting first, and both problems above say that is backwards: fitting
+   parameters more carefully cannot be verified with estimators that cannot resolve them.
+   Promoting it paid immediately — the first measurement found half the χ modulation was never
+   generated (D16). Remaining, in order:
+   - **Replace the two-band χ proxy** with specparam-per-window (SPRiNT's algorithm; specparam
+     2.0.0rc7 is already pinned). This is what §1 and Demo 1's mislabelled (c) row both wait on.
+   - **P12** — characterize `filterbank`'s over-response, then settle the default tilt scheme.
+   - **PAC precision versus event count.** Circular SE ≈ √((1−R̄²)/(nR̄²)); the spec already
+     shows ±15° is unreachable at 2–5 spindles/min, so this determines segment length or forces
+     gating on resultant length instead of preferred phase.
+   - **LZ χ-dependence**, needed only before any *phase-shuffled*-normalized LZc is gated or
+     plotted. Tier 0's time-shuffled surrogate has zero χ-dependence by construction (D1).
 2. **Then T1-M1 proper:** corpus fitting (P10 jointly, P8, P9). The `@lit-ok invented …` waivers
    are the call-site half of that backlog — every hardcoded morphology constant the linter now
    marks (KC peak positions, spindle jitter, envelope depth/rate, SO scheduling) needs a registry

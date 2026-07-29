@@ -1036,3 +1036,135 @@ state of the repository rather than the behaviour of the code is worth less than
 the same reason the harness spec gives about gates.
 
 Reproduce: `npm run verify`, or `python -m prep.runner --tier all --seeds 6`.
+
+---
+
+# Finding 15 — half the χ modulation was never generated `[T1-M2]`
+
+*The first Tier 1 measurement, and it found a Tier 0 generator defect that no Tier 0 gate could
+have caught.*
+
+T1-M2 was promoted above T1-M1 because two Tier 0 findings said the estimator was the binding
+constraint. Characterizing it properly showed that for one of them, **the estimator was not the
+problem at all.**
+
+## What the sweep found, and the two wrong conclusions I drew from it
+
+Sweeping modulation frequency against analysis window (`t1m2_chi_transfer.py`) shows recovered
+depth collapsing at high f. I first reported two conclusions from it, both of which fail on
+inspection and are recorded because the errors are the instructive part:
+
+| claim | why it fails |
+|---|---|
+| *"tracks the sinc prediction, median \|err\| 0.100"* | The median averaged over a grid whose low-frequency corner is all 1.00/1.00. At W = 0.5 s — where a sliding window attenuates almost nothing — measured/predicted was **0.47/0.97** at 0.25 Hz and **0.10/0.94** at 0.40 Hz. Something *W-independent* was removing the modulation, and a median cannot see it. |
+| *"0.15 is detectable at W = 8 s"* | Arithmetic inconsistency in my own formula: it divided the measured floor by the **predicted** sinc while the **measured** attenuation at that cell was 5× smaller. Recomputed model-free as `depth × floor/recovered`, W = 8 s is the **worst** cell (0.127), not the best. |
+
+The harness spec is explicit that the quantity of interest is what *"the **estimator**, not the
+generator, determines"*. Separating them is not tidiness — it is the measurement.
+
+## The mechanism: a 2-second coefficient hold
+
+`applyTimeVaryingTilt` defaulted to `blockwise` with `blockSamples = Math.round(2 * fs)`.
+`tiltBlockwise` **averages Δχ over each block**, applies one fixed tilt, and overlap-adds at a
+hop of 0.75·B — two stacked smoothings. At the respiratory rate of 0.25 Hz that is two blocks per
+cycle.
+
+An A/B against the `filterbank` scheme, which interpolates per sample and so has no staircase,
+read out with the *same* proxy at the *same* window in both arms so the readout's bias cancels:
+
+| f_mod | blockwise | filterbank | ratio |
+|---|---|---|---|
+| 0.05 Hz | 1.00 | 1.00 | 1.02 |
+| 0.10 Hz | 0.95 | 1.06 | 1.13 |
+| 0.15 Hz | 0.79 | 1.08 | 1.39 |
+| **0.25 Hz** *(respiratory)* | **0.48** | **1.17** | **2.48** |
+| 0.40 Hz | 0.11 | 1.30 | 12.3 |
+
+**At the respiratory rate the generator was delivering 48% of the requested χ modulation**, and
+11% at 0.40 Hz. Entirely generator-side, before any estimator saw the signal.
+
+## Two reasons this survived all of Tier 0
+
+**G4 probes the wrong frequency to see it.** The gate runs at `g4_f1` = 0.10 Hz, where the 2 s
+hold retains 95%. The defect lives at the respiratory rate — which G4 deliberately keeps clear
+of, so that f₁ and f₂ stay separable. *A gate can only see the frequencies it probes*, and G4's
+whole design puts the modulation somewhere the confound isn't.
+
+**The literal linter could not have caught it either.** The constant was written
+`Math.round(2 * fs)`, and `2` is on the linter's arithmetic-furniture allowlist. This is the
+documented cost of that allowlist, paid in full: *the most consequential unregistered constant in
+the generator was a `2`*. D15 predicted this failure mode in the abstract ("a `3` is a pairing
+count in one place and a filter order in another"); here it is concrete.
+
+## The fix, derived rather than chosen
+
+`tilt_block_s` is now a registry row, standing `derived`, at **0.75 s**. Two opposed constraints,
+both already measured in this project:
+
+- **Fidelity wants B small.** A hold of length B attenuates a modulation at f by ≈ \|sinc(fB)\|.
+- **Settling wants B large.** Each block filters from **zero state**, so every block has a
+  startup transient, masked only while the crossfade (overlap = B/4) exceeds the cascade's
+  t99 = 0.164 s (Finding 5). That gives **B ≥ 0.66 s**.
+
+So the derivation is *the smallest block that still hides its own settling transient*. Measured
+minimum detectable `chi_mod_depth` at the respiratory rate:
+
+| B | viable? | min detectable depth |
+|---|---|---|
+| 0.50 s | no (overlap < t99) | 0.060 |
+| **0.75 s** | **yes** | **0.061** |
+| 1.00 s | yes | 0.067 |
+| 1.50 s | yes | 0.089 |
+| **2.00 s** *(was shipped)* | yes | **0.129** |
+| 3.00 s | yes | 0.401 |
+
+**A 2.1× gain in detectability, with the noise floor unchanged.**
+
+### A vacuous check, caught and replaced
+
+The sweep's noise-floor column came out **bit-identical across all seven block lengths** — which
+should have been the tell. It measured the floor at `chi_mod_depth = 0`, where Δχ is constant, so
+every block applies the same tilt and *no transient can occur*. It looked like a safety check and
+tested nothing.
+
+The check that matters is whether a shorter block deposits a **comb at the hop rate** — the
+High-rated sideband risk, and the exact failure Finding 8 found at the epoch boundary, where a
+k/30 Hz comb landed on `g4_f1` as harmonic 3. Narrowband excess of the modulated/unmodulated PSD
+ratio at k/hop, above its own local neighbourhood:
+
+| B | hop rate | worst excess (k = 1…3) |
+|---|---|---|
+| 0.50 s *(violates the bound)* | 2.67 Hz | +0.96 dB |
+| **0.75 s** | 1.78 Hz | **−0.03 dB** |
+| 1.00 s | 1.33 Hz | +0.71 dB |
+| 2.00 s *(was shipped)* | 0.67 Hz | +0.20 dB |
+
+**No comb.** 0.75 s is marginally cleaner than the block it replaces, and the one configuration
+that violates the t99 bound is the one with the largest excess — the derivation's direction
+confirmed, its penalty benign.
+
+## Consequences
+
+- `generator_version` → **0.2.0**. The generated signal changes for every state whose χ is
+  modulated; this is precisely the "intentional change to a golden gate output" that field marks.
+- **G4 improves and still passes**: median recovered depth 0.352 → 0.394 at f₁ = 0.10 Hz, the
+  ~12% the sweep predicts for that frequency. Both arms 12/12.
+- **Demo 1's (c) row moves only 0.238 → 0.251 (+5%)**, and that small number is a *confirmation*:
+  Finding 13 established the row is dominated by mechanism (c)'s **amplitude** half, which the
+  tilt block does not touch. The exponent half roughly doubled but was a minor share. A large
+  jump here would have contradicted Finding 13.
+- `truth.chiModDepth` in the sidecar remains the **requested** depth. What is achieved is
+  scheme- and frequency-dependent, so the field is documented as requested-not-achieved rather
+  than silently recomputed — the alternative would bake a model into a ground-truth field.
+
+## Still open
+
+The `filterbank` scheme **over-responds**, reaching 117% at 0.25 Hz and 130% at 0.40 Hz where a
+pure attenuation cannot exceed 100%. Linear interpolation between two pre-filtered signals is not
+the filter at the interpolated tilt — the outputs are highly correlated, so amplitudes blend
+rather than log-slopes. That is uncharacterized, and switching the default to a scheme with an
+unexplained 30% over-response would be exactly the unexamined move this project forbids.
+**Registered as P12**, not adopted.
+
+Reproduce: `t1m2_chi_transfer.py`, `t1m2_chi_generator_side.py`, `t1m2_tilt_block_sweep.py`,
+`t1m2_tilt_block_comb.py`.

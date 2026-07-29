@@ -396,6 +396,57 @@ shaping, and it must be characterized before any PAC recovery gate is trusted.
 
 ---
 
+## D16 — `tilt_block_s` is registered and derived at 0.75 s; the blockwise scheme stays
+
+**Decided and measured.** T1-M2's first measurement found that the generator was delivering
+**48% of the requested χ modulation at the respiratory rate** and 11% at 0.40 Hz. The cause was a
+hardcoded 2 s coefficient hold in `tiltBlockwise`, which averages Δχ over each block and
+overlap-adds at a 0.75·B hop — two stacked smoothings, entirely generator-side.
+
+**The value is derived, not chosen.** Two opposed constraints, both already measured here:
+fidelity wants the block short (a hold attenuates f by ≈|sinc(fB)|); settling wants it long
+(each block filters from zero state, and its transient is masked only while overlap = B/4 exceeds
+the cascade's t99 = 0.164 s, giving B ≥ 0.66 s). The derivation is therefore *the smallest block
+that still hides its own settling transient*: **0.75 s**, which measures a **2.1× gain** in
+detectable `chi_mod_depth` at the respiratory rate with the noise floor unchanged, and is
+verified comb-free (−0.03 dB narrowband excess at the hop rate, against +0.20 dB for the 2 s
+block it replaces).
+
+`generator_version` → **0.2.0**, because the generated signal changes for every state whose χ is
+modulated. G4 improves (median 0.352 → 0.394) and still passes both arms 12/12.
+
+### Two checks that could not have caught this, both worth stating
+
+**G4 probes the wrong frequency.** It runs at f₁ = 0.10 Hz, where the 2 s hold retains 95%. The
+defect lives at the respiratory rate, which G4 deliberately keeps clear of so f₁ and f₂ stay
+separable. A gate can only see the frequencies it probes — and G4's design puts the modulation
+where the confound isn't, by construction.
+
+**The literal linter's allowlist passed it.** The constant was `Math.round(2 * fs)`, and `2` is
+arithmetic furniture. D15 named this failure mode in the abstract; this is the concrete instance,
+and it means the allowlist's cost is not hypothetical. It is not widened in response — flagging
+every `2` would flag ~124 sites and produce noise, which is a worse trade — but the limitation is
+now recorded against a real case rather than as a caveat.
+
+### Two errors in my own first analysis, corrected
+
+The first sweep reported that the attenuation *"tracks the sinc prediction"* on a median that
+averaged over a grid whose low-frequency corner is all 1.00/1.00, hiding a systematic W-independent
+failure. It also reported *"0.15 is detectable at W = 8 s"* from a formula that divided the
+measured floor by the **predicted** sinc while the **measured** attenuation there was 5× smaller;
+recomputed model-free, W = 8 s is the worst cell. And the block sweep's noise-floor column was
+**vacuous** — measured at depth 0, where Δχ is constant and no transient can occur, which is why
+it came out bit-identical across all seven block lengths. All three are recorded in Finding 15.
+
+### The sidecar keeps the requested depth, deliberately
+
+`truth.chiModDepth` still records what was **requested**. What is achieved is scheme- and
+frequency-dependent, so recomputing the field would bake a model into a ground-truth field —
+the opposite of what a truth block is for. It is documented as requested-not-achieved instead,
+with the transfer function measured in Finding 15.
+
+---
+
 ## D15 — the literal acceptance check exists, and the claim is restored with accurate scope
 
 **Built, enforced, and self-tested.** `tools/lint/literals.mjs` runs in `npm run verify` (6th
@@ -538,6 +589,7 @@ decisions in exactly that state.
 | P8 | Fit `alpha_shape_rdsym` / `alpha_shape_triangularity` / `so_rdsym` against a corpus | any PAC recovery gate | T1-M2 |
 | P9 | Replace Gaussian projection weights with LΨᵀ columns or a SEREEGA lead field | far-field correlation structure | T1-M1 |
 | P10 | Fit χ and `knee_freq_*` **jointly** per state | state orderings; any comparability claim | T1-M1 |
+| P12 | Characterize `filterbank`'s over-response, then decide the default tilt scheme | any χ modulation above ~0.3 Hz | T1-M2 |
 | ~~P11~~ | ~~Respiratory mechanism (a), and the amplitude half of (c)~~ | — | **Closed, implemented.** Demo 1 now moves 100% → 1%. See below |
 
 **P7 is implemented and deliberately left unfitted.** Alpha and the slow oscillation are now
@@ -548,6 +600,16 @@ manufactures spurious phase-amplitude coupling now exists rather than being abse
 replaces it**: no source consulted gives an rdsym for posterior alpha specifically, so both
 magnitude and direction are unfitted and a PAC recovery gate still must not be trusted until
 they are.
+
+**P12 is new (T1-M2).** The `filterbank` tilt scheme recovers the modulation the blockwise hold
+loses — but it **over-responds**, reaching 117% at 0.25 Hz and 130% at 0.40 Hz, where a pure
+attenuation cannot exceed 100%. The likely cause is that linear interpolation between two
+pre-filtered signals is not the filter at the interpolated tilt: the two outputs share an input
+and so are highly correlated, meaning amplitudes blend where log-slopes should. Until that is
+characterized the default stays `blockwise` at the derived `tilt_block_s` (D16), because adopting
+a scheme with an unexplained 30% over-response would trade a measured error for an unmeasured
+one. **Blocks any χ modulation above ~0.3 Hz**, where even the derived block length attenuates
+appreciably.
 
 **P9 and P10 are new**, and each is a concrete blocker rather than a worry:
 

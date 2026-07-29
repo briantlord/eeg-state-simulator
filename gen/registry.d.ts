@@ -162,6 +162,7 @@ export type ParamKey =
   | 'synth_overlap'
   | 'theta_amp'
   | 'theta_band'
+  | 'tilt_block_s'
   | 'tilt_mod_settling_ratio'
   | 'tilt_n_poles'
   | 'tilt_pole_spacing'
@@ -359,6 +360,7 @@ export interface ParamKindMap {
   'synth_overlap': 'scalar';
   'theta_amp': 'interval';
   'theta_band': 'interval';
+  'tilt_block_s': 'scalar';
   'tilt_mod_settling_ratio': 'absent';
   'tilt_n_poles': 'scalar';
   'tilt_pole_spacing': 'procedure';

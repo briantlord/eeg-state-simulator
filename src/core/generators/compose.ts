@@ -97,6 +97,15 @@ export interface ComposeOptions {
   /** Coefficient-update scheme for the tilt filter. See src/core/filters/tilt.ts. */
   readonly tiltScheme?: 'blockwise' | 'filterbank';
   /**
+   * Override `tilt_block_s`, the blockwise coefficient-hold length in seconds.
+   *
+   * Exists so T1-M2 can sweep it: the hold attenuates a chi modulation before any estimator
+   * sees it, and the registry's value is DERIVED from that sweep against the filter's settling
+   * time. A caller changing this is changing how much of the requested modulation is actually
+   * generated, which is why it is an explicit override rather than a tuning knob.
+   */
+  readonly tiltBlockS?: number;
+  /**
    * SNR mix, in dB relative to the registry amplitudes (seam 5).
    *
    * Scales every non-background source -- oscillations and graphoelements -- against the
@@ -258,8 +267,14 @@ export function composeState(
     // The filter applies the DEVIATION from the generated exponent.
     for (let i = 0; i < nSamples; i++) deltaChi[i] = chi - chiT[i]!;
     for (let i = 0; i < bgSources.length; i++) {
-      bgSources[i] = applyTimeVaryingTilt(bgSources[i]!, deltaChi, fs,
-        opts.tiltScheme ? { scheme: opts.tiltScheme } : {});
+      bgSources[i] = applyTimeVaryingTilt(bgSources[i]!, deltaChi, fs, {
+        ...(opts.tiltScheme ? { scheme: opts.tiltScheme } : {}),
+        // The block length is a REGISTRY VALUE, not the filter's own default. It sets how much
+        // of a chi modulation survives generation at all (Finding 15): a block holds chi
+        // constant, so a hold of length B attenuates a modulation at f by roughly |sinc(fB)|
+        // BEFORE any estimator sees it. `tilt_block_s` carries the derivation.
+        blockSamples: Math.round((opts.tiltBlockS ?? scalarValue('tilt_block_s')) * fs),
+      });
     }
     chiModDepth = opts.chiModDepth ?? provisionalValue('chi_mod_depth');
     const wakeLike = state === 'wake_eo' || state === 'wake_ec' || state === 'n1';
