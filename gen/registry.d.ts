@@ -121,6 +121,8 @@ export type ParamKey =
   | 'osc_carrier_flatten'
   | 'reference_channels'
   | 'render_decimation'
+  | 'resp_amp_mod_depth'
+  | 'resp_artifact_amp'
   | 'resp_ie_ratio'
   | 'resp_pause_fraction'
   | 'resp_period_cv'
@@ -166,6 +168,8 @@ export type ParamKey =
   | 'topo_centre_delta_y'
   | 'topo_centre_kc_x'
   | 'topo_centre_kc_y'
+  | 'topo_centre_resp_artifact_x'
+  | 'topo_centre_resp_artifact_y'
   | 'topo_centre_spindle_fast_x'
   | 'topo_centre_spindle_fast_y'
   | 'topo_centre_spindle_slow_x'
@@ -181,6 +185,7 @@ export type ParamKey =
   | 'topo_sigma_beta'
   | 'topo_sigma_delta'
   | 'topo_sigma_kc'
+  | 'topo_sigma_resp_artifact'
   | 'topo_sigma_spindle_fast'
   | 'topo_sigma_spindle_slow'
   | 'topo_sigma_theta'
@@ -308,6 +313,8 @@ export interface ParamKindMap {
   'osc_carrier_flatten': 'scalar';
   'reference_channels': 'electrodes';
   'render_decimation': 'enum';
+  'resp_amp_mod_depth': 'pending';
+  'resp_artifact_amp': 'interval';
   'resp_ie_ratio': 'interval';
   'resp_pause_fraction': 'scalar';
   'resp_period_cv': 'pending';
@@ -353,6 +360,8 @@ export interface ParamKindMap {
   'topo_centre_delta_y': 'scalar';
   'topo_centre_kc_x': 'scalar';
   'topo_centre_kc_y': 'scalar';
+  'topo_centre_resp_artifact_x': 'scalar';
+  'topo_centre_resp_artifact_y': 'scalar';
   'topo_centre_spindle_fast_x': 'scalar';
   'topo_centre_spindle_fast_y': 'scalar';
   'topo_centre_spindle_slow_x': 'scalar';
@@ -368,6 +377,7 @@ export interface ParamKindMap {
   'topo_sigma_beta': 'pending';
   'topo_sigma_delta': 'pending';
   'topo_sigma_kc': 'pending';
+  'topo_sigma_resp_artifact': 'scalar';
   'topo_sigma_spindle_fast': 'pending';
   'topo_sigma_spindle_slow': 'pending';
   'topo_sigma_theta': 'pending';

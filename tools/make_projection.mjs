@@ -31,6 +31,7 @@ function num(key) {
 }
 
 const GENERATORS = [
+  'resp_artifact',
   'alpha',
   'beta',
   'theta',

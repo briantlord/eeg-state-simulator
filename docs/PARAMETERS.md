@@ -218,12 +218,17 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 | `topo_expect_kc` | Fz/F3/F4 | — | `literature` | AASM Manual for the Scoring of Sleep and Associated Events — K-complex frontal maximum | n2 |
 | `topo_expect_alpha` | O1/O2/Pz | — | `literature` | AASM Manual for the Scoring of Sleep and Associated Events — posterior dominant rhythm, occipital maximum | wake_ec |
 | `so_travel_v_used` | 3 | m/s | `chosen` | point value drawn from the so_travel_v literature interval 1-7 m/s | n3 |
+| `topo_centre_resp_artifact_x` | 0 | normalized_10_20 | `invented` | mechanical artifact, broadly frontal where head movement couples most | all |
+| `topo_centre_resp_artifact_y` | 0.65 | normalized_10_20 | `invented` | frontal centre | all |
+| `topo_sigma_resp_artifact` | 0.9 | normalized_10_20 | `invented` | broad: a mechanical artifact is not focal | all |
 
 **`topo_sigma_background`.** Wider than any oscillation sigma on purpose. Narrow background sources would give channels that are nearly independent, which is the error this project's own rule forbids; wide overlapping ones give graded correlation.
 
 **`topo_expect_alpha`.** Re-sourced on import, not re-standed. In the source markdown this row read 'clinical convention (posterior dominant rhythm)' — naming neither author/year nor standard, which the registry's own discipline calls a contradiction on its face. It is the row G6 reads and D6 built the gate around its independence, so the violation sat on the load-bearing path. AASM does define the posterior dominant rhythm, so the standard is nameable and the literature standing survives.
 
 **`so_travel_v_used`.** so_travel_v is a literature INTERVAL (Massimini et al. 2004, 1-7 m/s); the generator needs a point. Registered separately rather than silently taking a midpoint inside the code, so the reduction is visible and can be replaced by a per-event draw once Dv rows exist. At 3 m/s across ap_axis_span = 180 mm the frontal-to-occipital delay is 60 ms, which is what makes the wave visibly sweep.
+
+**`topo_sigma_resp_artifact`.** Deliberately a DIFFERENT topography from any neural generator. Build Plan 5.1 insists the three respiratory mechanisms be kept separate because they have "different origins, different topographies, different implications. Conflating them is the standard error in this literature." A shared topography would make them inseparable by any spatial method.
 
 ## 6. Graphoelements
 
@@ -262,6 +267,8 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 | `resp_ie_ratio` | 1.5–2 *(uncertainty)* | — | `invented` | expiration:inspiration duration ratio; uncited | all |
 | `resp_pause_fraction` | 0.15 | — | `invented` | fraction of the breath period spent in inhalation and exhalation pauses | all |
 | `resp_period_cv` | — *(pending T1-M1; runs on 0.08)* | — | `invented` |  | all |
+| `resp_artifact_amp` | 5–25 *(uncertainty)* | uV | `invented` | amplitude of the mechanical respiratory movement artifact; uncited | all |
+| `resp_amp_mod_depth` | — *(pending T1-M1; runs on 0.35)* | — | `invented` | Kluger & Gross 2021 report respiration modulates band amplitude; depth not read out | all |
 | `chi_mod_depth` | — *(pending T1-M1; runs on 0.15)* | — | `invented` | Kluger et al. 2023 Fig. 2 reports this but the value has not been read out | all |
 | `chi_mod_phase_wake` | slope decreases in late inspiration, increases in late expiration | rad | `invented` | 2025 respiratory-excitability study, N=23; author not recorded | wake_eo, wake_ec, n1 |
 | `chi_mod_phi0_wake` | — *(pending T1-M1; runs on 3.14159265358979)* | rad | `invented` |  | wake_eo, wake_ec, n1 |
@@ -278,6 +285,10 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 **`resp_ie_ratio`.** Source markdown wrote '1:1.5 - 1:2'. Normalized to a numeric ratio.
 
 **`resp_pause_fraction`.** NeuroKit2's breathmetrics model interpolates inhalation and exhalation pauses, and the Build Plan says to transcribe it rather than reinvent it. NeuroKit2 is not a dependency here, so this implements the published description instead and the pause fraction is invented. TODO(T1): validate against neurokit2.rsp_simulate directly -- the risk register's mitigation for rebuilding solved generators is "transcribe, cite, validate against the originals", and the third step is not done.
+
+**`resp_artifact_amp`.** Build Plan 5.1(a): "Respiratory movement artifact. Mechanical, at the respiratory rate. GENUINE ARTIFACT; high-passing it out is correct." This is the mechanism a clinical high-pass actually destroys, and its absence is why the filter demonstration showed 93% -> 91% across the whole cutoff range (Finding 10). It sits AT the respiratory rate, i.e. below every hpf_options cutoff except 0.01 Hz, so a 0.5-1 Hz high-pass removes it essentially completely. That is the filter working correctly, and it is half the lesson: high-pass filtering trades a known artifact for a known distortion.
+
+**`resp_amp_mod_depth`.** The AMPLITUDE half of Build Plan 5.1(c), as distinct from the exponent half. It was added on the expectation that a 0.5-1 Hz high-pass would remove it, because it modulates the envelope of low-frequency content. MEASURED, THAT IS WRONG: retained 100-101% across the whole clinical cutoff range. A high-pass removes a CARRIER below its cutoff; it does not remove amplitude modulation of a carrier that passes, and modulating 0.5-4 Hz delta at 0.25 Hz puts the sidebands around the delta band rather than at 0.25 Hz. Kept, and kept separately switchable, because it is a real physiological mechanism and because its INSENSITIVITY is now the control in Demo 1 -- the row that does not move while mechanism (a) collapses 99.8%. See Finding 10 (resolved).
 
 **`chi_mod_depth`.** Routed to T1-M1 but the source names a specific figure — reading it out is an afternoon, not 8 days of corpus work. Flagged for early conversion to literature.
 
@@ -424,6 +435,6 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 | `chosen` | 50 |
 | `literature` | 8 |
 | `derived` | 7 |
-| `invented` | 99 |
+| `invented` | 104 |
 | `absent` | 8 |
-| **total** | **183** |
+| **total** | **188** |

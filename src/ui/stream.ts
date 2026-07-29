@@ -63,6 +63,18 @@ export class SignalStream {
     return this.current.truth;
   }
 
+  /**
+   * The respiratory phase that drove this segment, sample-aligned to `channels`.
+   *
+   * Exposed because Demo 1 measures coupling AGAINST THE KNOWN PHASE rather than one recovered
+   * from the signal — recovering it would let estimator error into the reference and confound
+   * the loss being demonstrated. This is ground truth, and it is only available because we
+   * generated it.
+   */
+  get respirationPhase(): Float64Array {
+    return this.current.respirationPhase;
+  }
+
   get segmentSeconds(): number {
     return this.segmentS;
   }

@@ -10,9 +10,10 @@
 The generator produces multichannel EEG that matches real resting recordings on effective
 rank, amplitude, alpha frequency, near-field correlation and PC1 share. The harness runs, two
 gates are implemented with their nulls, and the registry mechanism prevents a numeric constant
-from existing outside it. **The artifact's central demonstration does not work yet**, for a
-reason that is understood and recorded: only one of the three respiratory mechanisms is built,
-and it is the one a high-pass filter cannot damage.
+from existing outside it. **All three demonstrations now work**: Demo 1 moves 100% → 1% across
+the clinical cutoff range against a measured noise floor. Building it corrected the claim it
+makes — the loss is entirely the movement artifact, and the physiological coupling mechanisms
+are untouched, which is a sharper lesson than the one the demo was framed around.
 
 ---
 
@@ -26,6 +27,7 @@ and it is the one a high-pass filter cannot damage.
 | Oscillations | **done** | alpha as a damped bistable oscillator, non-sinusoidal (D13, P7) |
 | Graphoelements | **done** | spindles, K-complexes, SO with AP travel; YASA detects them |
 | Respiration + tilt filter | **done** | sideband risk measures −34 dB (Finding: WP-F) |
+| All three respiratory mechanisms | **done** | separately switchable; Demo 1 moves 100% → 1% (Finding 10, resolved) |
 | Observables χ / LZc / coupling | **done** | pink-noise demo passes under both LZ parses |
 | SNR calibration | **done** | `snr_nominal` = 1.4288 dB, solved on the fixture seed |
 | Web artifact | **done** | scrolling trace, filter panel, reference montages, 119 kB static |
@@ -54,33 +56,20 @@ PhysioNet EEGMAT, 8 resting adults, same 19-channel 10-20 montage, same linked-e
 
 ## What is wrong, in priority order
 
-### 1. The artifact's thesis does not work — P11
-
-Demo 1 shows coupling **93% → 91%** across the entire clinical cutoff range. It should show
-ground truth visibly diverging from the recovered estimate; that is the Tier 0 shipping test.
-
-Only respiratory mechanism **(c)**'s exponent half exists. χ is estimated from 2–8 and 16–40 Hz,
-so a 1 Hz high-pass cannot touch it. The two mechanisms a filter *does* destroy — **(a)**
-movement artifact at the respiratory rate, and the *amplitude* half of **(c)** — are not built.
-
-**The same omission makes G4's negative arm vacuous**, because the sidebands it hunts are
-intermodulation products needing energy at both frequencies. One missing mechanism blocks the
-thesis and the most important gate together.
-
-### 2. G4 has no pass criterion — D12
+### 1. G4 has no pass criterion — D12
 
 D4's mechanism is refuted (circular-shifting a clean ramp leaves an alignment-magnitude index
 invariant: measured, zero IQR). D8's replacement did not survive review — its f₁ neighbourhood
 spans below DC at the registered halfwidth, and its "5% per-seed rate by design" measured
 **0.317** at N3-like respiration regularity, which would reject a working generator.
 
-### 3. Four gates unimplemented
+### 2. Four gates unimplemented
 
 G1a, G1b, G3, G6 all have working measurements in `prep/reference/`. They need wrapping in the
 gate-module contract with matched nulls. `--allow-partial` is currently switched on in
 `npm run verify`, which means **the build does not notice a gate going missing.**
 
-### 4. The literal linter does not exist
+### 3. The literal linter does not exist
 
 `tools/lint/literals.mjs` is the sole mitigation for the register's top-rated risk. The claim
 that it is enforced was removed from the registry and `PARAMETERS.md` rather than left standing.
@@ -125,9 +114,9 @@ records what the adversarial review withdrew from D8 and D9.
 
 ## Next, in the order that unblocks the most
 
-1. **Respiratory mechanism (a) and the amplitude half of (c)** — P11. Small; both project
-   through the existing path. Unblocks the artifact's thesis *and* G4's negative arm.
-2. **Settle G4's criterion** against a generator that finally has something for it to catch.
-3. **Wrap G1a, G1b, G3, G6** as gate modules with nulls, then **remove `--allow-partial`**.
-4. **Write `tools/lint/literals.mjs`**, then restore the claim it enforces.
-5. Tier 1 proper: corpus fitting (P10 jointly, P8, P9) and estimator characterization.
+1. **Settle G4's criterion.** Now unblocked: mechanism (a) supplies the energy at f₂ that the
+   intermodulation sidebands need, so the gate finally has something to catch and a criterion
+   can be measured rather than argued.
+2. **Wrap G1a, G1b, G3, G6** as gate modules with nulls, then **remove `--allow-partial`**.
+3. **Write `tools/lint/literals.mjs`**, then restore the claim it enforces.
+4. Tier 1 proper: corpus fitting (P10 jointly, P8, P9) and estimator characterization.

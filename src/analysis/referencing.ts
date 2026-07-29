@@ -139,6 +139,31 @@ export function applyReference(
 }
 
 /**
+ * How much of a generator's amplitude survives projection AND referencing, at one electrode.
+ *
+ * Demo 1 needs this to state ground truth honestly. The generator injects a respiratory
+ * artifact of a known amplitude AT ITS SOURCE, but what reaches referenced Fz is that
+ * amplitude times the projection weight, minus the same source picked up by whatever the
+ * reference is. Measured on this montage under linked mastoid: 0.66. Comparing the recovered
+ * µV against the source amplitude would therefore show a 34% "loss" at a 0.01 Hz cutoff, where
+ * the filter has done nothing at all — attributing geometry to the filter.
+ *
+ * Every operator here is linear and sample-wise, so pushing the weight VECTOR through
+ * `applyReference` as a one-sample record gives the exact gain. Reusing the operator rather
+ * than re-deriving the algebra per mode is deliberate: the two can never drift apart.
+ */
+export function referencedGain(
+  weights: readonly number[],
+  mode: ReferenceMode,
+  label: string,
+): number {
+  const asChannels = weights.map((w) => Float64Array.of(w));
+  const r = applyReference(asChannels, mode);
+  const i = r.labels.indexOf(label);
+  return i < 0 ? Number.NaN : r.channels[i]![0]!;
+}
+
+/**
  * Effective dimensionality by the participation ratio, (Σλ)² / Σλ².
  *
  * Threshold-free, unlike "components to reach 95%", so it does not depend on where a line is

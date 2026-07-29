@@ -156,6 +156,52 @@ export function chiModulation(
   return out;
 }
 
+/**
+ * Mechanism (a) — the respiratory movement artifact.
+ *
+ * "Mechanical, at the respiratory rate. GENUINE ARTIFACT; high-passing it out is correct."
+ *
+ * It is the belt waveform itself appearing in the EEG, because that is what mechanical
+ * coupling produces: the electrode moves with the chest. It therefore sits AT the respiratory
+ * rate — below every clinical high-pass cutoff — and a 0.5–1 Hz filter removes it essentially
+ * completely. That is the filter doing its job, and it is the half of the lesson that says
+ * filtering is not a mistake.
+ *
+ * Kept as its own generator with its own topography because §5.1 is emphatic that the three
+ * mechanisms must stay separate: "different origins, different topographies, different
+ * implications. Conflating them is the standard error in this literature."
+ */
+export function respiratoryArtifact(belt: Float64Array, amplitudeUv: number): Float64Array {
+  const out = new Float64Array(belt.length);
+  for (let i = 0; i < belt.length; i++) out[i] = belt[i]! * amplitudeUv;
+  return out;
+}
+
+/**
+ * Mechanism (c), amplitude half — respiratory-phase modulation of band amplitude.
+ *
+ * Distinct from the exponent half, and distinct in a way that decides whether the filter
+ * demonstration works at all. This modulates the envelope of whatever it is applied to; when
+ * applied to LOW-FREQUENCY content, a 0.5–1 Hz high-pass removes most of that band and the
+ * measurable coupling collapses with cutoff. The exponent half survives any clinical filter,
+ * because χ is estimated from 2–40 Hz — entirely above the stopband.
+ *
+ * Returns the multiplier, so the caller decides what it multiplies.
+ */
+export function amplitudeModulation(
+  phase: Float64Array,
+  depth: number,
+  phi0: number,
+): Float64Array {
+  const out = new Float64Array(phase.length);
+  for (let i = 0; i < phase.length; i++) {
+    // Strictly positive: a modulation deep enough to go negative would invert the waveform
+    // rather than quieten it, which is a different physical claim.
+    out[i] = 1 + depth * Math.cos(phase[i]! - phi0);
+  }
+  return out;
+}
+
 /** A clean phase ramp at a fixed frequency, for the G4 independent modulator. */
 export function phaseRamp(nSamples: number, freqHz: number, fs: number): Float64Array {
   const out = new Float64Array(nSamples);

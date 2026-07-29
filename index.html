@@ -138,17 +138,37 @@
           <div class="panel">
             <h2>Demo 1 — coupling loss</h2>
             <table class="readout-table">
-              <tr><th>injected</th><td class="truth" id="c-inj">—</td></tr>
+              <tr><th>injected (a) at Fz</th><td class="truth" id="c-inj">—</td></tr>
               <tr><th>recovered</th><td class="derived" id="c-rec">—</td></tr>
               <tr><th>retained</th><td id="c-ret">—</td></tr>
+              <tr><th>noise floor</th><td class="derived" id="c-floor">—</td></tr>
+              <tr><th>χ modulation (c)</th><td class="derived" id="c-chi">—</td></tr>
             </table>
+            <p class="note">
+              Move the high-pass cutoff above the respiratory rate and the <strong>(a)</strong>
+              row collapses to near zero, while <strong>(c)</strong> is untouched. That is the
+              whole lesson: a naive respiration–EEG coupling measure is dominated by the
+              movement artifact, the filter removes it — correctly, it <em>is</em> an
+              artifact — and the physiological coupling was never what the number was
+              reporting.
+            </p>
+            <p class="note">
+              The <strong>noise floor</strong> is the same estimator run off-resonance, where
+              nothing was injected. It is not zero, because a projection onto one phase
+              recovers something from any finite record — that is why “retained” can read a
+              little over 100%, and why under the Laplacian, which cuts the injected amplitude
+              to about 2 µV, it reads a lot over. Compare the recovered value to the floor, not
+              to zero.
+            </p>
             <p class="note" id="c-window"></p>
             <p class="note">
-              Ground truth is known because the generator injected it. No real dataset can show
-              this comparison.
-              G4 runs this comparison on a 300 s record for the same reason the readout needs a
-              long buffer: a 30 s window is too coarse to separate the modulation from its
-              sidebands.
+              Ground truth is known because the generator injected it — and it is stated
+              <em>at the electrode</em>: the source amplitude times the gain of projection and
+              of the reference montage you selected, both of which are linear and both of which
+              are known exactly. Charging that geometry to the filter would be the same
+              conflation the demo is about. No real dataset can show this comparison.
+              G4 runs it on a 300 s record for the same reason the readout needs a long buffer:
+              a 30 s window is too coarse to separate the modulation from its sidebands.
             </p>
           </div>
 

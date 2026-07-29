@@ -19,7 +19,13 @@ import {
 } from './oscillations.ts';
 import { ALL_CHANNELS, projectInto, type GeneratorId } from './projection.ts';
 import { synthesizeGraphoelements } from './graphoelements.ts';
-import { synthesizeRespiration, chiModulation, phaseRamp } from './respiration.ts';
+import {
+  synthesizeRespiration,
+  chiModulation,
+  phaseRamp,
+  respiratoryArtifact,
+  amplitudeModulation,
+} from './respiration.ts';
 import { applyTimeVaryingTilt } from '../filters/tilt.ts';
 import type { GeneratedEvent } from '../types/event.ts';
 
@@ -48,7 +54,21 @@ const STATE_OSCILLATIONS: Record<StateId, OscSpec[]> = {
  * behaves identically whether or not a caller passes this.
  */
 export interface ComposeOptions {
-  /** Enable respiration-phase modulation of the aperiodic exponent (Build Plan 5.1c). */
+  /**
+   * The three respiratory mechanisms of Build Plan 5.1, switched SEPARATELY.
+   *
+   * They have "different origins, different topographies, different implications.
+   * Conflating them is the standard error in this literature." A single `respiration:
+   * true` flag would be that error in an API.
+   *
+   *   movementArtifact - (a) mechanical, AT the respiratory rate. A high-pass removes it.
+   *   amplitudeModulation - (c) amplitude half. Modulates low-frequency envelope, so a
+   *                         high-pass attenuates the measurable coupling with cutoff.
+   *   chiModulation - (c) exponent half. Lives above the stopband; survives any clinical
+   *                   filter, which is why it alone could not drive the filter demo.
+   */
+  readonly movementArtifact?: boolean;
+  readonly amplitudeModulation?: boolean;
   readonly chiModulation?: boolean;
   /** Override chi_mod_depth. */
   readonly chiModDepth?: number;
@@ -97,6 +117,8 @@ export interface ComposeResult {
     snrDb: number;
     chiModDepth: number;
     chiModPhi0: number;
+    respArtifactAmpUv: number;
+    respAmpModDepth: number;
     respFreqHz: number;
     independentChiModFreq: number | null;
   };
@@ -152,6 +174,26 @@ export function composeState(
     fs,
     opts.respRatePerMin,
   );
+
+  // Mechanism (a): the movement artifact. Its own generator, its own topography.
+  let respArtifactAmpUv = 0;
+  if (opts.movementArtifact) {
+    respArtifactAmpUv = pointFromUncertainty('resp_artifact_amp');
+    projectInto(out, respiratoryArtifact(resp.belt, respArtifactAmpUv), 'resp_artifact');
+  }
+
+  // Mechanism (c), amplitude half: the multiplier applied to low-frequency oscillations.
+  let respAmpModDepth = 0;
+  let ampMod: Float64Array | null = null;
+  if (opts.amplitudeModulation) {
+    respAmpModDepth = provisionalValue('resp_amp_mod_depth');
+    const wakeLikeAmp = state === 'wake_eo' || state === 'wake_ec' || state === 'n1';
+    ampMod = amplitudeModulation(
+      resp.phase,
+      respAmpModDepth,
+      provisionalValue(wakeLikeAmp ? 'chi_mod_phi0_wake' : 'chi_mod_phi0_sleep'),
+    );
+  }
 
   // Aperiodic background: SEVERAL shared sources with distinct topographies.
   //
@@ -254,6 +296,12 @@ export function composeState(
             fs,
           );
     if (sourceGain !== 1) for (let i = 0; i < nSamples; i++) s[i] = s[i]! * sourceGain;
+    // Applied only to bands the high-pass can reach. Modulating alpha's envelope would
+    // put sidebands at 10 +/- 0.25 Hz, which no clinical high-pass removes -- so it would
+    // reproduce exactly the flatness Finding 10 diagnosed.
+    if (ampMod && hi <= 8) {
+      for (let i = 0; i < nSamples; i++) s[i] = s[i]! * ampMod[i]!;
+    }
     projectInto(out, s, spec.generator);
     oscTruth.push({ generator: spec.generator, band: [lo, hi], rmsUv });
   }
@@ -288,6 +336,8 @@ export function composeState(
       snrDb,
       chiModDepth,
       chiModPhi0,
+      respArtifactAmpUv,
+      respAmpModDepth,
       respFreqHz: resp.meanRatePerMin / 60,
       independentChiModFreq: opts.independentChiModFreq ?? null,
     },

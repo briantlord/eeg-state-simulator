@@ -408,7 +408,7 @@ shaping, and it must be characterized before any PAC recovery gate is trusted.
 | P8 | Fit `alpha_shape_rdsym` / `alpha_shape_triangularity` / `so_rdsym` against a corpus | any PAC recovery gate | T1-M2 |
 | P9 | Replace Gaussian projection weights with LΨᵀ columns or a SEREEGA lead field | far-field correlation structure | T1-M1 |
 | P10 | Fit χ and `knee_freq_*` **jointly** per state | state orderings; any comparability claim | T1-M1 |
-| P11 | Respiratory mechanism (a), and the amplitude half of (c) | Demo 1; G4's negative arm | T0 |
+| ~~P11~~ | ~~Respiratory mechanism (a), and the amplitude half of (c)~~ | — | **Closed, implemented.** Demo 1 now moves 100% → 1%. See below |
 
 **P7 is implemented and deliberately left unfitted.** Alpha and the slow oscillation are now
 non-sinusoidal: triangularity plus a rise-decay asymmetry applied to the instantaneous phase,
@@ -419,7 +419,7 @@ replaces it**: no source consulted gives an rdsym for posterior alpha specifical
 magnitude and direction are unfitted and a PAC recovery gate still must not be trusted until
 they are.
 
-**P9, P10 and P11 are new**, and each is a concrete blocker rather than a worry:
+**P9 and P10 are new**, and each is a concrete blocker rather than a worry:
 
 - **P9** — measured against real EEG, far-field inter-channel correlation is 0.29 against a
   real 0.44, and a handful of Gaussian sources cannot fix it: more global component raises
@@ -428,10 +428,28 @@ they are.
 - **P10** — the recovered state ordering is a joint function of χ and the knee, so fitting
   either alone cannot reproduce the documented orderings (Finding 9), and our χ over 1–20 Hz
   is 0.32 against a real 0.99 because the knee sits inside the band (Finding 12).
-- **P11** — **the artifact's thesis does not currently work.** Only respiratory mechanism (c)'s
-  exponent half is implemented, and that is the one component a clinical high-pass cannot
-  remove, so Demo 1 shows 93% → 91% across the whole cutoff range. The same omission makes
-  G4's negative arm vacuous. One missing mechanism, two blocked deliverables (Finding 10).
+**P11 is closed, and closing it corrected the claim the artifact makes.** All three respiratory
+mechanisms are implemented and separately switchable. Demo 1 now moves: **100% retained at a
+0.01 Hz cutoff, 1% at 1 Hz**, against a measured off-resonance noise floor.
+
+But the expectation that motivated half of P11 was wrong. The amplitude half of (c) was added
+because a high-pass "removes most of that band" — measured, it is retained at 100–101% across
+the entire clinical range, because *a high-pass removes a carrier below its cutoff and does not
+remove amplitude modulation of a carrier that passes*. The whole loss is mechanism (a), and
+there it is 99.8%.
+
+So the demonstration's content is sharper than intended: a naive respiration–EEG coupling
+measure is **dominated by the movement artifact**; filtering removes the artifact and therefore
+the apparent coupling — correctly, because (a) *is* an artifact — and the mechanisms that were
+physiological all along are untouched. The (c) rows are now Demo 1's control, on screen beside
+the row that collapses. That is a better lesson than the one the demo was framed around, and it
+is only visible because §5.1 required the three be kept separate. Finding 10, resolved.
+
+Two consequences worth carrying forward: ground truth in the readout is stated **at the
+electrode** via `referencedGain()`, because comparing against the source amplitude charged 34%
+of projection-and-reference geometry to the filter; and the estimator prints a **measured
+off-resonance floor**, because a magnitude estimator never returns zero and "indistinguishable
+from nothing" is a claim that needs a floor to license it.
 | ~~P5~~ | ~~Re-measure G1a vs G1b error under the full generator~~ | — | **Closed: D3 stands.** See below |
 | P6 | Re-derive G1b's bias magnitude at the repaired `k_*` values | any comparability claim | T1-M1 |
 

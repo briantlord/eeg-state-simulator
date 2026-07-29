@@ -63,7 +63,10 @@ if (projection.channels.length !== ALL_CHANNELS.length ||
 export type GeneratorId =
   | `background_${number}`
   | 'alpha' | 'beta' | 'theta' | 'delta'
-  | 'spindle_fast' | 'spindle_slow' | 'kc';
+  | 'spindle_fast' | 'spindle_slow' | 'kc'
+  // Mechanism (a). Its own topography, deliberately unlike any neural generator's, because
+  // Build Plan 5.1 requires the three respiratory mechanisms stay separable.
+  | 'resp_artifact';
 
 /** Weight vector for a generator, indexed by `CHANNELS` order. */
 export function weightsFor(generator: GeneratorId): readonly number[] {

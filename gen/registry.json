@@ -2441,6 +2441,91 @@
       "section": "7. Respiration and coupling",
       "milestone": "T1-M1"
     },
+    "resp_artifact_amp": {
+      "value": {
+        "kind": "interval",
+        "lo": 5,
+        "hi": 25,
+        "meaning": "uncertainty"
+      },
+      "units": "uV",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "amplitude of the mechanical respiratory movement artifact; uncited"
+      },
+      "states": "all",
+      "section": "7. Respiration and coupling",
+      "milestone": "T1-M1",
+      "note": "Build Plan 5.1(a): \"Respiratory movement artifact. Mechanical, at the respiratory rate. GENUINE ARTIFACT; high-passing it out is correct.\" This is the mechanism a clinical high-pass actually destroys, and its absence is why the filter demonstration showed 93% -> 91% across the whole cutoff range (Finding 10). It sits AT the respiratory rate, i.e. below every hpf_options cutoff except 0.01 Hz, so a 0.5-1 Hz high-pass removes it essentially completely. That is the filter working correctly, and it is half the lesson: high-pass filtering trades a known artifact for a known distortion."
+    },
+    "topo_centre_resp_artifact_x": {
+      "value": {
+        "kind": "scalar",
+        "v": 0
+      },
+      "units": "normalized_10_20",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "mechanical artifact, broadly frontal where head movement couples most"
+      },
+      "states": "all",
+      "section": "5. Topography and geometry",
+      "milestone": "T1-M1"
+    },
+    "topo_centre_resp_artifact_y": {
+      "value": {
+        "kind": "scalar",
+        "v": 0.65
+      },
+      "units": "normalized_10_20",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "frontal centre"
+      },
+      "states": "all",
+      "section": "5. Topography and geometry",
+      "milestone": "T1-M1"
+    },
+    "topo_sigma_resp_artifact": {
+      "value": {
+        "kind": "scalar",
+        "v": 0.9
+      },
+      "units": "normalized_10_20",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "broad: a mechanical artifact is not focal"
+      },
+      "states": "all",
+      "section": "5. Topography and geometry",
+      "milestone": "T1-M1",
+      "note": "Deliberately a DIFFERENT topography from any neural generator. Build Plan 5.1 insists the three respiratory mechanisms be kept separate because they have \"different origins, different topographies, different implications. Conflating them is the standard error in this literature.\" A shared topography would make them inseparable by any spatial method."
+    },
+    "resp_amp_mod_depth": {
+      "value": {
+        "kind": "pending"
+      },
+      "provisional": {
+        "v": 0.35,
+        "basis": "depth of respiratory-phase modulation of low-frequency amplitude, 0-1",
+        "expires_at_milestone": "T1-M1",
+        "constrained_by": "must not be derived from the coupling estimator the filter demo reads"
+      },
+      "units": null,
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "Kluger & Gross 2021 report respiration modulates band amplitude; depth not read out"
+      },
+      "states": "all",
+      "section": "7. Respiration and coupling",
+      "milestone": "T1-M1",
+      "note": "The AMPLITUDE half of Build Plan 5.1(c), as distinct from the exponent half. It was added on the expectation that a 0.5-1 Hz high-pass would remove it, because it modulates the envelope of low-frequency content. MEASURED, THAT IS WRONG: retained 100-101% across the whole clinical cutoff range. A high-pass removes a CARRIER below its cutoff; it does not remove amplitude modulation of a carrier that passes, and modulating 0.5-4 Hz delta at 0.25 Hz puts the sidebands around the delta band rather than at 0.25 Hz. Kept, and kept separately switchable, because it is a real physiological mechanism and because its INSENSITIVITY is now the control in Demo 1 -- the row that does not move while mechanism (a) collapses 99.8%. See Finding 10 (resolved)."
+    },
     "chi_mod_depth": {
       "value": {
         "kind": "pending"

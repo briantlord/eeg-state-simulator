@@ -267,6 +267,44 @@
         ]
       }
     },
+    "resp_artifact": {
+      "weights": [
+        0.903944,
+        0.903944,
+        0.674804,
+        0.884078,
+        1,
+        0.884078,
+        0.674804,
+        0.42139,
+        0.669493,
+        0.781208,
+        0.669493,
+        0.42139,
+        0.261781,
+        0.389953,
+        0.448221,
+        0.389953,
+        0.261781,
+        0.196778,
+        0.196778,
+        0.382515,
+        0.382515
+      ],
+      "provenance": {
+        "method": "gaussian_on_projected_10_20",
+        "centre": [
+          0,
+          0.65
+        ],
+        "sigma": 0.9,
+        "registry_keys": [
+          "topo_centre_resp_artifact_x",
+          "topo_centre_resp_artifact_y",
+          "topo_sigma_resp_artifact"
+        ]
+      }
+    },
     "alpha": {
       "weights": [
         0.000007,

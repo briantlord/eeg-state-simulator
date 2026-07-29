@@ -13,10 +13,10 @@
  *   it."
  */
 import '../tokens/tokens.css';
-import { ALL_CHANNELS } from '../core/generators/projection.ts';
+import { ALL_CHANNELS, weightsFor } from '../core/generators/projection.ts';
 import { STATE_IDS, STATE_LABELS, type StateId } from '../core/types/state.ts';
 import { applyHighpass, ringingDemo, type FilterType } from '../core/filters/hpf.ts';
-import { couplingReadout } from '../analysis/coupling.ts';
+import { couplingReadout, respiratoryCoupling } from '../analysis/coupling.ts';
 import { broadbandExponent, narrowbandExponent } from '../analysis/psd.ts';
 import { lempelZiv } from '../analysis/lz.ts';
 import { formatExponent } from '../core/types/exponent.ts';
@@ -26,6 +26,7 @@ import { SignalStream } from './stream.ts';
 import {
   applyReference,
   effectiveRank,
+  referencedGain,
   REFERENCE_LABEL,
   REFERENCE_NOTE,
   type ReferenceMode,
@@ -50,7 +51,14 @@ const ui = {
   reference: 'linked-mastoid' as ReferenceMode,
 };
 
-let stream = new SignalStream({ seed: ui.seed, state: ui.state, chiModulation: true });
+let stream = new SignalStream({
+  seed: ui.seed,
+  state: ui.state,
+  // All three respiratory mechanisms of Build Plan 5.1, kept separate in the API.
+  movementArtifact: true,
+  amplitudeModulation: true,
+  chiModulation: true,
+});
 
 /**
  * The processed view of the current segment: high-pass, then reference.
@@ -160,18 +168,46 @@ function updateObservables(): void {
   // live 30 s window", because 1/T there is too coarse to separate f1 from the sidebands.
   // The live readout inherits that limit, so it uses the whole buffer and STATES how long
   // that is rather than presenting a swinging number as a reading.
-  const buffer = chan(p, 'Cz');
-  const c = couplingReadout(buffer, stream.truth.chiModDepth, stream.truth.respFreqHz, FS);
+  const buffer = chan(p, 'Fz');
   const breaths = stream.segmentSeconds * stream.truth.respFreqHz;
-  $('c-inj').textContent = c.injectedDepth.toFixed(4);
-  $('c-rec').textContent = Number.isFinite(c.recoveredDepth) ? c.recoveredDepth.toFixed(4) : '—';
-  $('c-ret').textContent = Number.isFinite(c.retained) ? `${(100 * c.retained).toFixed(0)}%` : '—';
+
+  // DEMO 1 REPORTS DIRECT respiration-EEG coupling in µV — the component locked to
+  // respiratory phase. That is the quantity a clinical high-pass annihilates, because it sits
+  // AT the respiratory rate. Envelope and exponent modulations are retained at ~100% across
+  // the entire cutoff range and would show nothing; see the note in coupling.ts.
+  // Ground truth AT THE ELECTRODE, not at the source: the injected amplitude times the gain
+  // of projection-then-reference. Otherwise geometry reads as filter loss (see
+  // `referencedGain`).
+  const gain = referencedGain(weightsFor('resp_artifact'), ui.reference, 'Fz');
+  const injected = stream.truth.respArtifactAmpUv * Math.abs(gain);
+  const recovered = respiratoryCoupling(buffer, stream.respirationPhase);
+  $('c-inj').textContent = `${injected.toFixed(1)} µV`;
+  $('c-rec').textContent = `${recovered.toFixed(2)} µV`;
+  $('c-ret').textContent = injected > 0 ? `${((100 * recovered) / injected).toFixed(0)}%` : '—';
+
+  // THE NOISE FLOOR, measured rather than asserted. `respiratoryCoupling` is a projection onto
+  // one phase, so it returns something positive from any signal — chance alignment over a
+  // finite buffer is not zero, which is why retained reads slightly over 100% and, under the
+  // Laplacian where the injected amplitude is small, well over.
+  //
+  // The null is an OFF-RESONANCE probe: the same estimator against a phase ramp at 1.7x the
+  // respiratory rate, where nothing was injected. NOT a circular rotation of the real phase,
+  // which was the first thing tried and is wrong here — respiration is near-periodic, so a
+  // rotation by half a cycle anti-aligns, and this estimator takes a magnitude, so an
+  // anti-aligned surrogate returns the SIGNAL back rather than a null.
+  const nullPhase = new Float64Array(buffer.length);
+  const wNull = (2 * Math.PI * 1.7 * stream.truth.respFreqHz) / FS;
+  for (let i = 0; i < nullPhase.length; i++) nullPhase[i] = i * wNull;
+  $('c-floor').textContent = `${respiratoryCoupling(buffer, nullPhase).toFixed(2)} µV`;
+
+  // The mechanism the filter does NOT remove, beside it, so the contrast is the lesson
+  // rather than a footnote.
+  const c = couplingReadout(buffer, stream.truth.chiModDepth, stream.truth.respFreqHz, FS);
+  $('c-chi').textContent = Number.isFinite(c.recoveredDepth)
+    ? `${c.recoveredDepth.toFixed(3)} (injected ${c.injectedDepth.toFixed(2)})`
+    : '—';
   $('c-window').textContent =
-    `Measured over ${stream.segmentSeconds} s (~${breaths.toFixed(0)} breaths). ` +
-    (c.retained > 1.15
-      ? 'Above 100% means estimator noise exceeds the injected depth at this record length — ' +
-        'the readout is not precise enough to state a loss.'
-      : '');
+    `Measured over ${stream.segmentSeconds} s (~${breaths.toFixed(0)} breaths).`;
 
   $('o-broad').textContent = formatExponent(broadbandExponent(pz, FS));
   $('o-narrow').textContent = formatExponent(narrowbandExponent(pz, FS));

@@ -12,6 +12,7 @@
  * was never known.
  */
 import { scalarValue } from '../core/registry.ts';
+import { bandpassSections, filtfilt } from '../core/dsp/biquad.ts';
 import { welch } from './psd.ts';
 
 /**
@@ -104,6 +105,97 @@ export interface CouplingReadout {
   /** Fraction of the injected coupling that survived. */
   readonly retained: number;
   readonly respFreqHz: number;
+}
+
+/**
+ * Modulation depth of a BAND'S AMPLITUDE by respiratory phase.
+ *
+ * This is the quantity the filter demonstration turns on, and it is a different quantity from
+ * χ modulation. It reads the envelope of a low-frequency band — which is where a 0.5–1 Hz
+ * high-pass actually bites — rather than a spectral slope estimated from 2–40 Hz, which sits
+ * entirely above the stopband and survives any clinical filter.
+ *
+ * Measured against the KNOWN respiration phase rather than one recovered from the signal.
+ * Recovering it would inject estimator error into the reference and confound the very loss
+ * being demonstrated: the filter would appear to destroy coupling partly by destroying our
+ * ability to measure phase, which is a different claim.
+ */
+export function bandAmplitudeCoupling(
+  x: Float64Array,
+  respPhase: Float64Array,
+  bandLo: number,
+  bandHi: number,
+  fs = scalarValue('fs'),
+): number {
+  const n = Math.min(x.length, respPhase.length);
+
+  // EXTRACT THE BAND FIRST. An earlier version took the running RMS of the raw signal and
+  // only used the band edges to size the window — so it measured the envelope of everything,
+  // including the movement artifact, whose own RMS modulates at TWICE the respiratory rate
+  // and diluted the very component being measured. The result moved in the wrong direction
+  // with cutoff, which is how the bug surfaced.
+  const band = Float64Array.from(x.subarray(0, n));
+  filtfilt(band, bandpassSections(bandLo, bandHi, fs, scalarValue('filter_order')));
+
+  const win = Math.round(fs / Math.max(bandHi - bandLo, 1));
+  // Running RMS over one beat period of the band: a cheap envelope, adequate because the
+  // modulation being measured is far slower than the band itself.
+  const cum = new Float64Array(n + 1);
+  for (let i = 0; i < n; i++) cum[i + 1] = cum[i]! + band[i]! * band[i]!;
+  const half = win >> 1;
+
+  let sumRe = 0;
+  let sumIm = 0;
+  let sumEnv = 0;
+  for (let i = 0; i < n; i++) {
+    const lo = Math.max(0, i - half);
+    const hi = Math.min(n, i + half + 1);
+    const env = Math.sqrt((cum[hi]! - cum[lo]!) / (hi - lo));
+    sumEnv += env;
+    sumRe += env * Math.cos(respPhase[i]!);
+    sumIm += env * Math.sin(respPhase[i]!);
+  }
+  const meanEnv = sumEnv / n;
+  if (meanEnv <= 0) return Number.NaN;
+  // Modulation depth: 2|<env e^{i phi}>| / <env> recovers `d` for env = 1 + d cos(phi).
+  return (2 * Math.hypot(sumRe / n, sumIm / n)) / meanEnv;
+}
+
+/**
+ * DIRECT respiration–EEG coupling: the component of the signal locked to respiratory phase,
+ * in microvolts. This is Demo 1's quantity.
+ *
+ * WHY THIS AND NOT AN ENVELOPE MEASURE, which cost a round of measurement to establish:
+ *
+ * A high-pass removes a CARRIER below its cutoff. It does NOT remove amplitude modulation of
+ * a carrier that passes — modulating delta at 0.5–2 Hz by respiration puts sidebands at
+ * 1 ± 0.25 Hz, and a 1 Hz cutoff keeps most of them. Measured, the envelope-coupling of
+ * 0.5–4 Hz was retained at 100–101% across the whole clinical range, in both N2 and N3. Nor
+ * does it touch χ modulation, which is estimated from 2–40 Hz entirely above the stopband.
+ *
+ * What a clinical high-pass DOES annihilate is anything sitting AT the respiratory rate —
+ * mechanism (a), the movement artifact. Measured: 11.14 µV at a 0.01 Hz cutoff, 0.02 µV at
+ * 0.5 Hz. A 99.8% loss.
+ *
+ * So the demonstration's honest content is sharper than "filtering destroys real coupling":
+ * a naive respiration–EEG coupling measure is DOMINATED by the artifact, filtering removes
+ * the artifact and therefore the apparent coupling, and the mechanisms that were physiological
+ * all along are untouched. That is why §5.1 insists the three be kept separate, and it is a
+ * better lesson than the one the demo was originally framed around.
+ */
+export function respiratoryCoupling(
+  x: Float64Array,
+  respPhase: Float64Array,
+): number {
+  const n = Math.min(x.length, respPhase.length);
+  let re = 0;
+  let im = 0;
+  for (let i = 0; i < n; i++) {
+    re += x[i]! * Math.cos(respPhase[i]!);
+    im += x[i]! * Math.sin(respPhase[i]!);
+  }
+  // 2|<x e^{i phi}>| recovers the amplitude of a component locked to phi.
+  return (2 * Math.hypot(re / n, im / n));
 }
 
 export function couplingReadout(

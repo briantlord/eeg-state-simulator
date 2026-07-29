@@ -535,7 +535,7 @@ the Build Plan quotes for N1–N3 separation by slope.
 
 ---
 
-# Finding 10 — the filter demonstration does not yet demonstrate coupling loss `[BLOCKS THE THESIS]`
+# Finding 10 — the filter demonstration does not yet demonstrate coupling loss `[RESOLVED — and it changed the claim]`
 
 The Tier 0 shipping test names the filter demonstration as the artifact's thesis and says to
 protect it above everything else. Built and measured, **Demo 1 shows no loss**:
@@ -591,6 +591,76 @@ respiratory phase. Neither needs new architecture: both project through the exis
 
 Until then the artifact ships **Demo 2 and Demo 3 working and Demo 1 flat**, which is worth
 stating plainly rather than letting a 91% readout imply the filter was gentle.
+
+---
+
+## RESOLVED — and the fix corrected the lesson, not just the number
+
+All three mechanisms are implemented and separately switchable (`movementArtifact`,
+`amplitudeModulation`, `chiModulation` on `ComposeOptions`). Measured, N3, 180 s, Fz, linked
+mastoid, with all three on:
+
+| cutoff | (a) artifact | (c) amp-mod | retained | (c) χ-mod | retained |
+|---|---|---|---|---|---|
+| 0.01 Hz | 11.14 µV | 0.2198 | 100% | 0.2311 | 100% |
+| 0.10 Hz | 11.10 µV | 0.2198 | 100% | 0.2311 | 100% |
+| 0.50 Hz | **0.02 µV** | 0.2211 | 101% | 0.2312 | 100% |
+| 1.00 Hz | **0.05 µV** | 0.2227 | 101% | 0.2304 | 100% |
+
+**One prediction above was wrong.** The amplitude half of (c) was expected to be removed too,
+"because that content sits in the stopband." It is retained at 100–101% across the entire
+clinical range. The reasoning error: *a high-pass removes a carrier below its cutoff, but it
+does not remove amplitude modulation of a carrier that passes.* Modulating 0.5–4 Hz delta at
+0.25 Hz puts sidebands around the delta band, not at 0.25 Hz, and a 1 Hz cutoff keeps the delta
+that carries them. Only the modulation of content genuinely below the cutoff is lost, and
+almost none of the delta band is.
+
+So the loss is carried entirely by mechanism **(a)**, and there it is total: **11.14 → 0.02 µV,
+a 99.8% collapse**.
+
+### The honest lesson is sharper than the one the demo was framed around
+
+The original framing — *the filter destroys real respiratory coupling* — is not what the
+generator shows. What it shows is:
+
+> A naive respiration–EEG coupling measure is **dominated by the movement artifact**. Filtering
+> removes the artifact and therefore removes the apparent coupling — and that is the filter
+> working correctly, because (a) *is* an artifact. The two mechanisms that were physiological
+> all along, (c)'s amplitude and exponent halves, are untouched.
+
+This is a better demonstration than the intended one, because the failure mode it exhibits is
+the one that actually appears in the literature: reporting a coupling number without
+establishing which mechanism carries it. It is also exactly why Build Plan §5.1 insists the
+three be kept separate, and the separation is what made the diagnosis possible at all.
+
+The artifact's Demo 1 was rewired to report this: `respiratoryCoupling()` in µV — the
+component locked to respiratory phase — with the χ-modulation row beside it as the control
+that does not move.
+
+### Two things the rewire forced, both worth recording
+
+**Ground truth had to be stated at the electrode, not at the source.** Comparing recovered µV
+against the injected source amplitude showed 66% retained at a 0.01 Hz cutoff, where the filter
+has done nothing. The missing 34% was projection weight and the linked-mastoid subtraction —
+geometry being charged to the filter, the same conflation the demo exists to warn about.
+`referencedGain()` pushes the generator's weight vector through the *same* `applyReference`
+operator as a one-sample record (every operator there is linear and sample-wise, so the result
+is exact) and the readout is now ~100% at low cutoff under all five montages.
+
+**The estimator needed a stated floor.** `respiratoryCoupling` takes a magnitude, so it returns
+something positive from any finite record; retained read 103–130% at low cutoff, worst under the
+Laplacian where the injected amplitude is only ~2 µV. The null is an *off-resonance* probe — the
+same estimator against a phase ramp at 1.7× the respiratory rate. The first attempt, a circular
+rotation of the real phase, is **wrong here**: respiration is near-periodic, a rotation by half
+a cycle anti-aligns, and a magnitude estimator returns the signal back rather than a null.
+
+Measured, linked mastoid: recovered 9.96 µV against a floor of 2.87 µV at 0.01 Hz — clearly
+above it; recovered 0.21 µV against a floor of 0.11 µV at 0.5 Hz — *at* it. The correct reading
+is not "the coupling shrank" but "after filtering, the coupling is indistinguishable from
+nothing," and only a stated floor licenses that sentence.
+
+**This also unblocks G4's negative arm**, which needed energy at f₂ for the intermodulation
+sidebands to exist. Mechanism (a) supplies it.
 
 ### Demo 3 does work, and is the most visceral of the three as the plan predicted
 
