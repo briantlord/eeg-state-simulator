@@ -23,12 +23,24 @@
       .seg button { flex: 1; border: 0; background: transparent; font: inherit; font-size: var(--size-sm);
         padding: 5px 4px; cursor: pointer; color: var(--ink-soft); }
       .seg button[aria-pressed='true'] { background: var(--ink); color: var(--paper); }
+      .transport { display: flex; gap: var(--gap-sm); align-items: center; flex-wrap: wrap;
+        padding: 6px 0; font-size: var(--size-sm); }
+      .transport button { font: inherit; font-size: var(--size-sm); padding: 3px 10px;
+        border: 1px solid var(--paper-rule-major); background: transparent; cursor: pointer;
+        color: var(--ink-soft); }
+      .transport button[aria-pressed='true'] { background: var(--ink); color: var(--paper); }
+      .inline { display: inline; margin: 0 0 0 var(--gap-sm); color: var(--ink-faint);
+        font-size: var(--size-xs); text-transform: uppercase; letter-spacing: 0.05em; }
+      .inline-sel { width: auto; }
+      .clock { margin-left: auto; font-family: var(--font-mono); font-size: var(--size-xs);
+        color: var(--ink-faint); }
+      #scrub { width: 100%; margin: 4px 0 0; }
     </style>
   </head>
   <body>
     <main>
       <h1>EEG State Simulator</h1>
-      <p class="subtitle">A generator of multichannel EEG for arousal states.</p>
+      <p class="subtitle">A generator of multichannel EEG for arousal states. <span id="version"></span></p>
 
       <div class="prime">
         <strong>This is a model, not a measurement.</strong>
@@ -38,8 +50,24 @@
 
       <div class="layout">
         <div>
+          <div class="transport">
+            <button id="play" aria-pressed="true">pause</button>
+            <label for="window" class="inline">window</label>
+            <select id="window" class="inline-sel"></select>
+            <label for="sens" class="inline">µV/mm</label>
+            <select id="sens" class="inline-sel"></select>
+            <button id="showref" aria-pressed="false">show A1/A2</button>
+            <span class="clock" id="clock"></span>
+          </div>
           <canvas id="trace"></canvas>
-          <p class="note" id="trace-note"></p>
+          <input id="scrub" type="range" min="0" max="90" step="0.1" value="0" />
+          <p class="note">
+            The trace scrolls: new signal arrives at the right-hand edge and older signal
+            leaves at the left, as on a paper chart. Drag the slider to scrub — that pauses.
+            <strong>Changing µV/mm is not autoscaling:</strong> the scale is stated, and it is
+            the same for every channel and every state, so the amplitude difference between N3
+            delta and waking alpha survives.
+          </p>
 
           <div class="panel">
             <h2>Demo 3 — ringing the filter invented</h2>
@@ -101,9 +129,13 @@
               <tr><th>recovered</th><td class="derived" id="c-rec">—</td></tr>
               <tr><th>retained</th><td id="c-ret">—</td></tr>
             </table>
+            <p class="note" id="c-window"></p>
             <p class="note">
               Ground truth is known because the generator injected it. No real dataset can show
               this comparison.
+              G4 runs this comparison on a 300 s record for the same reason the readout needs a
+              long buffer: a 30 s window is too coarse to separate the modulation from its
+              sidebands.
             </p>
           </div>
 

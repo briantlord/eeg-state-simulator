@@ -41,6 +41,9 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 | `display_cal_pulse_amp` | 50 | uV | `chosen` | height of the calibration pulse drawn beside the traces | all |
 | `display_px_per_mm` | 3.8 | px/mm | `chosen` | assumed CSS pixel density, so the uV/mm figure means something on screen | all |
 | `render_decimation` | min_max | — | `chosen` | one min/max pair per pixel column | all |
+| `display_sensitivity_options` | 3 or 5 or 7 or 10 or 15 or 20 or 30 or 50 | uV/mm | `chosen` | sensitivity steps offered by the control; clinical machines step similarly | all |
+| `display_window_options` | 5 or 10 or 15 or 30 or 60 | s | `chosen` | time-base steps offered by the control; 30 s is the AASM epoch and the default | all |
+| `display_buffer_s` | 90 | s | `chosen` | length of the live streaming buffer the display scrolls through | all |
 | `export_schema_version` | 1 | — | `chosen` | epoch-directory schema (seam 9) | all |
 | `rng_algorithm_ts` | xoshiro128++ | — | `chosen` | 32-bit state, native in typed arrays; see DECISIONS D2 | all |
 | `n_seeds` | 20 | — | `chosen` | provisional; to be set from observed variance — power analysis, not circularity | all |
@@ -58,6 +61,10 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 **`display_px_per_mm`.** A browser cannot know the physical size of a display, so uV/mm is a claim about an ASSUMED density. Stated rather than hidden: at a different density the sensitivity annotation is wrong by that ratio, and a reader measuring the calibration bar with a ruler would find it.
 
 **`render_decimation`.** Min/max per pixel column preserves the ENVELOPE: a spike narrower than one column still reaches the top of that column. Naive subsampling would drop it entirely, which on an artifact whose subject is graphoelements would be a silent lie.
+
+**`display_sensitivity_options`.** Changing sensitivity is NOT autoscaling. The scale is always stated and always the same for every channel and every state, so the amplitude difference between N3 delta and waking alpha survives; the reader is choosing a ruler, not having one chosen for them per epoch.
+
+**`display_buffer_s`.** "Real-time generation is not in question. Do not architect around synthesis cost; the streaming buffer exists for CONTINUITY, not throughput." 90 s at 256 Hz over 21 channels is ~39 MB, which is the cost of keeping a scroll-back window in memory rather than regenerating on every frame.
 
 **`rng_algorithm_ts`.** Source markdown offered 'xoshiro128++ or PCG32'. An unresolved disjunction is not a value; xoshiro128++ selected so seam 4 is pinned.
 
@@ -405,9 +412,9 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 | Standing | Rows |
 |---|---|
 | `definitional` | 11 |
-| `chosen` | 47 |
+| `chosen` | 50 |
 | `literature` | 8 |
 | `derived` | 7 |
 | `invented` | 96 |
 | `absent` | 8 |
-| **total** | **177** |
+| **total** | **180** |

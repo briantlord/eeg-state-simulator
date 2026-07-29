@@ -43,9 +43,12 @@ export type ParamKey =
   | 'chi_wake_eo'
   | 'delta_amp'
   | 'delta_band'
+  | 'display_buffer_s'
   | 'display_cal_pulse_amp'
   | 'display_px_per_mm'
   | 'display_sensitivity'
+  | 'display_sensitivity_options'
+  | 'display_window_options'
   | 'emg_amp_wake'
   | 'emg_band'
   | 'emg_rem_level'
@@ -224,9 +227,12 @@ export interface ParamKindMap {
   'chi_wake_eo': 'pending';
   'delta_amp': 'interval';
   'delta_band': 'interval';
+  'display_buffer_s': 'scalar';
   'display_cal_pulse_amp': 'scalar';
   'display_px_per_mm': 'scalar';
   'display_sensitivity': 'scalar';
+  'display_sensitivity_options': 'enum';
+  'display_window_options': 'enum';
   'emg_amp_wake': 'interval';
   'emg_band': 'bound';
   'emg_rem_level': 'scalar';

@@ -171,6 +171,40 @@ params:
       reaches the top of that column. Naive subsampling would drop it entirely, which on an
       artifact whose subject is graphoelements would be a silent lie.
 
+  display_sensitivity_options:
+    value: {kind: enum, options: [3, 5, 7, 10, 15, 20, 30, 50]}
+    units: uV/mm
+    standing: chosen
+    source: {kind: none, rationale: "sensitivity steps offered by the control; clinical machines step similarly"}
+    states: all
+    section: "1. Sampling, display, infrastructure"
+    note: >-
+      Changing sensitivity is NOT autoscaling. The scale is always stated and always the same
+      for every channel and every state, so the amplitude difference between N3 delta and
+      waking alpha survives; the reader is choosing a ruler, not having one chosen for them
+      per epoch.
+
+  display_window_options:
+    value: {kind: enum, options: [5, 10, 15, 30, 60]}
+    units: s
+    standing: chosen
+    source: {kind: none, rationale: "time-base steps offered by the control; 30 s is the AASM epoch and the default"}
+    states: all
+    section: "1. Sampling, display, infrastructure"
+
+  display_buffer_s:
+    value: {kind: scalar, v: 90}
+    units: s
+    standing: chosen
+    source: {kind: none, rationale: "length of the live streaming buffer the display scrolls through"}
+    states: all
+    section: "1. Sampling, display, infrastructure"
+    note: >-
+      "Real-time generation is not in question. Do not architect around synthesis cost; the
+      streaming buffer exists for CONTINUITY, not throughput." 90 s at 256 Hz over 21 channels
+      is ~39 MB, which is the cost of keeping a scroll-back window in memory rather than
+      regenerating on every frame.
+
   export_schema_version:
     value: {kind: scalar, v: 1}
     units: null
