@@ -77,7 +77,7 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 | `chi_wake_ec` | — *(pending T1-M1; runs on 1.1)* | — | `invented` |  | wake_ec |
 | `chi_n1` | — *(pending T1-M1; runs on 1.4)* | — | `invented` |  | n1 |
 | `chi_n2` | — *(pending T1-M1; runs on 1.7)* | — | `invented` |  | n2 |
-| `chi_n3` | — *(pending T1-M1; runs on 1.75)* | — | `invented` |  | n3 |
+| `chi_n3` | — *(pending T1-M1; runs on 1.66)* | — | `invented` |  | n3 |
 | `chi_rem` | — *(pending T1-M1; runs on 2.1)* | — | `invented` |  | rem |
 | `knee_modelled` | the ~20 Hz knee only | — | `chosen` | see DECISIONS D3 | all |
 | `knee_freq_low` | 20 | Hz | `invented` | approximate location reported in a 2024 J Neurosci intrinsic-timescales paper; author not recorded, value not read out under a known pipeline | all |
@@ -93,7 +93,7 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 | `k_wake_ec` | — *(pending T1-M1; runs on 15.3851)* | — | `invented` |  | wake_ec |
 | `k_n1` | — *(pending T1-M1; runs on 32.423)* | — | `invented` |  | n1 |
 | `k_n2` | — *(pending T1-M1; runs on 50.1187)* | — | `invented` |  | n2 |
-| `k_n3` | — *(pending T1-M1; runs on 0.2973)* | — | `invented` |  | n3 |
+| `k_n3` | — *(pending T1-M1; runs on 0.3164)* | — | `invented` |  | n3 |
 | `k_rem` | — *(pending T1-M1; runs on 539.7131)* | — | `invented` |  | rem |
 | `fit_band_broad` | 1–45 *(band_edges)* | Hz | `chosen` | one of eleven bands in use in the literature; ours by choice | all |
 | `fit_band_narrow` | 30–45 *(band_edges)* | Hz | `literature` | Lendner et al. 2020, *eLife* | all |

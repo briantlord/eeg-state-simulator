@@ -452,8 +452,8 @@
         "kind": "pending"
       },
       "provisional": {
-        "v": 1.75,
-        "basis": "N2 ~ N3; deliberately close, not ordered against N2",
+        "v": 1.66,
+        "basis": "BELOW chi_n2: Build Plan 7 documents that narrowband slope steepens across sleep stages WITH A SMALL REVERSAL IN N3, and 3.2 records that N1-N3 correlate r~0.7 and are poorly separated by slope alone. A value above chi_n2 would encode a clean ladder, which 7 says to treat as a bug",
         "expires_at_milestone": "T1-M1",
         "constrained_by": "must not be set from any gate threshold"
       },
@@ -787,8 +787,8 @@
         "kind": "pending"
       },
       "provisional": {
-        "v": 0.2973,
-        "basis": "k = knee_freq_n3 ** chi_n3 = 0.5 ** 1.75; knee below the fit band, i.e. absent",
+        "v": 0.3164,
+        "basis": "k = knee_freq_n3 ** chi_n3 = 0.5 ** 1.66; knee below the fit band, i.e. absent",
         "expires_at_milestone": "T1-M1",
         "constrained_by": "must follow from the knee frequency"
       },

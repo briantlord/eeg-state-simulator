@@ -392,6 +392,82 @@ duration distribution alongside F1, or the curve will be uninterpretable.
 
 ---
 
+# Finding 9 — the state ordering cannot be set from `chi_*`, and three symptoms share one cause
+
+Build Plan §7 sets a trap deliberately: *"Do not assume monotonic orderings … **Treat a clean
+ladder from wake down to N3 as a bug.**"* Measured across all six states, 8 seeds, Pz:
+
+| state | χ broad (1–45, knee) | χ narrow (30–45, fixed) | LZc normalized |
+|---|---|---|---|
+| wake EO | 0.875 | 0.631 | 0.595 |
+| wake EC | 1.800 | 0.909 | 0.639 |
+| N1 | 1.400 | 1.227 | 0.595 |
+| N2 | 1.700 | 1.554 | 0.553 |
+| N3 | 1.650 | 1.619 | 0.463 |
+| REM | 2.275 | 1.668 | 0.600 |
+
+**The generator walked straight into the trap**, and the fix is not what it looks like.
+
+### The recovered ordering is a joint function of χ and the knee
+
+`chi_n3` was lowered to 1.66, below `chi_n2` = 1.70, to encode the small N3 reversal §7
+documents. It shows up in the **broad** band (1.650 < 1.700) and **not** in the narrow band
+(1.619 > 1.554) — because the 30–45 Hz fit is biased by the knee, and the states have
+different knees by design (`knee_present`: prominent in REM, absent in N3). N2's knee at 10 Hz
+flattens its narrowband fit; N3's at 0.5 Hz barely touches it.
+
+**So the recovered ordering cannot be set by setting `chi_*`.** It is fixed jointly by χ and
+`knee_freq_*`, which is seam 7's rule — *"an exponent is a (value, band, mode) tuple"* —
+arriving as a concrete consequence rather than a style guide. **T1-M1 must fit χ and the knee
+together, per state, against a corpus; fitting either alone cannot reproduce the documented
+orderings.** Chasing it by hand now would be tuning invented numbers until a plot looked
+right, which is the failure mode the whole registry exists to prevent.
+
+### The broad band is already non-monotone, and that is the band-choice artifact
+
+wake-EC's broadband χ (1.800) exceeds N1's (1.400). That is the alpha peak contaminating a
+knee-mode fit, and it is exactly the effect §7 names: *"broadband and narrowband fits give
+different orderings across sleep stages, and much of the apparent disagreement in this
+literature is a band-choice artifact."* The artifact will show this the moment a user toggles
+the band control, which is the point of making it a control.
+
+### Three symptoms, one cause
+
+**LZc does not rise from N1 to N2**, which §7 documents that it should. N2's extra complexity
+should come from its spindles and K-complexes — N1 has neither — and instead LZc tracks χ
+almost mechanically. The graphoelements are present in the event list and in the trace, but
+too weak against the background to move a complexity measure.
+
+That is the same root cause as two findings already recorded: **YASA's spindle recall of 0.29**
+(Finding in the WP-E commit) and the graphoelements being visually underwhelming in
+`docs/graphoelements.png`. All three are the amplitude of injected events relative to the
+aperiodic background, which is uncalibrated because **`snr_nominal` does not exist yet** — it
+is solved at T0-M5.
+
+Harness §7's dependency rule says this plainly: *"if a gate fails, refuse to evaluate its
+dependents and report the earliest failure only … A spindle F1 anomaly when the amplitude
+scale is wrong is not a morphology problem, and tuning morphology to fix it makes the
+generator worse."* Three downstream symptoms, one upstream node, and the node is scheduled.
+**Nothing here should be tuned before T0-M5.**
+
+### Collinearity — the good news
+
+| pair | r |
+|---|---|
+| χ broad vs LZc | **−0.01** |
+| χ narrow vs LZc | −0.50 |
+| χ broad vs χ narrow | +0.68 |
+
+The register rates collinearity between the observable axes **High**, and investigators have
+asked in print whether LZc adds anything over the aperiodic exponent. At these values it does:
+LZc is essentially uncorrelated with the broadband exponent and only moderately correlated
+with the narrowband one. The χ-broad/χ-narrow correlation of +0.68 sits close to the r ≈ 0.7
+the Build Plan quotes for N1–N3 separation by slope.
+
+**This number must be displayed in the artifact**, not merely measured here — §7 requires it.
+
+---
+
 ## Reproduce
 
 ```bash
