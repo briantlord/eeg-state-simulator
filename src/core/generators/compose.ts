@@ -124,6 +124,10 @@ export function composeState(
               bandwidthSharpHz: scalarValue('alpha_bandwidth_sharp'),
               bandwidthBroadHz: scalarValue('alpha_bandwidth_broad'),
               dwellS: scalarValue('alpha_mode_dwell'),
+              shape: {
+                triangularity: scalarValue('alpha_shape_triangularity'),
+                riseDecaySymmetry: scalarValue('alpha_shape_rdsym'),
+              },
               rmsUv,
             },
             fs,

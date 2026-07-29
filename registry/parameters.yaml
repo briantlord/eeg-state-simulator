@@ -461,6 +461,45 @@ params:
       hard-gated envelope would put switching transients into the band -- a spectral artefact
       manufactured by the realism fix.
 
+  alpha_shape_triangularity:
+    value: {kind: scalar, v: 0.45}
+    units: null
+    standing: invented
+    source: {kind: none, rationale: "blend from sinusoid (0) toward triangle (1) in the alpha waveform"}
+    states: [wake_ec, rem]
+    section: "4. Oscillations"
+    milestone: T1-M2
+    note: >-
+      Occipital alpha reads as TRIANGULAR in raw traces -- its extrema are sharper than a
+      sinusoid's rounded ones -- while the sensorimotor mu rhythm is arciform. This project's
+      alpha is posterior (topo_expect_alpha = O1/O2/Pz), so triangular is the right target and
+      mu's arciform shape is not.
+      The VALUE is invented: the shape literature reports log sharpness and steepness ratios
+      per cycle rather than a blend coefficient, so no published number maps onto this
+      parameter directly. T1-M2 must fit it by matching bycycle's rise-decay and peak-trough
+      symmetry against a corpus, not by eye.
+
+  alpha_shape_rdsym:
+    value: {kind: scalar, v: 0.42}
+    units: null
+    standing: invented
+    source: {kind: none, rationale: "rise-decay symmetry in bycycle's convention: the fraction of the trough-to-trough cycle spent rising"}
+    states: [wake_ec, rem]
+    section: "4. Oscillations"
+    milestone: T1-M2
+    note: >-
+      0.5 is symmetric; below 0.5 is a steeper rise, above is a steeper decay. Stated as the
+      MEASURED QUANTITY rather than as a signed deviation, because the deviation form was got
+      wrong twice in one sitting -- the registry note inverted the formula, and independently
+      the implementation used a phase warp that produced no asymmetry at all while appearing
+      to. A parameter that IS the measurement cannot be misread, and test/oscillations.test.ts
+      pins it against the generated signal.
+      BOTH THE MAGNITUDE AND THE DIRECTION ARE UNFITTED. The shape literature reports log
+      sharpness and steepness ratios per cycle, not rdsym for occipital alpha specifically,
+      and no source consulted gives a direction for posterior alpha. 0.42 is a mild steeper
+      rise, chosen to be visibly non-sinusoidal without asserting a direction the data does
+      not support. T1-M2 fits it against a corpus with bycycle.
+
   alpha_rem_shift:
     value: {kind: interval, lo: -2, hi: -1, meaning: uncertainty}
     units: Hz

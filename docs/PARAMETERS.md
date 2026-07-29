@@ -120,6 +120,8 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 | `alpha_burst_rate` | 20–30 *(uncertainty)* | 1/min | `invented` | uncited; set from a target duty cycle rather than observed directly | wake_ec, rem |
 | `alpha_burst_duty_note` | duty cycle = alpha_burst_dur * alpha_burst_rate / 60; the two rows are not independent | — | `chosen` | records the constraint linking the two burst rows | wake_ec, rem |
 | `alpha_interburst_level` | 0.15 | — | `invented` | envelope floor between bursts, as a fraction of burst peak | wake_ec, rem |
+| `alpha_shape_triangularity` | 0.45 | — | `invented` | blend from sinusoid (0) toward triangle (1) in the alpha waveform | wake_ec, rem |
+| `alpha_shape_rdsym` | 0.42 | — | `invented` | rise-decay symmetry in bycycle's convention: the fraction of the trough-to-trough cycle spent rising | wake_ec, rem |
 | `alpha_rem_shift` | -2–-1 *(uncertainty)* | Hz | `invented` | direction well known; magnitude uncited | rem |
 | `beta_band` | 15–25 *(band_edges)* | Hz | `chosen` | conventional band edges | wake_eo |
 | `beta_amp` | 5–15 *(uncertainty)* | uV_pp | `invented` | textbook range | wake_eo |
@@ -145,6 +147,10 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 **`alpha_burst_rate`.** SUPERSEDED by DECISIONS D13; nothing reads this row. Rate and duration are not independent: together they fix the DUTY CYCLE, which is the quantity with physiological meaning. At alpha_burst_dur's midpoint of 1.25 s, 20-30/min gives 42-63% — eyes-closed posterior alpha is the dominant rhythm and is present much of the time, so a duty cycle near half is more defensible than the 25% an earlier 8-16/min produced. T1-M1 should fit the duty cycle and one of the two, not all three independently.
 
 **`alpha_interburst_level`.** SUPERSEDED by DECISIONS D13; nothing reads this row. Not zero. Alpha becomes hard to see between bursts rather than provably absent, and a hard-gated envelope would put switching transients into the band -- a spectral artefact manufactured by the realism fix.
+
+**`alpha_shape_triangularity`.** Occipital alpha reads as TRIANGULAR in raw traces -- its extrema are sharper than a sinusoid's rounded ones -- while the sensorimotor mu rhythm is arciform. This project's alpha is posterior (topo_expect_alpha = O1/O2/Pz), so triangular is the right target and mu's arciform shape is not. The VALUE is invented: the shape literature reports log sharpness and steepness ratios per cycle rather than a blend coefficient, so no published number maps onto this parameter directly. T1-M2 must fit it by matching bycycle's rise-decay and peak-trough symmetry against a corpus, not by eye.
+
+**`alpha_shape_rdsym`.** 0.5 is symmetric; below 0.5 is a steeper rise, above is a steeper decay. Stated as the MEASURED QUANTITY rather than as a signed deviation, because the deviation form was got wrong twice in one sitting -- the registry note inverted the formula, and independently the implementation used a phase warp that produced no asymmetry at all while appearing to. A parameter that IS the measurement cannot be misread, and test/oscillations.test.ts pins it against the generated signal. BOTH THE MAGNITUDE AND THE DIRECTION ARE UNFITTED. The shape literature reports log sharpness and steepness ratios per cycle, not rdsym for occipital alpha specifically, and no source consulted gives a direction for posterior alpha. 0.42 is a mild steeper rise, chosen to be visibly non-sinusoidal without asserting a direction the data does not support. T1-M2 fits it against a corpus with bycycle.
 
 **`delta_amp`.** Given a Tier 0 value on import; see Execution-Scheme D10. Left blank, this row and snr_nominal are under-determined by one degree of freedom and the calibration absorbs it, setting delta amplitude from the 75 uV figure through the back door — the exact circularity D5 exists to close, re-entering through the one row D5's prose leaves empty. The AASM number appears in gate_aasm_n3 and nowhere else. UNITS CORRECTED to uV_pp on review: the textbook 100-200 figure for slow waves is peak-to-peak, and it had been placed on a row declared in plain uV. Read as peak it is 200-400 uV p-p, which at snr_null_offset = -6 dB still clears the 75 uV criterion — so G5's null could not have failed, and under D9 that null is G5's only failable arm. D10's claim that fixing this row "makes snr_nominal a genuine single-scalar solve" is FALSE and is withdrawn: so_amp (100-200 uV, so_freq < 1 Hz) also lands inside gate_aasm_n3_band, the aperiodic offset b has no registry row at all, and the interval-to-point reduction rule is unregistered with zero Dv rows in the registry. At least three further degrees of freedom remain. See Execution-Scheme section 7.
 
@@ -376,6 +382,6 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 | `chosen` | 41 |
 | `literature` | 8 |
 | `derived` | 7 |
-| `invented` | 90 |
+| `invented` | 92 |
 | `absent` | 8 |
-| **total** | **165** |
+| **total** | **167** |

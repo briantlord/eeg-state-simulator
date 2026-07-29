@@ -16,6 +16,8 @@ export type ParamKey =
   | 'alpha_mode_dwell'
   | 'alpha_peak'
   | 'alpha_rem_shift'
+  | 'alpha_shape_rdsym'
+  | 'alpha_shape_triangularity'
   | 'amp_pp_to_rms'
   | 'analysis_update'
   | 'analysis_window'
@@ -185,6 +187,8 @@ export interface ParamKindMap {
   'alpha_mode_dwell': 'scalar';
   'alpha_peak': 'scalar';
   'alpha_rem_shift': 'interval';
+  'alpha_shape_rdsym': 'scalar';
+  'alpha_shape_triangularity': 'scalar';
   'amp_pp_to_rms': 'scalar';
   'analysis_update': 'scalar';
   'analysis_window': 'scalar';

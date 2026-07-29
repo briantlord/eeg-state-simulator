@@ -10,6 +10,7 @@
  * move the tell from the carrier to the envelope.
  */
 import { bandpassSections, filtfilt, lowpass } from '../dsp/biquad.ts';
+import { envelopeAndPhase, floorPow2 } from '../dsp/fft.ts';
 import type { Rng } from '../rng/xoshiro128pp.ts';
 import { scalarValue } from '../registry.ts';
 import { normalizeRms } from './aperiodic.ts';
@@ -64,6 +65,8 @@ export interface DampedOscillatorParams {
   /** Mean dwell time in each mode, seconds. */
   readonly dwellS?: number;
   readonly rmsUv: number;
+  /** Non-sinusoidal waveform shaping. Omit for a symmetric (linear-oscillator) waveform. */
+  readonly shape?: WaveformShape;
 }
 
 /**
@@ -124,7 +127,72 @@ export function synthesizeDampedOscillator(
     x[i] = 2 * r * cosW0 * x[i - 1]! - r * r * x[i - 2]! + rng.normal();
   }
 
+  if (p.shape) applyWaveformShape(x, p.shape);
+
   return normalizeRms(x, p.rmsUv);
+}
+
+export interface WaveformShape {
+  /**
+   * Blend from sinusoid (0) toward triangle (1). Occipital alpha reads as TRIANGULAR in raw
+   * traces — its extrema are sharper than a sinusoid's rounded ones.
+   */
+  readonly triangularity: number;
+  /**
+   * Rise-decay symmetry in `bycycle`'s own convention: the fraction of the trough-to-trough
+   * cycle spent rising. 0.5 is symmetric, below 0.5 is a steeper rise, above is a steeper
+   * decay.
+   *
+   * Stated as the target quantity rather than as a deviation with a sign. An earlier version
+   * took a signed "asymmetry" and both the registry note and the implementation got the
+   * direction wrong, in opposite ways. A parameter that IS the measured quantity cannot be
+   * misread.
+   */
+  readonly riseDecaySymmetry: number;
+}
+
+/**
+ * Re-render a rhythm from its own instantaneous phase and envelope with a non-sinusoidal
+ * waveform, in place.
+ *
+ * WHY THIS IS NOT COSMETIC. A linear oscillator is exactly symmetric — measured peak/trough
+ * ratio 1.000 — and real alpha is not. Non-sinusoidal morphology **manufactures spurious
+ * phase-amplitude coupling** (Cole & Voytek 2017; Gerber et al. 2016): Fourier methods
+ * decompose an asymmetric waveform into harmonics, and a coupling estimator reads the
+ * harmonic relationship as cross-frequency coupling that no mechanism produced. This project
+ * measures PAC — SO-spindle at Tier 0, respiration-chi throughout — so a symmetric alpha
+ * would understate a confound the artifact exists partly to demonstrate.
+ *
+ * Shaping is applied to the PHASE, not to the amplitude: the envelope (and therefore the
+ * bistable burst structure from the damping) is preserved exactly, and only the shape within
+ * each cycle changes.
+ */
+export function applyWaveformShape(x: Float64Array, s: WaveformShape): void {
+  // The analytic signal needs a power-of-two length; shape the largest such prefix and leave
+  // the remainder, rather than zero-padding (which would ring at the join).
+  const n = floorPow2(x.length);
+  const { envelope, phase } = envelopeAndPhase(x.subarray(0, n));
+
+  // Clamp away from the degenerate ends, where the warp would divide by zero.
+  const r = Math.max(0.05, Math.min(0.95, s.riseDecaySymmetry));
+
+  for (let i = 0; i < n; i++) {
+    // Cycle position, 0 at the trough, rising through the peak, back to 1 at the next trough.
+    const u = (phase[i]! + Math.PI) / (2 * Math.PI);
+
+    // Piecewise-linear time warp placing the PEAK at u = r instead of u = 0.5. This is what
+    // makes the rise and decay take different fractions of the cycle.
+    //
+    // A phase warp of the form phi + a*sin(phi) does NOT do this: it is antisymmetric about
+    // both extrema, so it compresses rise and decay by equal amounts and leaves rdsym at
+    // exactly 0.5. Measured, that is precisely what it did.
+    const w = u <= r ? u / (2 * r) : 0.5 + (u - r) / (2 * (1 - r));
+
+    const c = Math.cos(2 * Math.PI * (w - 0.5));
+    // Triangle wave via arcsine: sharper extrema than a cosine at the same amplitude.
+    const tri = (2 / Math.PI) * Math.asin(Math.max(-1, Math.min(1, c)));
+    x[i] = envelope[i]! * ((1 - s.triangularity) * c + s.triangularity * tri);
+  }
 }
 
 /**

@@ -83,6 +83,59 @@ export function fft(re: Float64Array, im: Float64Array, inverse = false): void {
   }
 }
 
+/**
+ * Analytic signal via the Hilbert transform: zero the negative frequencies, double the
+ * positive ones, invert.
+ *
+ * Needed in two places: waveform shaping (which re-renders a rhythm from its instantaneous
+ * phase and envelope) and the Lempel-Ziv readout, which §7 specifies as "bandpass, Hilbert,
+ * binarize around the median".
+ *
+ * Input length must be a power of two. Returns { re, im }; envelope is hypot(re, im) and
+ * instantaneous phase is atan2(im, re).
+ */
+export function analyticSignal(x: Float64Array): { re: Float64Array; im: Float64Array } {
+  const n = x.length;
+  if (!isPowerOfTwo(n)) throw new Error(`analyticSignal: length ${n} is not a power of two`);
+  const re = Float64Array.from(x);
+  const im = new Float64Array(n);
+  fft(re, im, false);
+
+  // h = 1 at DC and Nyquist, 2 on the positive frequencies, 0 on the negative ones.
+  const half = n >> 1;
+  for (let i = 1; i < half; i++) {
+    re[i] = re[i]! * 2;
+    im[i] = im[i]! * 2;
+  }
+  for (let i = half + 1; i < n; i++) {
+    re[i] = 0;
+    im[i] = 0;
+  }
+
+  fft(re, im, true);
+  return { re, im };
+}
+
+/** Envelope and unwrapped-free instantaneous phase of a real signal. */
+export function envelopeAndPhase(x: Float64Array): {
+  envelope: Float64Array;
+  phase: Float64Array;
+} {
+  const { re, im } = analyticSignal(x);
+  const envelope = new Float64Array(x.length);
+  const phase = new Float64Array(x.length);
+  for (let i = 0; i < x.length; i++) {
+    envelope[i] = Math.hypot(re[i]!, im[i]!);
+    phase[i] = Math.atan2(im[i]!, re[i]!);
+  }
+  return { envelope, phase };
+}
+
+/** Largest power of two not exceeding n. */
+export function floorPow2(n: number): number {
+  return 1 << (31 - Math.clz32(n));
+}
+
 /** Magnitude spectrum of a real signal, bins 0..n/2. For tests and the PSD readout. */
 export function magnitudeSpectrum(x: Float64Array): Float64Array {
   const n = x.length;
