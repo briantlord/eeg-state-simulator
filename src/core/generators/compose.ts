@@ -13,6 +13,7 @@ import { provisionalValue, scalarValue, uncertainty, bandEdges } from '../regist
 import { synthesizeAperiodic } from './aperiodic.ts';
 import {
   synthesizeOscillation,
+  synthesizeDampedOscillator,
   DEFAULT_ENVELOPE_DEPTH,
   DEFAULT_ENVELOPE_RATE_HZ,
 } from './oscillations.ts';
@@ -104,30 +105,41 @@ export function composeState(
   for (const spec of STATE_OSCILLATIONS[state]) {
     const { lo, hi } = bandEdges(spec.bandKey);
     const rmsUv = rmsFromPeakToPeak(spec.ampKey);
-    // Alpha arrives in discrete runs. Beta and theta burst structure is unfitted, so they
-    // keep the smooth envelope rather than borrowing alpha's numbers.
-    // TODO(T1-M1): fit burst parameters per rhythm; the interface already takes them.
-    const burst =
+    // ALPHA IS MODELLED DIFFERENTLY FROM THE OTHERS, deliberately.
+    //
+    // Alpha is a genuine resonance — it stands out as a peak above the aperiodic background
+    // in a way most band-limited EEG activity does not — so it is generated as a damped
+    // stochastic oscillator with bistable damping (DECISIONS D13). Beta and theta keep the
+    // filtered-noise form: they are broader, weaker and far less clearly resonant, and there
+    // is no fitted damping for them. Giving them alpha's mechanism would assert a resonance
+    // nobody has measured.
+    // TODO(T1-M1): fit damping per rhythm and decide which, if any, of the others resonate.
+    const s =
       spec.generator === 'alpha'
-        ? {
-            durMeanS: pointFromUncertainty('alpha_burst_dur'),
-            ratePerMin: pointFromUncertainty('alpha_burst_rate'),
-            interburstLevel: scalarValue('alpha_interburst_level'),
-          }
-        : undefined;
-    const s = synthesizeOscillation(
-      Rng.substream(seed, `${spec.generator}/${state}`),
-      nSamples,
-      {
-        bandLo: lo,
-        bandHi: hi,
-        rmsUv,
-        envelopeDepth: DEFAULT_ENVELOPE_DEPTH,
-        envelopeRateHz: DEFAULT_ENVELOPE_RATE_HZ,
-        ...(burst ? { burst } : {}),
-      },
-      fs,
-    );
+        ? synthesizeDampedOscillator(
+            Rng.substream(seed, `${spec.generator}/${state}`),
+            nSamples,
+            {
+              f0: scalarValue('alpha_peak'),
+              bandwidthSharpHz: scalarValue('alpha_bandwidth_sharp'),
+              bandwidthBroadHz: scalarValue('alpha_bandwidth_broad'),
+              dwellS: scalarValue('alpha_mode_dwell'),
+              rmsUv,
+            },
+            fs,
+          )
+        : synthesizeOscillation(
+            Rng.substream(seed, `${spec.generator}/${state}`),
+            nSamples,
+            {
+              bandLo: lo,
+              bandHi: hi,
+              rmsUv,
+              envelopeDepth: DEFAULT_ENVELOPE_DEPTH,
+              envelopeRateHz: DEFAULT_ENVELOPE_RATE_HZ,
+            },
+            fs,
+          );
     projectInto(out, s, spec.generator);
     oscTruth.push({ generator: spec.generator, band: [lo, hi], rmsUv });
   }

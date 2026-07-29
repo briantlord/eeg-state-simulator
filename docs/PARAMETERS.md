@@ -113,6 +113,9 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 | `alpha_band` | 8–12 *(band_edges)* | Hz | `chosen` | conventional band edges; no single standard fixes them | wake_ec, rem |
 | `alpha_peak` | 10 | Hz | `invented` | individual peak varies 8-13; no fitted value | wake_ec |
 | `alpha_amp` | 20–50 *(uncertainty)* | uV_pp | `invented` | textbook range, not a measurement under a known pipeline | wake_ec |
+| `alpha_bandwidth_sharp` | 1 | Hz | `invented` | -3 dB bandwidth of the weakly damped (high-amplitude) alpha mode | wake_ec, rem |
+| `alpha_bandwidth_broad` | 6 | Hz | `invented` | -3 dB bandwidth of the strongly damped (low-amplitude) alpha mode | wake_ec, rem |
+| `alpha_mode_dwell` | 1.25 | s | `invented` | mean dwell time in each alpha amplitude mode | wake_ec, rem |
 | `alpha_burst_dur` | 0.5–2 *(uncertainty)* | s | `invented` | conventional description of posterior alpha runs; uncited | wake_ec, rem |
 | `alpha_burst_rate` | 20–30 *(uncertainty)* | 1/min | `invented` | uncited; set from a target duty cycle rather than observed directly | wake_ec, rem |
 | `alpha_burst_duty_note` | duty cycle = alpha_burst_dur * alpha_burst_rate / 60; the two rows are not independent | — | `chosen` | records the constraint linking the two burst rows | wake_ec, rem |
@@ -133,9 +136,15 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 
 **`alpha_band`.** Re-standed definitional -> chosen on import: a convention in wide use is not a named standard. Same for beta_band, theta_band.
 
-**`alpha_burst_rate`.** Rate and duration are not independent: together they fix the DUTY CYCLE, which is the quantity with physiological meaning. At alpha_burst_dur's midpoint of 1.25 s, 20-30/min gives 42-63% — eyes-closed posterior alpha is the dominant rhythm and is present much of the time, so a duty cycle near half is more defensible than the 25% an earlier 8-16/min produced. T1-M1 should fit the duty cycle and one of the two, not all three independently.
+**`alpha_bandwidth_sharp`.** Damping, not filter width. A damped oscillator's bandwidth IS its damping: r = exp(-pi*B/fs). Narrow means weakly damped, long phase memory, a genuine oscillation; wide means heavily damped and noise-like. One parameter spans both regimes, which is what makes "alpha is a real oscillation, unlike the rest of the signal" expressible rather than asserted.
 
-**`alpha_interburst_level`.** Not zero. Alpha becomes hard to see between bursts rather than provably absent, and a hard-gated envelope would put switching transients into the band -- a spectral artefact manufactured by the realism fix.
+**`alpha_bandwidth_broad`.** The second mode exists because alpha amplitude is BISTABLE, bursting between high- and low-amplitude states rather than diffusing about one mean (Freyer et al. 2009, 2011; mechanism a subcritical Hopf bifurcation). A single linear mode has a Rayleigh envelope -- measured CV 0.521 against Rayleigh's exact 0.523 -- which is precisely the distribution that finding contradicts. With two modes the measured bimodality coefficient is 0.580, above the 0.555 threshold; with one it is 0.434.
+
+**`alpha_burst_dur`.** SUPERSEDED by the damped-oscillator model (DECISIONS D13). Alpha burst structure now EMERGES from bistable damping rather than being imposed by an envelope, so nothing reads this row. Retained rather than deleted because the burst-envelope machinery still exists for rhythms whose damping is unfitted, and because deleting it would erase the record of why it was tried.
+
+**`alpha_burst_rate`.** SUPERSEDED by DECISIONS D13; nothing reads this row. Rate and duration are not independent: together they fix the DUTY CYCLE, which is the quantity with physiological meaning. At alpha_burst_dur's midpoint of 1.25 s, 20-30/min gives 42-63% — eyes-closed posterior alpha is the dominant rhythm and is present much of the time, so a duty cycle near half is more defensible than the 25% an earlier 8-16/min produced. T1-M1 should fit the duty cycle and one of the two, not all three independently.
+
+**`alpha_interburst_level`.** SUPERSEDED by DECISIONS D13; nothing reads this row. Not zero. Alpha becomes hard to see between bursts rather than provably absent, and a hard-gated envelope would put switching transients into the band -- a spectral artefact manufactured by the realism fix.
 
 **`delta_amp`.** Given a Tier 0 value on import; see Execution-Scheme D10. Left blank, this row and snr_nominal are under-determined by one degree of freedom and the calibration absorbs it, setting delta amplitude from the 75 uV figure through the back door — the exact circularity D5 exists to close, re-entering through the one row D5's prose leaves empty. The AASM number appears in gate_aasm_n3 and nowhere else. UNITS CORRECTED to uV_pp on review: the textbook 100-200 figure for slow waves is peak-to-peak, and it had been placed on a row declared in plain uV. Read as peak it is 200-400 uV p-p, which at snr_null_offset = -6 dB still clears the 75 uV criterion — so G5's null could not have failed, and under D9 that null is G5's only failable arm. D10's claim that fixing this row "makes snr_nominal a genuine single-scalar solve" is FALSE and is withdrawn: so_amp (100-200 uV, so_freq < 1 Hz) also lands inside gate_aasm_n3_band, the aperiodic offset b has no registry row at all, and the interval-to-point reduction rule is unregistered with zero Dv rows in the registry. At least three further degrees of freedom remain. See Execution-Scheme section 7.
 
@@ -367,6 +376,6 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 | `chosen` | 41 |
 | `literature` | 8 |
 | `derived` | 7 |
-| `invented` | 87 |
+| `invented` | 90 |
 | `absent` | 8 |
-| **total** | **162** |
+| **total** | **165** |

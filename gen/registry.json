@@ -916,6 +916,62 @@
       "section": "4. Oscillations",
       "milestone": "T1-M1"
     },
+    "alpha_bandwidth_sharp": {
+      "value": {
+        "kind": "scalar",
+        "v": 1
+      },
+      "units": "Hz",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "-3 dB bandwidth of the weakly damped (high-amplitude) alpha mode"
+      },
+      "states": [
+        "wake_ec",
+        "rem"
+      ],
+      "section": "4. Oscillations",
+      "milestone": "T1-M1",
+      "note": "Damping, not filter width. A damped oscillator's bandwidth IS its damping: r = exp(-pi*B/fs). Narrow means weakly damped, long phase memory, a genuine oscillation; wide means heavily damped and noise-like. One parameter spans both regimes, which is what makes \"alpha is a real oscillation, unlike the rest of the signal\" expressible rather than asserted."
+    },
+    "alpha_bandwidth_broad": {
+      "value": {
+        "kind": "scalar",
+        "v": 6
+      },
+      "units": "Hz",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "-3 dB bandwidth of the strongly damped (low-amplitude) alpha mode"
+      },
+      "states": [
+        "wake_ec",
+        "rem"
+      ],
+      "section": "4. Oscillations",
+      "milestone": "T1-M1",
+      "note": "The second mode exists because alpha amplitude is BISTABLE, bursting between high- and low-amplitude states rather than diffusing about one mean (Freyer et al. 2009, 2011; mechanism a subcritical Hopf bifurcation). A single linear mode has a Rayleigh envelope -- measured CV 0.521 against Rayleigh's exact 0.523 -- which is precisely the distribution that finding contradicts. With two modes the measured bimodality coefficient is 0.580, above the 0.555 threshold; with one it is 0.434."
+    },
+    "alpha_mode_dwell": {
+      "value": {
+        "kind": "scalar",
+        "v": 1.25
+      },
+      "units": "s",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "mean dwell time in each alpha amplitude mode"
+      },
+      "states": [
+        "wake_ec",
+        "rem"
+      ],
+      "section": "4. Oscillations",
+      "milestone": "T1-M1"
+    },
     "alpha_burst_dur": {
       "value": {
         "kind": "interval",
@@ -934,7 +990,8 @@
         "rem"
       ],
       "section": "4. Oscillations",
-      "milestone": "T1-M1"
+      "milestone": "T1-M1",
+      "note": "SUPERSEDED by the damped-oscillator model (DECISIONS D13). Alpha burst structure now EMERGES from bistable damping rather than being imposed by an envelope, so nothing reads this row. Retained rather than deleted because the burst-envelope machinery still exists for rhythms whose damping is unfitted, and because deleting it would erase the record of why it was tried."
     },
     "alpha_burst_rate": {
       "value": {
@@ -955,7 +1012,7 @@
       ],
       "section": "4. Oscillations",
       "milestone": "T1-M1",
-      "note": "Rate and duration are not independent: together they fix the DUTY CYCLE, which is the quantity with physiological meaning. At alpha_burst_dur's midpoint of 1.25 s, 20-30/min gives 42-63% — eyes-closed posterior alpha is the dominant rhythm and is present much of the time, so a duty cycle near half is more defensible than the 25% an earlier 8-16/min produced. T1-M1 should fit the duty cycle and one of the two, not all three independently."
+      "note": "SUPERSEDED by DECISIONS D13; nothing reads this row. Rate and duration are not independent: together they fix the DUTY CYCLE, which is the quantity with physiological meaning. At alpha_burst_dur's midpoint of 1.25 s, 20-30/min gives 42-63% — eyes-closed posterior alpha is the dominant rhythm and is present much of the time, so a duty cycle near half is more defensible than the 25% an earlier 8-16/min produced. T1-M1 should fit the duty cycle and one of the two, not all three independently."
     },
     "alpha_burst_duty_note": {
       "value": {
@@ -991,7 +1048,7 @@
       ],
       "section": "4. Oscillations",
       "milestone": "T1-M1",
-      "note": "Not zero. Alpha becomes hard to see between bursts rather than provably absent, and a hard-gated envelope would put switching transients into the band -- a spectral artefact manufactured by the realism fix."
+      "note": "SUPERSEDED by DECISIONS D13; nothing reads this row. Not zero. Alpha becomes hard to see between bursts rather than provably absent, and a hard-gated envelope would put switching transients into the band -- a spectral artefact manufactured by the realism fix."
     },
     "alpha_rem_shift": {
       "value": {

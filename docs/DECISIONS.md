@@ -327,6 +327,75 @@ is worse than none, for the reason the harness spec gives about gates.
 
 ---
 
+## D13 — Alpha is a damped stochastic oscillator, not bandpass-filtered noise
+
+**Decided.** Alpha is generated as a **stochastically driven damped oscillator with bistable
+damping**, discretized as AR(2):
+
+    x'' + 2γx' + ω₀²x = ξ(t)   →   x[n] = 2r·cos(ω₀)·x[n−1] − r²·x[n−2] + ξ[n],  r = e^(−πB/fs)
+
+Beta and theta keep the filtered-noise form. **This asymmetry is deliberate**, not an
+oversight — see below.
+
+**Reasoning.** §3.3's rule is *"narrowband-filtered noise, never pure sinusoids"*, and that
+rule is right about what to avoid. But it is a rule about the *tell*, not about the mechanism,
+and applied literally it produces a signal that fails three separate things the literature
+says about alpha. All three were measured before the change and after:
+
+| | bandpass noise | damped oscillator | what the literature says |
+|---|---|---|---|
+| peak shape (w₋₁₀/w₋₃) | **1.26** | **3.10** | a resonance is Lorentzian, ≈3 |
+| envelope CV | 0.528 | 0.693 | Rayleigh is 0.523 — real alpha is not Rayleigh |
+| envelope skew | 0.633 | 1.222 | Rayleigh is 0.631 |
+| bimodality coefficient | 0.428 | **0.558** | >0.555 indicates two modes |
+| phase memory | 1.8 cycles | 2.7 cycles | a resonance holds phase |
+
+1. **The peak shape was a boxcar.** A 4th-order Butterworth bandpass has a flat passband and
+   steep skirts; it deposits a *rectangle* of power, not a peak. A damped oscillator has a
+   Lorentzian peak. Measured, the old model scored 1.26 where a Lorentzian scores ~3.1 — and
+   the whole point of alpha in this project is that it is the one component that stands out
+   as a *peak* above the aperiodic background. `specparam`, which G1a depends on, fits peaks
+   over an aperiodic component; a boxcar is not a shape it expects.
+
+2. **The amplitude envelope was Rayleigh, and real alpha's is not.** Filtered Gaussian noise
+   has a Rayleigh envelope by construction — the old model measured CV 0.528 / skew 0.633
+   against Rayleigh's exact 0.523 / 0.631, i.e. it reproduced the analytic values to three
+   decimals. Freyer et al. report alpha amplitude is **bistable**, bursting between high- and
+   low-amplitude modes rather than diffusing about one mean, with a subcritical Hopf
+   bifurcation as the mechanism. Switching the damping between two values reproduces that:
+   bimodality coefficient 0.558 against 0.428 before.
+
+3. **One mechanism, fewer parts.** Liley and colleagues show that resting EEG — *both* the
+   alpha peak *and* the 1/f background — is well accounted for by a sum of stochastically
+   driven damped alpha-band processes with a distribution of dampings. Under that account
+   alpha and the aperiodic background are not separate ingredients requiring separate
+   machinery. This decision adopts the mechanism for alpha only; adopting it for the
+   background too is a Tier 1 question.
+
+**Why alpha and not the others.** Damping bandwidth is the parameter that says *how much of a
+real oscillation this is*: narrow means weakly damped with long phase memory; wide means
+heavily damped and indistinguishable from filtered noise. One parameter spans both regimes.
+Alpha is the component with a clear, well-documented resonance. Beta and theta are broader,
+weaker and far less clearly resonant, and **no damping has been fitted for them** — giving
+them alpha's mechanism would assert a resonance nobody has measured. `chosen` for alpha,
+open for the rest.
+
+**What this replaces.** The imposed burst envelope, the carrier-flattening step, and
+`osc_carrier_flatten` for alpha. Burst structure now *emerges* from the damping rather than
+being multiplied on afterwards. `alpha_burst_dur`, `alpha_burst_rate` and
+`alpha_interburst_level` are marked superseded in the registry rather than deleted, because
+the burst machinery still serves rhythms whose damping is unfitted.
+
+**Known gap, and it is load-bearing.** AR(2) is **linear**, so its output is exactly
+symmetric — measured peak/trough ratio 1.000. Real alpha is non-sinusoidal, and that
+asymmetry **manufactures spurious phase–amplitude coupling** (Cole & Voytek; Gerber et al.).
+This project measures PAC — SO–spindle coupling at Tier 0, respiration–χ throughout — so a
+perfectly symmetric alpha understates a confound the artifact exists partly to demonstrate.
+**Registered as P7**, not fixed here: the fix is a nonlinear oscillator or explicit waveform
+shaping, and it must be characterized before any PAC recovery gate is trusted.
+
+---
+
 ## Pending decisions
 
 | ID | Question | Blocks | Due |
@@ -335,6 +404,7 @@ is worse than none, for the reason the harness spec gives about gates.
 | ~~P2~~ | ~~`tilt_n_poles` and spacing~~ | — | **Closed.** `tilt_n_poles` = 12, standing `derived`; see `Tier0-Estimator-Probe.md` Finding 4 |
 | ~~P3~~ | ~~`tilt_mod_settling_ratio`~~ | — | **Closed as not answerable as posed.** Settling has 61× margin and is not the binding constraint; the residual risk is the coefficient-interpolation scheme, and measuring it *is* G4. Registered `absent` with a procedure. Finding 5 |
 | P4 | Corpus selection for T1-M1 fitting | every `invented` row | T1-M1 |
+| P7 | Non-sinusoidal waveform shape for alpha (and the SO) | any PAC recovery gate | T1-M2 |
 | ~~P5~~ | ~~Re-measure G1a vs G1b error under the full generator~~ | — | **Closed: D3 stands.** See below |
 | P6 | Re-derive G1b's bias magnitude at the repaired `k_*` values | any comparability claim | T1-M1 |
 

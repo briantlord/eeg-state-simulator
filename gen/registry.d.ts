@@ -6,11 +6,14 @@ export type StateId = 'wake_eo' | 'wake_ec' | 'n1' | 'n2' | 'n3' | 'rem';
 export type ParamKey =
   | 'alpha_amp'
   | 'alpha_band'
+  | 'alpha_bandwidth_broad'
+  | 'alpha_bandwidth_sharp'
   | 'alpha_burst_dur'
   | 'alpha_burst_duty_note'
   | 'alpha_burst_rate'
   | 'alpha_interburst_level'
   | 'alpha_mod_depth'
+  | 'alpha_mode_dwell'
   | 'alpha_peak'
   | 'alpha_rem_shift'
   | 'amp_pp_to_rms'
@@ -172,11 +175,14 @@ export type Standing = 'definitional' | 'chosen' | 'literature' | 'derived' | 'f
 export interface ParamKindMap {
   'alpha_amp': 'interval';
   'alpha_band': 'interval';
+  'alpha_bandwidth_broad': 'scalar';
+  'alpha_bandwidth_sharp': 'scalar';
   'alpha_burst_dur': 'interval';
   'alpha_burst_duty_note': 'procedure';
   'alpha_burst_rate': 'interval';
   'alpha_interburst_level': 'scalar';
   'alpha_mod_depth': 'pending';
+  'alpha_mode_dwell': 'scalar';
   'alpha_peak': 'scalar';
   'alpha_rem_shift': 'interval';
   'amp_pp_to_rms': 'scalar';

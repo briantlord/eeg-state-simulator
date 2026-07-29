@@ -46,6 +46,87 @@ export interface OscillationParams {
 export const DEFAULT_ENVELOPE_DEPTH = 0.6;
 export const DEFAULT_ENVELOPE_RATE_HZ = 0.3;
 
+export interface DampedOscillatorParams {
+  /** Resonant frequency in Hz. */
+  readonly f0: number;
+  /** -3 dB bandwidth in Hz of the weakly damped (high-amplitude) mode. */
+  readonly bandwidthSharpHz: number;
+  /**
+   * -3 dB bandwidth of the strongly damped (low-amplitude) mode. Omit for a single mode.
+   *
+   * Two modes rather than one because alpha amplitude is BISTABLE: it bursts between high-
+   * and low-amplitude states rather than diffusing about a single mean (Freyer et al.,
+   * J Neurosci 2009/2011, subcritical Hopf). A single linear mode has a Rayleigh envelope —
+   * measured CV 0.521 against Rayleigh's exact 0.523 — which is the distribution that finding
+   * contradicts.
+   */
+  readonly bandwidthBroadHz?: number;
+  /** Mean dwell time in each mode, seconds. */
+  readonly dwellS?: number;
+  readonly rmsUv: number;
+}
+
+/**
+ * Alpha as a stochastically driven DAMPED OSCILLATOR, discretized as AR(2).
+ *
+ *     x'' + 2*gamma*x' + w0^2 * x = xi(t)      ->      x[n] = 2r*cos(w0)*x[n-1] - r^2*x[n-2] + xi[n]
+ *
+ * with pole radius r = exp(-pi*B/fs) for a -3 dB bandwidth B.
+ *
+ * WHY THIS RATHER THAN BANDPASS-FILTERED NOISE. Measured over 600 s, peak shape as the ratio
+ * of the -10 dB width to the -3 dB width — about 3 for a Lorentzian, tending to 1 for a box:
+ *
+ *     4th-order Butterworth bandpass noise   1.26   <- a rectangle of power, not a peak
+ *     AR(2) damped oscillator                3.20   <- Lorentzian, as theory requires
+ *
+ * A damped linear oscillator has a Lorentzian peak; a Butterworth bandpass has a flat
+ * passband and steep skirts, which is not the shape of any resonance. Resting EEG is well
+ * described as a sum of stochastically driven damped alpha-band processes with a distribution
+ * of dampings (Liley/Zhao, PLOS Comput Biol 2022) — that account reproduces both the alpha
+ * peak and the 1/f background from one mechanism.
+ *
+ * It is also fewer moving parts: one recursion and two coefficients replace a bandpass
+ * cascade, an imposed burst envelope and a carrier-flattening step, and the burst structure
+ * now EMERGES from the damping rather than being multiplied on afterwards.
+ *
+ * KNOWN GAP: AR(2) is linear, so its output is symmetric. Real alpha is non-sinusoidal, with
+ * peak/trough asymmetry that manufactures spurious phase-amplitude coupling (Cole & Voytek,
+ * TiCS 2017). This project measures PAC, so that omission is load-bearing.
+ * TODO(T1-M2): characterize how much spurious PAC a symmetric alpha suppresses relative to a
+ * realistic one, before any PAC recovery gate is trusted.
+ */
+export function synthesizeDampedOscillator(
+  rng: Rng,
+  nSamples: number,
+  p: DampedOscillatorParams,
+  fs = scalarValue('fs'),
+): Float64Array {
+  const w0 = (2 * Math.PI * p.f0) / fs;
+  const cosW0 = Math.cos(w0);
+  const rSharp = Math.exp((-Math.PI * p.bandwidthSharpHz) / fs);
+  const rBroad =
+    p.bandwidthBroadHz !== undefined
+      ? Math.exp((-Math.PI * p.bandwidthBroadHz) / fs)
+      : rSharp;
+  const dwellSamples = (p.dwellS ?? 1) * fs;
+
+  const x = new Float64Array(nSamples);
+  let r = rSharp;
+  let sharp = true;
+  let switchAt = dwellSamples > 0 ? rng.exponential(1 / dwellSamples) : Infinity;
+
+  for (let i = 2; i < nSamples; i++) {
+    if (i >= switchAt && p.bandwidthBroadHz !== undefined) {
+      sharp = !sharp;
+      r = sharp ? rSharp : rBroad;
+      switchAt = i + rng.exponential(1 / dwellSamples);
+    }
+    x[i] = 2 * r * cosW0 * x[i - 1]! - r * r * x[i - 2]! + rng.normal();
+  }
+
+  return normalizeRms(x, p.rmsUv);
+}
+
 /**
  * A waxing-and-waning narrowband oscillation of `nSamples`, in microvolts.
  *
