@@ -396,6 +396,59 @@ shaping, and it must be characterized before any PAC recovery gate is trusted.
 
 ---
 
+## D17 — χ(t) is a least-squares slope over 2–40 Hz, not specparam; and G4's null gains an effect-size floor
+
+**Decided against the plan, on measurement.** T1-M2's stated task was to replace the cheap
+two-band χ proxy with specparam-per-window (SPRiNT's algorithm). Measured, that would have made
+the readout **worse by 2×**, and it could not have shipped anyway.
+
+**An architectural constraint the plan does not state.** `specparam` is Python; the artifact is a
+static TypeScript page with no framework dependency (Build Plan §8). The shipped Demo 1 readout
+can never call specparam. The harness may — and does, as T1-M2's class-V reference — but the
+artifact needs something portable regardless.
+
+**Adopted: `chi_est_band` = 2–40 Hz, `chi_est_window_s` = 2 s, both `derived`.** Ordinary
+least-squares slope of log₁₀P on log₁₀f. Minimum detectable `chi_mod_depth` at the respiratory
+rate, five candidates on identical windows of identical records: **LS 2–40 Hz 0.048**, two-band
+0.058, specparam 2–40 Hz 0.098, LS 30–45 Hz 0.271, specparam 30–45 Hz 0.547. log(MDD) correlates
+**−0.85** with band leverage.
+
+**Leverage, not sophistication.** At the *same* band, plain least squares beats specparam 2× on
+variance and is also closer on bias (DC χ̂ 1.637 vs 1.734 against an injected 1.66). I predicted
+the opposite — that peaks inside 2–40 Hz would bias a plain slope and specparam's peak model would
+earn its cost. Per-window peak fitting adds variance to the exponent, and for an AC measurement a
+static bias cancels anyway. specparam over 30–45 Hz being worst is Finding 14 resurfacing: 0.176
+decades cannot support a slope however good the fitter.
+
+**The units fix matters as much as the 1.21× gain.** A slope returns true χ units; the two-band
+ratio returned 0.76 proxy-units per χ-unit, so Demo 1's "injected 0.15, recovered 0.238" was never
+like-for-like. Finding 13 flagged that; it is now dimensionally honest. G4's selectivity ratio
+improves 4.93 → 7.81.
+
+### D14's null arm was magnitude-blind, and only a better estimator could show it
+
+G4's null **failed** on the new estimator, reporting `LEAKAGE at 0.35 Hz` and *"none of it reaches
+χ̂"* in one sentence — `1/12, p = 0.0063, ratio 0.999x`. Both statements were true. **A paired
+sign test detects direction, not magnitude:** pairing removes the variance, so with enough
+precision any systematic difference clears p < 0.05. Amended — leakage is declared only if it is
+**both** consistent **and** exceeds `chi_est_mdd_resp` = 0.048, the estimator's own detection
+floor. A difference below what the estimator can detect cannot support or refute a claim.
+
+**The effect metric was also wrong.** It used `obs − null`; both are magnitudes of a line at one
+frequency, so an added component of unknown relative phase combines in **quadrature**. On a real
+leakage source subtraction says 0.017 where quadrature says 0.033.
+
+**The amended arm's falsification is OPEN and recorded as such.** Enabling mechanism
+(c)-amplitude in the observed arm gives leakage 0.033 against the 0.048 floor at `6/12, p = 1` —
+inconclusive, because the sign test never fired, so the floor never bound. A leakage of amplitude
+≈ the floor added at random phase exceeds the original only slightly more than half the time, so
+the per-seed sign carries almost no information at n = 12. Falsifying the arm needs a monotone
+leakage source, which needs a `resp_artifact_amp` override the exporter does not expose. Until
+then the arm is **not** demonstrated falsifiable, and that is stated in the gate rather than
+assumed. Mechanism (a), its actual target, measures 0.0000 in quadrature.
+
+---
+
 ## D16 — `tilt_block_s` is registered and derived at 0.75 s; the blockwise scheme stays
 
 **Decided and measured.** T1-M2's first measurement found that the generator was delivering

@@ -203,13 +203,18 @@ function updateObservables(): void {
   // The mechanism the filter does NOT remove, beside it, so the contrast is the lesson
   // rather than a footnote.
   //
-  // LABELLED (c), NOT "chi modulation", and the distinction cost a gate to find. This reads
-  // chi-hat at the respiratory rate, and chi-hat's low band is 2-8 Hz while (c)'s AMPLITUDE
-  // half modulates 0.5-4 Hz power -- the bands overlap, so what this row mostly measures is
-  // the amplitude half, not the exponent half. Measured in isolation at f2: amplitude alone
-  // 0.233, exponent alone at the shipped depth 1.02x its own null, i.e. nothing. The row is
-  // an honest control -- it genuinely does not move with the filter -- but calling it the
-  // exponent modulation would be a claim the generator does not support. See G4, Finding 13.
+  // LABELLED (c), NOT "chi modulation", and the distinction cost a gate to find. Mechanism (c)
+  // has two halves and this reads chi-hat at the respiratory rate, where both can appear.
+  //
+  // The exposure is much smaller than it was. Under the two-band ratio, whose low band was
+  // 2-8 Hz, (c)'s AMPLITUDE half (0.5-4 Hz) leaked in at 3.3x the floor and dominated the row.
+  // chi-hat is now a least-squares slope over chi_est_band (2-40 Hz), where a change confined to
+  // the band's low edge has little leverage: measured leakage 0.033 against a detection floor of
+  // 0.048 (Finding 16). The reading also changed UNITS -- true chi rather than the old proxy's
+  // 0.76-per-chi -- so it is now comparable to the registry depth, which it never was.
+  //
+  // Still a control rather than a measurement: the shipped depth sits ~3x above the floor, so
+  // calling this the exponent modulation would claim more than the generator supports.
   const c = couplingReadout(buffer, stream.truth.chiModDepth, stream.truth.respFreqHz, FS);
   $('c-chi').textContent = Number.isFinite(c.recoveredDepth) ? c.recoveredDepth.toFixed(3) : '—'; // @lit-ok display precision (3 decimals)
   $('c-window').textContent =

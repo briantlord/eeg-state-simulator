@@ -2675,6 +2675,53 @@
       "section": "7. Respiration and coupling",
       "milestone": "T1-M1"
     },
+    "chi_est_band": {
+      "value": {
+        "kind": "interval",
+        "lo": 2,
+        "hi": 40,
+        "meaning": "band_edges"
+      },
+      "units": "Hz",
+      "standing": "derived",
+      "source": {
+        "kind": "procedure",
+        "text": "Chosen by measured minimum detectable chi_mod_depth at the respiratory rate, over five candidate estimators on identical windows of identical records. An ordinary least-squares log-log slope over 2-40 Hz gives 0.048, against 0.058 for the two-band ratio it replaces, 0.098 for specparam over the same band, 0.271 for an LS slope over 30-45 Hz and 0.547 for specparam over 30-45 Hz. log(MDD) correlates -0.85 with the band's log-frequency leverage, so the band is what sets the variance. 2-40 Hz spans 1.30 decades against the two-band ratio's effective 0.80 and G1b's 0.18. See Finding 16; prep/reference/t1m2_chi_estimators.py."
+      },
+      "states": "all",
+      "section": "9. Observables",
+      "note": "THE BAND chi(t) IS ESTIMATED OVER, and the single choice that decides whether respiratory coupling is measurable at all. It is NOT `fit_band_broad` (1-45 Hz): the top of that band is above the anti-alias roll-off at this fs and its bottom is where the N3 slow oscillation dominates, and it is not `fit_band_narrow` (30-45 Hz), whose 0.18 decades of leverage Finding 14 already showed cannot resolve the chi spacing between states. LEVERAGE, NOT SOPHISTICATION. Measured at this band, a plain least-squares slope BEATS specparam by 2x on variance (0.048 vs 0.098) and is also closer on bias (DC chi 1.637 against an injected 1.66, where specparam reads 1.73). Peak modelling costs per-window variance and buys nothing here, because modulation depth is an AC measurement: any static bias cancels in the line at the modulation frequency."
+    },
+    "chi_est_mdd_resp": {
+      "value": {
+        "kind": "scalar",
+        "v": 0.048
+      },
+      "units": null,
+      "standing": "derived",
+      "source": {
+        "kind": "procedure",
+        "text": "Measured minimum detectable chi modulation depth at the respiratory rate for the adopted estimator: depth x floor / recovered over 2 seeds x 300 s, N3, Pz, at chi_est_band and chi_est_window_s. See Finding 16; prep/reference/t1m2_chi_estimators.py."
+      },
+      "states": "all",
+      "section": "9. Observables",
+      "note": "THE SMALLEST chi MODULATION DEPTH THIS ESTIMATOR CAN SEE AT ALL, and therefore the effect-size floor below which no claim about chi modulation can be supported or refuted. It is used as G4's null arm requires: a difference smaller than the estimator's own detection limit is not evidence of leakage, however consistently signed. WHY THAT CLAUSE EXISTS. D14 specified the null arm as a paired sign test alone, and a sign test detects DIRECTION, NOT MAGNITUDE. When Finding 16 lowered the estimator's variance, a 0.1% paired difference at one sideband became \"significant\" (1/12 seeds, p = 0.0063) while the effect ratio was 0.999 -- the gate reported LEAKAGE and, in the same line, that the largest effect was 0.003 in ratio terms. Pairing removes variance, so with enough precision any systematic difference clears a sign test. An effect-size floor is what makes the arm a statement about consequence rather than about resolution."
+    },
+    "chi_est_window_s": {
+      "value": {
+        "kind": "scalar",
+        "v": 2
+      },
+      "units": "s",
+      "standing": "derived",
+      "source": {
+        "kind": "procedure",
+        "text": "Smallest measured minimum detectable depth at the respiratory rate: 0.048 at 2 s against 0.052 at 4 s for the adopted estimator. A longer window attenuates the modulation being measured (|sinc(fW)|, Finding 15); a shorter one has fewer spectral bins to fit. See Finding 16."
+      },
+      "states": "all",
+      "section": "9. Observables",
+      "note": "The sliding-window length for chi(t). Harness section 4's warning applies directly: \"a window at or above the respiratory period averages the very modulation being measured away.\" At the 0.25 Hz respiratory rate the period is 4 s, so a 4 s window is exactly the pathological case the spec names -- and the measurement confirms it costs ~8%."
+    },
     "tilt_block_s": {
       "value": {
         "kind": "scalar",
@@ -3378,7 +3425,7 @@
     "gate_g4_seed_aggregation": {
       "value": {
         "kind": "procedure",
-        "text": "Exact binomial sign test on the paired per-seed comparisons. Positive arms: one-sided P(K >= k | n, 0.5) < 0.05. Null arm: TWO-sided p >= 0.05, i.e. the leakage comparison must be consistent with chance in either direction."
+        "text": "Exact binomial sign test on the paired per-seed comparisons. Positive arms: one-sided P(K >= k | n, 0.5) < 0.05. Null arm: leakage is declared only if BOTH two-sided p < 0.05 AND the paired median absolute difference exceeds chi_est_mdd_resp, the estimator's own detection floor -- a sign test detects direction, not magnitude."
       },
       "units": null,
       "standing": "derived",

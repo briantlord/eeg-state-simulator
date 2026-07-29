@@ -32,6 +32,9 @@ export type ParamKey =
   | 'blink_dur'
   | 'blink_rate'
   | 'chi_direction'
+  | 'chi_est_band'
+  | 'chi_est_mdd_resp'
+  | 'chi_est_window_s'
   | 'chi_mod_depth'
   | 'chi_mod_phase_sleep'
   | 'chi_mod_phase_wake'
@@ -230,6 +233,9 @@ export interface ParamKindMap {
   'blink_dur': 'interval';
   'blink_rate': 'interval';
   'chi_direction': 'ordering';
+  'chi_est_band': 'interval';
+  'chi_est_mdd_resp': 'scalar';
+  'chi_est_window_s': 'scalar';
   'chi_mod_depth': 'pending';
   'chi_mod_phase_sleep': 'procedure';
   'chi_mod_phase_wake': 'procedure';

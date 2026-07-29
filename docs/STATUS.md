@@ -32,7 +32,7 @@ missed.
 
 | Area | State | Evidence |
 |---|---|---|
-| Registry mechanism | **done** | 194 rows; source discipline + circularity rule enforced; fixed-point check in CI |
+| Registry mechanism | **done** | 197 rows; source discipline + circularity rule enforced; fixed-point check in CI |
 | Seams 1, 2, 4, 7, 9 | **done** | `test/rng.test.ts`, `test/exponent.test.ts`, `prep/test_epochio.py` |
 | Aperiodic + knee | **done** | χ recovery −0.03…+0.11 via `specparam` (Finding 2 correction) |
 | Oscillations | **done** | alpha as a damped bistable oscillator, non-sinusoidal (D13, P7) |
@@ -72,15 +72,18 @@ PhysioNet EEGMAT, 8 resting adults, same 19-channel 10-20 montage, same linked-e
 G4 found this while being built (D14, Finding 13): at `chi_mod_depth` = 0.15 the recovered line
 was **1.02× its own null**, so the gate injects 13× that depth to have anything to attribute.
 
-**T1-M2 has since split the cause in two, and one half is fixed** (Finding 15). Half the loss was
-never the estimator: a 2 s tilt-coefficient hold meant only 48% of the requested modulation was
-*generated* at the respiratory rate. `tilt_block_s` = 0.75 s recovers 2.1× of that. What remains
-is genuinely the estimator — the cheap two-band proxy's floor is ~0.06 in true-χ units at the
-respiratory rate against a provisional depth of 0.15, so the margin is ~2.5× and fragile.
+**T1-M2 has worked both halves of the cause and neither is now the plan's fault.** The generator
+half is fixed — a 2 s tilt-coefficient hold meant only 48% of the requested modulation was
+*generated* at the respiratory rate; `tilt_block_s` = 0.75 s recovers 2.1× (D16, Finding 15). The
+estimator half is **settled against the plan**: replacing the cheap proxy with specparam-per-window
+would have been 2× *worse*, and could not run in a browser. A least-squares slope over 2–40 Hz is
+the best of five candidates measured and is what now ships (D17, Finding 16).
 
-Demo 1's (c) row still reads mostly mechanism (c)'s *amplitude* half, and **no claim may rest on
-recovered χ modulation** until the proxy is replaced. The remaining T1-M2 work is the replacement
-(specparam-per-window, i.e. SPRiNT's algorithm) and P12, the tilt-scheme decision.
+What remains is not an estimator defect but a **floor**: `chi_est_mdd_resp` = 0.048 in true-χ units
+against a provisional depth of 0.15, a margin of ~3×. Demo 1's (c) row still reads mostly mechanism
+(c)'s *amplitude* half. **No claim may rest on recovered χ modulation** until either the depth is
+fitted at T1-M1 or the record length is raised — and the latter is now the cheaper lever, since the
+estimator is no longer the limit.
 
 ### 2. Narrowband χ cannot resolve the spacing between states
 
@@ -123,9 +126,9 @@ characterization).
 |---|---|
 | `Build-Plan.md`, `Validation-Harness_Spec.md` | the original specification, unmodified |
 | `PARAMETERS.md` | **generated** from `registry/parameters.yaml`; never edit |
-| `DECISIONS.md` | D1–D16 and pending P1–P12, append-only |
+| `DECISIONS.md` | D1–D17 and pending P1–P12, append-only |
 | `Execution-Scheme.md` | the plan: gate ledger, work packages, build order |
-| `Tier0-Estimator-Probe.md` | Findings 1–15, every one reproducible from `prep/reference/` |
+| `Tier0-Estimator-Probe.md` | Findings 1–16, every one reproducible from `prep/reference/` |
 | `STATUS.md` | this file |
 
 Corrections are marked in place rather than rewritten: Finding 2 carries a correction block
@@ -141,10 +144,16 @@ Tier 0 is closed. Everything below is Tier 1.
 1. **T1-M2, estimator characterization — IN PROGRESS, promoted above T1-M1.** The milestone
    ordering puts corpus fitting first, and both problems above say that is backwards: fitting
    parameters more carefully cannot be verified with estimators that cannot resolve them.
-   Promoting it paid immediately — the first measurement found half the χ modulation was never
-   generated (D16). Remaining, in order:
-   - **Replace the two-band χ proxy** with specparam-per-window (SPRiNT's algorithm; specparam
-     2.0.0rc7 is already pinned). This is what §1 and Demo 1's mislabelled (c) row both wait on.
+   Promoting it paid immediately: the first measurement found half the χ modulation was never
+   generated (D16), and the second found the plan's prescribed fix would have made things worse
+   (D17). Done and remaining:
+   - ~~Replace the two-band χ proxy with specparam-per-window~~ — **done, against the plan**
+     (D17). specparam measured 2× *worse* and cannot run in a browser; a least-squares slope over
+     2–40 Hz ships instead, and it also made the readout dimensionally honest.
+   - **Demonstrate G4's null arm can fail.** Its falsification is **open** (D17): the effect-size
+     floor is right in principle but untested against a monotone leakage source, which needs a
+     `resp_artifact_amp` override the exporter does not expose. A gate arm not shown falsifiable
+     is the state D12 spent two decisions objecting to, so this ranks above new characterization.
    - **P12** — characterize `filterbank`'s over-response, then settle the default tilt scheme.
    - **PAC precision versus event count.** Circular SE ≈ √((1−R̄²)/(nR̄²)); the spec already
      shows ±15° is unreachable at 2–5 spindles/min, so this determines segment length or forces

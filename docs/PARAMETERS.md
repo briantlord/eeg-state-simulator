@@ -302,6 +302,20 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 
 **`tilt_mod_settling_ratio`.** Resolves pending decision P3 by showing it is not answerable as posed. Build both interpolation schemes behind one interface and let G4 choose.
 
+## 9. Observables
+
+| Key | Value | Units | Standing | Source | States |
+|---|---|---|---|---|---|
+| `chi_est_band` | 2–40 *(band_edges)* | Hz | `derived` | Chosen by measured minimum detectable chi_mod_depth at the respiratory rate, over five candidate estimators on identical windows of identical records. An ordinary least-squares log-log slope over 2-40 Hz gives 0.048, against 0.058 for the two-band ratio it replaces, 0.098 for specparam over the same band, 0.271 for an LS slope over 30-45 Hz and 0.547 for specparam over 30-45 Hz. log(MDD) correlates -0.85 with the band's log-frequency leverage, so the band is what sets the variance. 2-40 Hz spans 1.30 decades against the two-band ratio's effective 0.80 and G1b's 0.18. See Finding 16; prep/reference/t1m2_chi_estimators.py. | all |
+| `chi_est_mdd_resp` | 0.048 | — | `derived` | Measured minimum detectable chi modulation depth at the respiratory rate for the adopted estimator: depth x floor / recovered over 2 seeds x 300 s, N3, Pz, at chi_est_band and chi_est_window_s. See Finding 16; prep/reference/t1m2_chi_estimators.py. | all |
+| `chi_est_window_s` | 2 | s | `derived` | Smallest measured minimum detectable depth at the respiratory rate: 0.048 at 2 s against 0.052 at 4 s for the adopted estimator. A longer window attenuates the modulation being measured (|sinc(fW)|, Finding 15); a shorter one has fewer spectral bins to fit. See Finding 16. | all |
+
+**`chi_est_band`.** THE BAND chi(t) IS ESTIMATED OVER, and the single choice that decides whether respiratory coupling is measurable at all. It is NOT `fit_band_broad` (1-45 Hz): the top of that band is above the anti-alias roll-off at this fs and its bottom is where the N3 slow oscillation dominates, and it is not `fit_band_narrow` (30-45 Hz), whose 0.18 decades of leverage Finding 14 already showed cannot resolve the chi spacing between states. LEVERAGE, NOT SOPHISTICATION. Measured at this band, a plain least-squares slope BEATS specparam by 2x on variance (0.048 vs 0.098) and is also closer on bias (DC chi 1.637 against an injected 1.66, where specparam reads 1.73). Peak modelling costs per-window variance and buys nothing here, because modulation depth is an AC measurement: any static bias cancels in the line at the modulation frequency.
+
+**`chi_est_mdd_resp`.** THE SMALLEST chi MODULATION DEPTH THIS ESTIMATOR CAN SEE AT ALL, and therefore the effect-size floor below which no claim about chi modulation can be supported or refuted. It is used as G4's null arm requires: a difference smaller than the estimator's own detection limit is not evidence of leakage, however consistently signed. WHY THAT CLAUSE EXISTS. D14 specified the null arm as a paired sign test alone, and a sign test detects DIRECTION, NOT MAGNITUDE. When Finding 16 lowered the estimator's variance, a 0.1% paired difference at one sideband became "significant" (1/12 seeds, p = 0.0063) while the effect ratio was 0.999 -- the gate reported LEAKAGE and, in the same line, that the largest effect was 0.003 in ratio terms. Pairing removes variance, so with enough precision any systematic difference clears a sign test. An effect-size floor is what makes the arm a statement about consequence rather than about resolution.
+
+**`chi_est_window_s`.** The sliding-window length for chi(t). Harness section 4's warning applies directly: "a window at or above the respiratory period averages the very modulation being measured away." At the 0.25 Hz respiratory rate the period is 4 s, so a 4 s window is exactly the pathological case the spec names -- and the measurement confirms it costs ~8%.
+
 ## 6. Tilt filter
 
 | Key | Value | Units | Standing | Source | States |
@@ -406,7 +420,7 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 | `gate_aasm_n3_reference` | referenced to contralateral mastoid (reference_channels) | — | `definitional` | AASM Manual for the Scoring of Sleep and Associated Events — derivation reference | n3 |
 | `gate_g5_null_ordering` | pass_fraction(N3 @ snr_nominal) > pass_fraction(N2) AND > pass_fraction(N3 @ snr_nominal + snr_null_offset) | — | `derived` | A strict ordering needs no invented threshold. See Execution-Scheme D9. | n2, n3 |
 | `gate_g4_criterion` | PAIRED per seed. Detection arm: depth(f1) with chi modulation ON exceeds depth(f1) with it OFF, same seed, everything else identical. Selectivity arm: depth(f1) exceeds depth(f2) within the same record. Both aggregate by gate_g4_seed_aggregation. | — | `derived` | Sign test against p = 0.5, which holds under the null by the pairing itself and is not a chosen number. See D14. | all |
-| `gate_g4_seed_aggregation` | Exact binomial sign test on the paired per-seed comparisons. Positive arms: one-sided P(K >= k | n, 0.5) < 0.05. Null arm: TWO-sided p >= 0.05, i.e. the leakage comparison must be consistent with chance in either direction. | — | `derived` | Under H0 a paired difference is positive with probability 0.5. The 0.5 comes from the pairing, not from a choice. | all |
+| `gate_g4_seed_aggregation` | Exact binomial sign test on the paired per-seed comparisons. Positive arms: one-sided P(K >= k | n, 0.5) < 0.05. Null arm: leakage is declared only if BOTH two-sided p < 0.05 AND the paired median absolute difference exceeds chi_est_mdd_resp, the estimator's own detection floor -- a sign test detects direction, not magnitude. | — | `derived` | Under H0 a paired difference is positive with probability 0.5. The 0.5 comes from the pairing, not from a choice. | all |
 | `gate_topography` | argmax over electrodes matches the topo_expect_* rows | — | `derived` | structural — no tolerance required; expectations are literature and independent of the projection file | all |
 | `gate_determinism` | bit-identical, within-platform and within-version only | — | `chosen` | This project's definition of determinism. No external standard fixes it. | all |
 | `gate_chi_tol_knee` | — *(absent)* | — | `absent` | T1-M2 estimator characterization | all |
@@ -457,7 +471,7 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 | `definitional` | 11 |
 | `chosen` | 51 |
 | `literature` | 8 |
-| `derived` | 9 |
+| `derived` | 12 |
 | `invented` | 104 |
 | `absent` | 11 |
-| **total** | **194** |
+| **total** | **197** |

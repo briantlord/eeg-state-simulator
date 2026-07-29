@@ -1168,3 +1168,109 @@ unexplained 30% over-response would be exactly the unexamined move this project 
 
 Reproduce: `t1m2_chi_transfer.py`, `t1m2_chi_generator_side.py`, `t1m2_tilt_block_sweep.py`,
 `t1m2_tilt_block_comb.py`.
+
+---
+
+# Finding 16 — leverage beats sophistication, and specparam loses `[T1-M2]`
+
+*The estimator half of the χ problem. Finding 15 fixed the generator half.*
+
+The plan said: replace the cheap two-band proxy with specparam-per-window, which is SPRiNT's
+algorithm and what harness §4 names. Measured, **that would have made the readout worse.**
+
+## An architectural constraint the plan does not state
+
+`specparam` is Python. The artifact is a static TypeScript page with no framework dependency
+(Build Plan §8 takes that as a constraint). **The shipped Demo 1 readout can never call
+specparam.** So the milestone splits: the harness may use specparam as a class-V reference, and
+does; the artifact must keep something cheap regardless of what the reference says. The useful
+question is therefore not *"is specparam better"* but *"how much of it can a portable estimator
+reach"*.
+
+## Five candidates, identical windows of identical records
+
+Minimum detectable `chi_mod_depth` at the respiratory rate — `depth × floor/recovered`, a ratio,
+so it compares across estimators whose units differ:
+
+| estimator | band | decades | DC χ̂ | min detectable | portable |
+|---|---|---|---|---|---|
+| **`ls240`** LS slope | 2–40 Hz | **1.30** | **1.637** | **0.048** | **yes** |
+| `twoband` *(was shipped)* | 2–8 vs 16–40 | 0.80 | — | 0.058 | shipped |
+| `sp240` specparam | 2–40 Hz | 1.30 | 1.734 | 0.098 | no |
+| `ls3045` LS slope | 30–45 Hz | 0.18 | 1.436 | 0.271 | yes |
+| `sp3045` specparam | 30–45 Hz | 0.18 | 1.523 | 0.547 | no |
+
+Injected `chi_n3` = 1.66, for the DC column. **log(MDD) correlates −0.85 with band leverage.**
+
+**Leverage, not sophistication, orders the table.** 30–45 Hz spans 0.176 decades, and a slope over
+that span scatters however good the fitter is — this is Finding 14 resurfacing inside a different
+measurement. specparam over G1b's band is the worst candidate here, which is a verdict on the
+band it was handed, not on specparam.
+
+**At the same band, plain least squares beats specparam by 2×** (0.048 vs 0.098) — and is also
+*more accurate* (DC 1.637 vs 1.734 against an injected 1.66). I had predicted the opposite: that
+oscillatory peaks inside 2–40 Hz would bias a plain slope and specparam's peak model would earn
+its cost. It does not, in this regime. Per-window peak fitting adds variance to the exponent, and
+for an AC measurement a static bias cancels in the line at f_mod anyway.
+
+## Adopted, and it fixes a units problem too
+
+`chi_est_band` = 2–40 Hz, `chi_est_window_s` = 2 s, both `derived`. The gain over the shipped
+proxy is modest (1.21×), but the second benefit is larger: **a slope fit returns true χ units.**
+The two-band ratio returned its own units — measured 0.76 proxy-units per χ-unit in Finding 15 —
+so Demo 1's *"injected 0.15, recovered 0.238"* was never a like-for-like comparison. Finding 13
+flagged exactly that. It is now dimensionally honest.
+
+G4 improves again: f₁/f₂ selectivity ratio 4.93 → **7.81**, both arms still 12/12.
+
+## The better estimator broke my own gate criterion, correctly
+
+G4's null arm **failed** on first run with the new estimator — reporting `LEAKAGE at 0.35 Hz` and
+*"none of it reaches χ̂"* in the same sentence. Both were true, which is the defect:
+
+`f2+f1 1/12 (p=0.0063, ratio 0.999x)`
+
+**A paired sign test detects direction, not magnitude.** Pairing removes the variance, so once the
+estimator is precise enough, an arbitrarily tiny but consistently-signed difference clears
+p < 0.05. D14 specified the arm as a sign test alone; that was magnitude-blind, and only a
+lower-variance estimator could expose it.
+
+Fixed by requiring leakage to be **both** statistically consistent **and** larger than
+`chi_est_mdd_resp` = 0.048, the estimator's own detection floor — a difference smaller than what
+the estimator can see at all cannot support or refute any claim.
+
+### And the effect metric was wrong before it was right
+
+The first implementation used `obs − null`. Both are **magnitudes of a line at the same
+frequency**, so an added component of unknown relative phase combines in **quadrature**:
+|obs|² ≈ |null|² + |leak|². Measured on a real leakage source, subtraction says 0.017 where
+quadrature says 0.033 — the difference between "well below the floor" and "near it".
+
+## The null arm's falsification is open, and says so
+
+Testing that the new floor had not neutered the arm, I enabled mechanism (c)-amplitude in the
+observed arm only — a leakage measured at 3.3× the empty floor in Finding 13. Result:
+
+| | |
+|---|---|
+| f₂ line with (c)-amplitude on | 0.0669 |
+| with it off | 0.0484 |
+| leakage amplitude (quadrature) | **0.0332** |
+| detection floor | 0.048 |
+| paired sign test | 6/12, **p = 1** |
+
+**Inconclusive, and not a demonstration either way.** The floor never bound — the sign test
+returned p = 1, so this leakage would not have been flagged before the effect-size clause existed
+either. What the numbers do establish is a measurement: **(c)-amplitude reaches χ̂ at roughly the
+limit of what this estimator can resolve in one record.**
+
+Why the sign test cannot see it: when a leakage of amplitude ≈ the floor is added at random
+relative phase, the resulting magnitude exceeds the original only slightly more than half the
+time, so the per-seed sign carries almost no information at n = 12. Falsifying this arm needs a
+cleanly monotone leakage source — raising `resp_artifact_amp` far above its registered range would
+do it, and that needs a CLI override the exporter does not expose. **Recorded as the arm's open
+falsification, not as a pass.** By contrast mechanism (a), the arm's actual target, measures
+0.0000 in quadrature — genuinely nil, and distinguishable from (c)-amplitude's 0.033 only because
+the metric is now correct.
+
+Reproduce: `t1m2_chi_estimators.py`, `probe_g4_falsify.py` (breakage 4).

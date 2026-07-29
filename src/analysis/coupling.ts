@@ -11,51 +11,79 @@
  * filtering. No real dataset can show that gap, because with real data the pre-filter value
  * was never known.
  */
-import { scalarValue } from '../core/registry.ts';
+import { scalarValue, bandEdges } from '../core/registry.ts';
 import { bandpassSections, filtfilt } from '../core/dsp/biquad.ts';
 import { welch } from './psd.ts';
 
 /**
- * Sliding-window estimate of χ(t) by a two-band log-power ratio.
+ * Sliding-window estimate of χ(t): an ordinary least-squares slope of log₁₀P on log₁₀f over
+ * `chi_est_band`.
  *
- * Deliberately NOT a `specparam` fit per window: at ~1 Hz update over a 30 s buffer that
- * would be thirty model fits per second in a browser. This is a cheap monotone proxy, and it
- * is labelled as one.
+ * RETURNS TRUE χ UNITS. That matters as much as the accuracy: the two-band log-power ratio this
+ * replaced returned its own units — measured 0.76 proxy-units per χ-unit — so Demo 1's
+ * "injected 0.15, recovered 0.238" was never a like-for-like comparison (Finding 13 flagged
+ * exactly that). A slope fit is dimensionally the same quantity the registry stores.
  *
- * THE WINDOW IS THE ESTIMATOR'S TRANSFER FUNCTION. Harness §4 names this for SPRiNT —
- * "sliding-window smoothing comparable to a ~4 s respiratory cycle will attenuate recovered
- * modulation depth by an amount the ESTIMATOR, not the generator, determines" — and it
- * applies identically here. A window at or above the respiratory period averages the very
- * modulation being measured away.
+ * WHY NOT `specparam` PER WINDOW, which is SPRiNT's algorithm and what harness §4 names. Two
+ * independent reasons, and the second was a surprise:
+ *
+ *   1. It cannot run here. `specparam` is Python; this file ships to a browser as part of a
+ *      static page with no framework dependency. The harness may use it as a class-V reference
+ *      — and does, in T1-M2's characterization — but the artifact cannot.
+ *   2. MEASURED, IT IS WORSE. On identical windows of identical records at the respiratory rate,
+ *      minimum detectable `chi_mod_depth` was 0.048 for this slope against 0.098 for specparam
+ *      OVER THE SAME BAND, and it is also closer on bias. Per-window peak fitting adds variance
+ *      to the exponent, and buys nothing for an AC measurement where a static bias cancels.
+ *
+ * LEVERAGE, NOT SOPHISTICATION, sets the variance: log(MDD) correlated −0.85 with the band's
+ * log-frequency span across five candidates. See Finding 16 and `chi_est_band`'s derivation.
+ *
+ * THE WINDOW IS STILL THE ESTIMATOR'S TRANSFER FUNCTION. Harness §4 — "sliding-window smoothing
+ * comparable to a ~4 s respiratory cycle will attenuate recovered modulation depth by an amount
+ * the ESTIMATOR, not the generator, determines" — holds for a slope fit exactly as for SPRiNT,
+ * and Finding 15 measured that attenuation as ≈|sinc(fW)|. `chi_est_window_s` is derived against
+ * it. A window at or above the respiratory period averages away the very modulation being
+ * measured.
  */
 export function chiOverTime(
   x: Float64Array,
   fs = scalarValue('fs'),
-  windowS = 2,
-  hopS = 0.25, // @lit-ok chi-proxy sliding-window hop (s); estimator-internal, provisional -- Finding 13/14, replaced at T1-M2
+  windowS = scalarValue('chi_est_window_s'),
+  hopS = 0.25, // @lit-ok chi(t) sampling interval (s); only needs to clear 2x the modulation rate
 ): { chi: Float64Array; fsEst: number } {
   const win = Math.round(windowS * fs);
   const hop = Math.round(hopS * fs);
   const nEst = Math.max(0, Math.floor((x.length - win) / hop));
   const out = new Float64Array(nEst);
 
-  const loBand = [2, 8] as const; // @lit-ok chi-proxy low band edges (Hz); estimator-internal, provisional (Finding 13/14)
-  const hiBand = [16, 40] as const; // @lit-ok chi-proxy high band edges (Hz); estimator-internal, provisional (Finding 13/14)
-  const fcLo = Math.sqrt(loBand[0] * loBand[1]);
-  const fcHi = Math.sqrt(hiBand[0] * hiBand[1]);
-  const span = Math.log10(fcHi) - Math.log10(fcLo);
+  const band = bandEdges('chi_est_band');
 
   for (let k = 0; k < nEst; k++) {
     const seg = x.subarray(k * hop, k * hop + win);
     const psd = welch(seg, fs, Math.min(win, 512), Math.min(win, 512) / 2); // @lit-ok Welch segment cap (samples); estimator-internal
-    let lo = 0;
-    let hi = 0;
+    // Least-squares slope of log10(P) on log10(f). Accumulated in one pass rather than
+    // materialising the arrays: this runs once per hop per channel in a browser loop.
+    let n = 0;
+    let sx = 0;
+    let sy = 0;
+    let sxx = 0;
+    let sxy = 0;
     for (let i = 0; i < psd.freqs.length; i++) {
       const f = psd.freqs[i]!;
-      if (f >= loBand[0] && f <= loBand[1]) lo += psd.power[i]!;
-      else if (f >= hiBand[0] && f <= hiBand[1]) hi += psd.power[i]!;
+      const p = psd.power[i]!;
+      if (f < band.lo || f > band.hi || p <= 0) continue;
+      const lx = Math.log10(f);
+      const ly = Math.log10(p);
+      n++;
+      sx += lx;
+      sy += ly;
+      sxx += lx * lx;
+      sxy += lx * ly;
     }
-    out[k] = lo > 0 && hi > 0 ? -(Math.log10(hi) - Math.log10(lo)) / span : Number.NaN;
+    const denom = n * sxx - sx * sx;
+    // Minimum bins for a slope to mean anything over a decade-wide band; a guard, not a tuning
+    // parameter -- at chi_est_band and chi_est_window_s the real count is ~150.
+    out[k] = n >= 4 && denom !== 0 ? -(n * sxy - sx * sy) / denom : Number.NaN; // @lit-ok degenerate-fit guard, minimum bin count
   }
   return { chi: out, fsEst: 1 / hopS };
 }

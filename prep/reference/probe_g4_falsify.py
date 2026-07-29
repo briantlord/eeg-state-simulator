@@ -128,3 +128,98 @@ print(f"""
   g4_fixture_chi_mod_depth's note, and it is why the gate injects 13x the shipped depth: G4
   tests FREQUENCY ATTRIBUTION for a detectable line, and cannot and does not claim the shipped
   coupling is recoverable by this estimator.""")
+
+
+# --------------------------------------------------------------------------------------
+# BREAKAGE 4 -- can the NULL arm still fail after gaining an effect-size floor?
+#
+# Finding 16's estimator lowered the variance enough that a 0.1% paired difference cleared
+# p < 0.05, so the null arm gained a second clause: leakage must also exceed
+# `chi_est_mdd_resp`, the estimator's own detection floor. A floor added to a criterion can
+# silently neuter it, so this checks the arm still catches leakage it should.
+#
+# THE INJECTED LEAKAGE IS ONE ALREADY MEASURED AS REAL. Mechanism (c)-amplitude modulates
+# 0.5-4 Hz power at the respiratory rate, and chi_est_band starts at 2 Hz -- the bands overlap,
+# so it produces a genuine f2 line. probe_g4_decompose.py measured it at 3.30x the empty floor.
+# G4's fixture keeps it OFF for exactly that reason (Finding 13); switching it on in the
+# observed arm alone is therefore a leakage the arm MUST report.
+print("\n" + "=" * 78)
+print("Breakage 4: enable mechanism (c)-amplitude in the observed arm only...", flush=True)
+
+import numpy as np
+
+
+def _measure_amp(seed: int, tag: str, amp_mod: bool) -> dict:
+    import json
+    import subprocess
+    from prep.runner import rmtree_robust
+    out = WORK / f'{tag}{seed}'
+    rmtree_robust(out)
+    n_epochs = int(round(R.scalar_value('g4_record_length') / R.scalar_value('epoch_display')))
+    subprocess.run([
+        'node', '--experimental-strip-types', '--no-warnings',
+        str(ROOT / 'bin' / 'eegsim-export.mts'),
+        '--seed', str(seed), '--state', 'n3', '--epochs', str(n_epochs), '--out', str(out),
+        '--movement-artifact', 'true',
+        '--amplitude-modulation', 'true' if amp_mod else 'false',
+        '--chi-modulation', 'true',
+        '--chi-mod-depth', str(R.scalar_value('g4_fixture_chi_mod_depth')),
+        '--resp-rate', str(F2 * 60.0), '--independent-chi-mod-freq', str(F1),
+    ], cwd=ROOT, capture_output=True, check=True)
+    p = subprocess.run([
+        'node', '--experimental-strip-types', '--no-warnings',
+        str(ROOT / 'bin' / 'eegsim-chi.mts'), '--run', str(out),
+        '--channel', 'Fz', '--reference', 'linked-mastoid',
+        '--freqs', ','.join(str(f) for f in FREQS),
+    ], cwd=ROOT, capture_output=True, text=True, check=True)
+    return json.loads(p.stdout)['depths']
+
+
+leak_obs = [_measure_amp(s, 'la', True) for s in SEEDS]
+leak_nul = [_measure_amp(s, 'ln', False) for s in SEEDS]
+
+floor = R.scalar_value('chi_est_mdd_resp')
+o = np.array([r[str(F2)] for r in leak_obs])
+u = np.array([r[str(F2)] for r in leak_nul])
+k4 = int((o > u).sum())
+p4 = sign_test(k4, N, two_sided=True)
+# In quadrature, not by subtraction: both are magnitudes of a line at the same frequency, so an
+# added component of unknown relative phase combines as |o|^2 ~ |u|^2 + |leak|^2. Subtraction
+# understates it -- 0.017 linear against 0.046 in quadrature on this very case.
+leak = np.sqrt(np.maximum(o**2 - u**2, 0.0))
+eff4 = float(np.median(leak))
+eff_linear = float(abs(np.median(o - u)))
+caught = (p4 < 0.05) and (eff4 > floor)
+
+print(f"\n  f2 line with (c)-amplitude on : {np.median(o):.4f}")
+print(f"  f2 line with it off           : {np.median(u):.4f}")
+print(f"  leakage amplitude (quadrature): {eff4:.4f}   (linear subtraction would say "
+      f"{eff_linear:.4f})")
+print(f"  paired {k4}/{N}, p = {p4:.2g};  detection floor {floor:.3f}")
+print(f"  -> null arm reports leakage: {'YES' if caught else 'NO'}")
+
+if caught:
+    print(f"""
+  THE FLOOR DID NOT NEUTER THE ARM. A leakage of {eff4:.4f} -- {eff4 / floor:.1f}x the detection
+  floor -- is caught, while the 0.0000 effect that the sign test alone called significant is
+  not. The arm discriminates on magnitude as well as consistency, as intended.""")
+elif p4 >= 0.05:
+    print(f"""
+  INCONCLUSIVE, AND NOT A DEMONSTRATION EITHER WAY. The floor never bound: the SIGN TEST
+  returned p = {p4:.2g} at {k4}/{N}, so this leakage would not have been flagged before the
+  effect-size clause existed either. What the numbers do establish is a measurement rather than
+  a verdict -- the leakage amplitude is {eff4:.4f} against a detection floor of {floor:.3f}, i.e.
+  mechanism (c)-amplitude reaches chi-hat at essentially exactly the limit of what this estimator
+  can resolve in one record.
+
+  WHY THE SIGN TEST CANNOT SEE IT: when a leakage of amplitude ~|floor| is added at random
+  relative phase, the resulting magnitude exceeds the original only a little more than half the
+  time, so the per-seed sign carries almost no information at n = {N}. A cleanly monotone
+  leakage source is needed to falsify this arm -- raising resp_artifact_amp far above its
+  registered range would do it, and that requires a CLI override the exporter does not yet
+  expose. RECORDED AS THE ARM'S OPEN FALSIFICATION, not as a pass.""")
+else:
+    print(f"""
+  THE FLOOR HAS NEUTERED THE ARM. The sign test DID fire (p = {p4:.2g}) and the effect-size
+  clause suppressed it at {eff4:.4f} against a floor of {floor:.3f}. That is the failure mode a
+  floor risks, and chi_est_mdd_resp must be re-derived before this arm is trusted.""")
