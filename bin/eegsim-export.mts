@@ -119,16 +119,36 @@ function main(): void {
   // the pattern G4 declares a pass, on the gate the Build Plan calls the most important thing
   // in Tier 0.
   const totalSamples = nSamp * nEpochs;
-  const composed = composeState(seed, stateArg, totalSamples, fs, { snrDb });
+
+  // THE RESPIRATORY MECHANISMS ARE OFF UNLESS ASKED FOR, and each is its own flag, because
+  // Build Plan 5.1 requires the three stay separable and a single --respiration would be that
+  // error in a CLI. G4's fixture needs exactly one of them on (the movement artifact) and one
+  // deliberately off (the amplitude half), so a combined flag could not express it at all.
+  const respOpts = {
+    movementArtifact: args['movement-artifact'] === 'true',
+    amplitudeModulation: args['amplitude-modulation'] === 'true',
+    chiModulation: args['chi-modulation'] === 'true',
+    ...(args['chi-mod-depth'] !== undefined ? { chiModDepth: Number(args['chi-mod-depth']) } : {}),
+    ...(args['resp-rate'] !== undefined ? { respRatePerMin: Number(args['resp-rate']) } : {}),
+    ...(args['independent-chi-mod-freq'] !== undefined
+      ? { independentChiModFreq: Number(args['independent-chi-mod-freq']) }
+      : {}),
+  };
+
+  const composed = composeState(seed, stateArg, totalSamples, fs, { snrDb, ...respOpts });
 
   const truth: InjectedTruth = {
     chi: composed.truth.chi,
     knee: composed.truth.knee,
     snrDb: composed.truth.snrDb,
-    chiModDepth: 0,
-    chiModPhi0: 0,
-    respFreq: 0,
-    independentChiModFreq: null,
+    // Read back from the generator rather than from the CLI arguments. The sidecar records
+    // WHAT WAS INJECTED; echoing the request would make it agree with itself even if the
+    // option never reached the generator -- which is the exact failure the f1 arm of G4 was
+    // built to detect, so the gate must not be handed a truth block that cannot disagree.
+    chiModDepth: respOpts.chiModulation ? composed.truth.chiModDepth : 0,
+    chiModPhi0: composed.truth.chiModPhi0,
+    respFreq: composed.truth.respFreqHz,
+    independentChiModFreq: respOpts.independentChiModFreq ?? null,
     projectionWeights: Object.fromEntries(
       [
         // One entry per background source, since there are now several with distinct
@@ -137,7 +157,14 @@ function main(): void {
         ...composed.truth.oscillations.map((o) => o.generator),
       ].map((g) => [g, [...weightsFor(g as Parameters<typeof weightsFor>[0])]]),
     ),
-    respMechanisms: { movementArtifact: false, rmbo: false, chiModulation: false },
+    // `rmbo` is mechanism (b), respiration-entrained neural activity. Still not implemented,
+    // and recorded as false rather than omitted so the sidecar says so explicitly.
+    respMechanisms: {
+      movementArtifact: respOpts.movementArtifact,
+      rmbo: false,
+      amplitudeModulation: respOpts.amplitudeModulation,
+      chiModulation: respOpts.chiModulation,
+    },
   };
 
   for (let e = 0; e < nEpochs; e++) {

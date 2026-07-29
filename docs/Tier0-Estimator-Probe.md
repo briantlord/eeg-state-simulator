@@ -825,3 +825,100 @@ than made and caveated, and only 1–20 Hz is quoted.
 
 These are characterization probes, not gates. They run on clean synthetic signal and **no
 tolerance may be derived from them** — that is T1-M2, against the full generator.
+
+---
+
+# Finding 13 — G4 was unbuildable for two decisions, and measuring its premises is what unblocked it
+
+D8 proposed G4's criterion; D12 refuted it and left four options on the table. **None of the
+four was adopted.** Measuring the premises first removed the need for all of them.
+
+## D12's own objection did not survive measurement
+
+D12 rejected the f₁ spectral-neighbourhood null partly because 39% of surviving bins sit below
+0.05 Hz, "in the drift band of any sliding-window χ̂ estimator where the local spectrum is
+emphatically not flat." Measured, the χ̂ noise floor by band:
+
+| band | bins | median | IQR/median |
+|---|---|---|---|
+| 0.005–0.05 Hz | 13 | 0.0633 | 0.70 |
+| 0.05–0.10 Hz | 6 | 0.0378 | 0.70 |
+| 0.10–0.20 Hz | 4 | 0.0753 | 0.33 |
+| 0.20–0.35 Hz | 14 | 0.0675 | 0.31 |
+
+The drift band sits at **0.9×** the floor over 0.10–0.35 Hz — not elevated. The objection was
+reasonable and it was wrong, and it is recorded as wrong in `g4_f1_neighbourhood_halfwidth`'s
+absence reason rather than quietly inherited.
+
+## What replaced it needs no threshold at all
+
+Measure every seed **twice**, once with the mechanism under test on and once off, everything
+else identical, and count how often the pair orders correctly. Under the null a paired
+difference is positive with probability 0.5 — **from the pairing, not from a choice.** This
+dissolves D12's defect 2 (the percentile null's per-seed exceedance rate was a function of
+respiration regularity, 0.317 at N3-like cv against an assumed 0.05) because the seed is its
+own control and seed-to-seed variance cancels rather than needing to be modelled.
+
+## The fixture choice that would have failed the gate for working correctly
+
+Decomposing the f₂ line by mechanism, χ modulation off throughout:
+
+| respiratory mechanisms | median @ f₂ | vs empty floor |
+|---|---|---|
+| neither | 0.0707 | 1.00× |
+| **(a) movement artifact only** | 0.0708 | **1.00×** |
+| **(c) amplitude only** | 0.2331 | **3.30×** |
+| both | 0.2331 | 3.30× |
+
+**Mechanism (a) does not reach χ̂ at all** — ~11 µV at 0.25 Hz on Fz, and none of it crosses
+into a 2–8 vs 16–40 Hz band ratio. That is the result the f₂ arm exists to establish, and it
+could not have been established before P11 because there was no energy at f₂ to leak.
+
+**Mechanism (c)-amplitude does, at 3.30×, and correctly.** It moves 0.5–4 Hz power at the
+respiratory rate and χ̂'s low band is 2–8 Hz; the bands overlap by construction. A fixture
+leaving it on would have failed G4 for doing exactly what it was built to do — the standard
+error Build Plan §5.1 names, committed in the gate rather than the generator. It is off in the
+fixture, and the epoch sidecar now carries four flags for three mechanisms so a reader can tell
+which halves of (c) were running.
+
+## The gate injects 13× the shipped modulation depth, and that is a finding, not a detail
+
+Detection rate of the f₁ line against its own null, by injected depth, 40 seeds:
+
+| `chi_mod_depth` | median @ f₁ | seeds clearing the null p95 |
+|---|---|---|
+| 0 | 0.1024 | 2/40 |
+| **0.15** *(shipped)* | 0.1016 | — *1.02× its own null* |
+| 0.80 | 0.1658 | 10/40 |
+| 1.25 | 0.2223 | 20/40 |
+| 1.75 | 0.3077 | 36/40 |
+| **2.00** *(fixture)* | 0.3599 | **39/40** |
+
+**At the depth the generator ships, the injected χ modulation is invisible to the estimator that
+measures it.** G4 asks whether the estimator attributes a *detectable* line to the *right*
+frequency, so the fixture supplies one — but it follows that G4 establishes nothing about the
+shipped coupling. This is a property of the cheap two-band proxy (floor ~0.10 in its own units
+over 300 s), and replacing it is T1-M2 estimator-characterization work.
+
+**It also qualifies Demo 1's χ row.** The artifact prints χ-modulation as the control that does
+not move with the filter. It is still a valid control, but it is not what its label says: at the
+shipped depth the exponent half contributes essentially nothing, and the 0.238 on screen is
+almost entirely mechanism (c)-**amplitude** (measured alone at f₂: 0.2331). The row is honest
+about not moving; it is not honest about which mechanism it is reading, and the label is
+corrected in the artifact.
+
+## Result, and that it can fail
+
+Gate: detection **12/12**, selectivity **12/12**, p = 2.4×10⁻⁴ each, f₁/f₂ ratio 4.93×.
+Null: f₂ **6/12**, sidebands **6/12** and **4/12**, ratios 1.000, 1.001, 1.000 — exactly chance.
+
+Three deliberate breakages all read FAIL: wrong frequency (0/12), nothing injected (0/12), and
+the shipped depth (8/12, p = 0.19). The last is not hypothetical — it is the generator as it
+ships, and the gate correctly refuses it.
+
+The null arm remains **absence of evidence**: a sign test at n = 12 resolves a shift only when
+it flips most pairs, and mechanism (a) moves the f₂ line by 0.2% of the null median. It
+establishes that leakage is not gross. The report prints the effect ratio beside the p-value so
+that limit is visible rather than inferred.
+
+Reproduce: `probe_g4.py`, `probe_g4_decompose.py`, `probe_g4_fixture.py`, `probe_g4_falsify.py`.

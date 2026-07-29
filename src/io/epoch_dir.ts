@@ -46,8 +46,22 @@ export interface InjectedTruth {
   readonly independentChiModFreq: number | null;
   /** Per-generator channel weights actually applied, from the projection file. */
   readonly projectionWeights: Readonly<Record<string, readonly number[]>>;
-  /** Which of the three respiratory mechanisms were enabled (Build Plan 5.1 a/b/c). */
-  readonly respMechanisms: { movementArtifact: boolean; rmbo: boolean; chiModulation: boolean };
+  /**
+   * Which respiratory mechanisms were enabled (Build Plan 5.1 a/b/c).
+   *
+   * FOUR FLAGS FOR THREE MECHANISMS, because (c) has two halves that behave differently
+   * enough that recording them as one would lose the distinction the sidecar exists to
+   * preserve: `amplitudeModulation` moves 0.5-4 Hz power, which overlaps chi-hat's 2-8 Hz low
+   * band and therefore produces a legitimate line at the respiratory rate, while
+   * `chiModulation` acts on the spectral slope. G4's fixture needs the first OFF and the
+   * second ON; a reader who cannot tell them apart cannot reproduce the gate.
+   */
+  readonly respMechanisms: {
+    movementArtifact: boolean;
+    rmbo: boolean;
+    amplitudeModulation: boolean;
+    chiModulation: boolean;
+  };
 }
 
 export interface EpochSidecar {

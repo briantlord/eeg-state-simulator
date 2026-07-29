@@ -373,16 +373,18 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 | `g4_f1` | 0.1 | Hz | `chosen` | chi modulation frequency | all |
 | `g4_f2` | 0.25 | Hz | `chosen` | respiration frequency | all |
 | `g4_min_bin_separation` | ≥10 | bins | `chosen` | f1, f2 and the sidebands f2+-f1 must all be separated by at least this many bins. At 300 s: f1-f2 = 45 bins; f1 to the nearest sideband (0.15 Hz) = 15 bins | all |
-| `g4_n_surrogates` | 200 | — | `chosen` | circular shifts of the respiration phase reference — f2 arm only | all |
+| `g4_n_surrogates` | — *(absent)* | — | `absent` | withdrawn with the circular-shift null | all |
+| `g4_n_seeds` | 12 | — | `chosen` | 12 paired seeds give an exact one-sided sign-test p of 1/4096 at k = n, comfortably below 0.05, and cost ~25 s of the fast tier at 3 exports per seed | all |
 | `g4_percentile_level` | 95 | percent | `chosen` | the percentile LEVEL is a convention — 99 would serve as well | all |
-| `g4_threshold_value` | *solved:* The coupling index at g4_percentile_level of the null distribution, computed per run. | — | `derived` | f1 arm: percentile over the spectral neighbourhood, excluding f2 and the sidebands f2+-f1 plus the g4_min_bin_separation guard band. f2 arm: percentile over the circular-shift surrogate distribution. | all |
-| `g4_f1_neighbourhood_halfwidth` | 60 | bins | `chosen` | half-width of the spectral neighbourhood used for the f1 arm's null, at 1/T = 0.0033 Hz | all |
+| `g4_threshold_value` | — *(absent)* | — | `absent` | No threshold. See gate_g4_criterion and gate_g4_seed_aggregation. | all |
+| `g4_f1_neighbourhood_halfwidth` | — *(absent)* | bins | `absent` | withdrawn with D8's f1 null | all |
+| `g4_fixture_chi_mod_depth` | 2 | — | `derived` | Smallest depth on a 0.8-2.0 sweep at which the f1 line clears its own depth-0 null in >=95% of seeds. Measured: prep/reference/probe_g4_fixture.py, 40 seeds, 300 s, N3, Fz, linked mastoid. | all |
+
+**`g4_n_seeds`.** G4 caps at its own seed count rather than consuming n_seeds. Each seed costs THREE 300 s exports (observed, detection null, leakage null) because the comparisons are paired, so the runner's default 20 would put the gate over the fast tier's 2-minute budget on its own. The cap is stated in the report rather than left implicit — harness section 9: a workflow that silently truncates coverage reads as having covered everything.
 
 **`g4_percentile_level`.** Split from g4_percentile on import. The level and the threshold value at that level have different standings; as one derived row the UI renders the level read-only and the report prints the wrong threshold standing for the gate whose provenance matters most.
 
-**`g4_threshold_value`.** The two arms take DIFFERENT nulls; see Execution-Scheme D8. A circular shift of a clean phase ramp multiplies an alignment-magnitude index by a unit-magnitude constant, so on the f1 arm the null is a point mass at the observed value and the gate can never pass — measured, with zero IQR. The f2 arm's circular-shift null is sound and is retained.
-
-**`g4_f1_neighbourhood_halfwidth`.** Added on import to support D8's f1 null. Must exceed g4_min_bin_separation by enough to give a usable sample after the guard bands are excised.
+**`g4_fixture_chi_mod_depth`.** THE DEPTH G4 INJECTS, WHICH IS NOT THE DEPTH THE GENERATOR SHIPS. chi_mod_depth's provisional value is 0.15, and at 0.15 the recovered line is 1.02x its own null -- invisible. Measured detection rates: 0.8 -> 0.25, 1.0 -> 0.35, 1.25 -> 0.50, 1.5 -> 0.65, 1.75 -> 0.90, 2.0 -> 0.97. This is legitimate because of what G4 asks: whether the estimator attributes a DETECTABLE line to the RIGHT FREQUENCY. A line has to be detectable before that question means anything, so the fixture supplies one. It is 13x the shipped depth, and the gate therefore DOES NOT establish that the shipped modulation is recoverable. It is not — that is a property of the cheap two-band chi proxy in src/analysis/coupling.ts, whose floor over a 300 s record is ~0.10 in its own units. Replacing that estimator is T1-M2 work.
 
 ## 12. Gate criteria
 
@@ -393,8 +395,8 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 | `gate_aasm_n3_band` | 0.5–2 *(band_edges)* | Hz | `definitional` | AASM Manual for the Scoring of Sleep and Associated Events — slow wave activity band | n3 |
 | `gate_aasm_n3_reference` | referenced to contralateral mastoid (reference_channels) | — | `definitional` | AASM Manual for the Scoring of Sleep and Associated Events — derivation reference | n3 |
 | `gate_g5_null_ordering` | pass_fraction(N3 @ snr_nominal) > pass_fraction(N2) AND > pass_fraction(N3 @ snr_nominal + snr_null_offset) | — | `derived` | A strict ordering needs no invented threshold. See Execution-Scheme D9. | n2, n3 |
-| `gate_g4_criterion` | coupling index exceeds g4_threshold_value at f1 (spectral-neighbourhood null) and does not at f2 (circular-shift null) | — | `derived` | from the null distributions; see Execution-Scheme D8 | all |
-| `gate_g4_seed_aggregation` | exact binomial test of the observed f2 exceedance count against the per-seed false-exceedance rate implied by g4_percentile_level | — | `derived` | estimator property: a correctly-sized null exceeds its own percentile at the complementary rate by construction | all |
+| `gate_g4_criterion` | PAIRED per seed. Detection arm: depth(f1) with chi modulation ON exceeds depth(f1) with it OFF, same seed, everything else identical. Selectivity arm: depth(f1) exceeds depth(f2) within the same record. Both aggregate by gate_g4_seed_aggregation. | — | `derived` | Sign test against p = 0.5, which holds under the null by the pairing itself and is not a chosen number. See D14. | all |
+| `gate_g4_seed_aggregation` | Exact binomial sign test on the paired per-seed comparisons. Positive arms: one-sided P(K >= k | n, 0.5) < 0.05. Null arm: TWO-sided p >= 0.05, i.e. the leakage comparison must be consistent with chance in either direction. | — | `derived` | Under H0 a paired difference is positive with probability 0.5. The 0.5 comes from the pairing, not from a choice. | all |
 | `gate_topography` | argmax over electrodes matches the topo_expect_* rows | — | `derived` | structural — no tolerance required; expectations are literature and independent of the projection file | all |
 | `gate_determinism` | bit-identical, within-platform and within-version only | — | `chosen` | This project's definition of determinism. No external standard fixes it. | all |
 | `gate_chi_tol_knee` | — *(absent)* | — | `absent` | T1-M2 estimator characterization | all |
@@ -413,7 +415,9 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 
 **`gate_g5_null_ordering`.** G5's positive arm is RECORD-ONLY: it reports a pass fraction with no threshold, because any threshold on that fraction would be invented or read from our own generator's spread, both prohibited. The null carries the verdict — which D5 already says carries the discriminative weight.
 
-**`gate_g4_seed_aggregation`.** Added on import. The spec never stated how per-seed results aggregate to a verdict, and 'all seeds must pass' fails ~64% of the time at n_seeds=20 on a working generator (0.95^20 = 0.36), because the f2 arm has a 5% per-seed false-exceedance rate BY DESIGN.
+**`gate_g4_criterion`.** TWO ARMS BECAUSE 'appears at f1 and not at f2' IS TWO CLAIMS. Detection alone would pass an estimator that smears a real line across every low frequency; selectivity alone would pass one that reports nothing anywhere, since 0 > 0 is false but so is any comparison on noise. Measured under the fixture: detection 40/40, selectivity 40/40.
+
+**`gate_g4_seed_aggregation`.** REPLACES the exact-binomial-against-5% construction, which D12 measured as false: the per-seed false-exceedance rate of a percentile null is a function of respiration regularity, not of the percentile, and ran 0.317 at N3-like resp_period_cv. Pairing removes the dependency entirely — the seed is its own control, so seed-to-seed variance cancels instead of having to be modelled. THE NULL ARM IS ABSENCE OF EVIDENCE and the report says so: it establishes that leakage is not gross, not that it is zero. Measured, mechanism (a) shifts the f2 line by 0.2% of the null median, far below what a sign test at these n could resolve.
 
 **`gate_determinism`.** Build Plan 9 groups G2 with the record-only gates, but bit-identity has no distribution to record and a determinism gate that cannot fail is worthless. It is also the root of the dependency graph. Canonically PASS/FAIL; see Execution-Scheme section 1. RE-STANDED definitional -> chosen on review. It had been sourced to "IEEE 754 binary64", which defines float64 representation and arithmetic but says nothing about one seed producing identical output -- that is a property of OUR implementation and its draw ordering, which is exactly why the Build Plan strikes any cross-implementation clause. That was a re-sourcing by guess, the remedy this registry's own discipline forbids, and it sat on the criterion of a failable gate. No numeric tolerance is invented here, so `chosen` is adequate for a structural criterion -- as it is for gate_topography.
 
@@ -432,9 +436,9 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 | Standing | Rows |
 |---|---|
 | `definitional` | 11 |
-| `chosen` | 50 |
+| `chosen` | 49 |
 | `literature` | 8 |
 | `derived` | 7 |
 | `invented` | 104 |
-| `absent` | 8 |
-| **total** | **188** |
+| `absent` | 11 |
+| **total** | **190** |

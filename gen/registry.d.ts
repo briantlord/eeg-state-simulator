@@ -63,7 +63,9 @@ export type ParamKey =
   | 'g4_f1'
   | 'g4_f1_neighbourhood_halfwidth'
   | 'g4_f2'
+  | 'g4_fixture_chi_mod_depth'
   | 'g4_min_bin_separation'
+  | 'g4_n_seeds'
   | 'g4_n_surrogates'
   | 'g4_percentile_level'
   | 'g4_record_length'
@@ -253,13 +255,15 @@ export interface ParamKindMap {
   'fit_band_narrow': 'interval';
   'fs': 'scalar';
   'g4_f1': 'scalar';
-  'g4_f1_neighbourhood_halfwidth': 'scalar';
+  'g4_f1_neighbourhood_halfwidth': 'absent';
   'g4_f2': 'scalar';
+  'g4_fixture_chi_mod_depth': 'scalar';
   'g4_min_bin_separation': 'bound';
-  'g4_n_surrogates': 'scalar';
+  'g4_n_seeds': 'scalar';
+  'g4_n_surrogates': 'absent';
   'g4_percentile_level': 'scalar';
   'g4_record_length': 'scalar';
-  'g4_threshold_value': 'solved';
+  'g4_threshold_value': 'absent';
   'gate_aasm_n3_band': 'interval';
   'gate_aasm_n3_min_amp': 'scalar';
   'gate_aasm_n3_min_fraction': 'scalar';

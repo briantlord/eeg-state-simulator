@@ -202,10 +202,16 @@ function updateObservables(): void {
 
   // The mechanism the filter does NOT remove, beside it, so the contrast is the lesson
   // rather than a footnote.
+  //
+  // LABELLED (c), NOT "chi modulation", and the distinction cost a gate to find. This reads
+  // chi-hat at the respiratory rate, and chi-hat's low band is 2-8 Hz while (c)'s AMPLITUDE
+  // half modulates 0.5-4 Hz power -- the bands overlap, so what this row mostly measures is
+  // the amplitude half, not the exponent half. Measured in isolation at f2: amplitude alone
+  // 0.233, exponent alone at the shipped depth 1.02x its own null, i.e. nothing. The row is
+  // an honest control -- it genuinely does not move with the filter -- but calling it the
+  // exponent modulation would be a claim the generator does not support. See G4, Finding 13.
   const c = couplingReadout(buffer, stream.truth.chiModDepth, stream.truth.respFreqHz, FS);
-  $('c-chi').textContent = Number.isFinite(c.recoveredDepth)
-    ? `${c.recoveredDepth.toFixed(3)} (injected ${c.injectedDepth.toFixed(2)})`
-    : '—';
+  $('c-chi').textContent = Number.isFinite(c.recoveredDepth) ? c.recoveredDepth.toFixed(3) : '—';
   $('c-window').textContent =
     `Measured over ${stream.segmentSeconds} s (~${breaths.toFixed(0)} breaths).`;
 

@@ -396,6 +396,89 @@ shaping, and it must be characterized before any PAC recovery gate is trusted.
 
 ---
 
+## D14 — G4's criterion is a paired sign test; both of D8's nulls are withdrawn
+
+**Decided, implemented, and falsified against.** D12 left G4 with no pass criterion and four
+options on the table. None of them was adopted. Measuring the premises first killed the whole
+family:
+
+**D12's stated objection to the neighbourhood null does not survive measurement.** The argument
+was that 39% of the surviving bins sit below 0.05 Hz, in a drift band where the local spectrum
+is not flat. Measured, the χ̂ floor below 0.05 Hz is **0.9× the floor over 0.10–0.35 Hz** — the
+drift band is not elevated at all at these parameters. The neighbourhood null was dropped
+anyway, for a better reason than the one that was argued.
+
+**The better reason: a matched null needs no local-flatness assumption and no threshold.**
+Measure every seed **twice** — once with the mechanism under test on, once with it off,
+everything else identical — and count how often the pair orders correctly. Under the null a
+paired difference is positive with probability 0.5. The criterion is an exact sign test, and
+**the 0.5 comes from the pairing rather than from anyone's choice**, which is the "derived, not
+invented" threshold §1 demands.
+
+This also removes D12's defect 2 at the root. The percentile construction's per-seed
+false-exceedance rate turned out to be a function of respiration regularity — 0.317 at N3-like
+`resp_period_cv`, against the 0.05 it was assumed to have — so it would have rejected a working
+generator once a state-specific cv was fitted. Pairing makes each seed its own control, so
+seed-to-seed variance cancels instead of having to be modelled. `g4_threshold_value`,
+`g4_f1_neighbourhood_halfwidth` and `g4_n_surrogates` are all now `absent` with reasons.
+
+**The circular shift was never a null here, and the project made the same mistake twice.** A
+shift of a near-periodic phase ramp by half a cycle *anti-aligns*, and a magnitude estimator
+returns the signal straight back. That is D12's zero-IQR degeneracy — and it is independently
+the mistake I made building Demo 1's noise floor a day later, caught by measurement and now
+pinned by `test/coupling.test.ts`. The replacement in both places is an **off-resonance or
+mechanism-toggle** null, never a permutation of a periodic reference.
+
+### Two positive arms, because "at f₁ and not at f₂" is two claims
+
+`DETECTION` — depth(f₁) with χ modulation on exceeds depth(f₁) with it off, same seed.
+`SELECTIVITY` — depth(f₁) exceeds depth(f₂) within the same record.
+
+Detection alone would pass an estimator that smears a real line across every low frequency;
+selectivity alone would pass one that reports nothing anywhere. Measured: **12/12 and 12/12,
+p = 2.4 × 10⁻⁴ each, f₁/f₂ ratio 4.93×.**
+
+### The fixture, and the choice in it that decides whether the gate means anything
+
+Mechanism **(a) is ON** — it is the confound the f₂ arm must survive, ~11 µV at 0.25 Hz on Fz,
+and its absence is what made this arm vacuous until P11.
+
+Mechanism **(c)-amplitude is OFF**, and getting this wrong would have been invisible. It
+modulates 0.5–4 Hz power at the respiratory rate and χ̂'s low band is 2–8 Hz: **the bands
+overlap by construction**, so it produces a genuine f₂ line — measured, 3.30× the empty floor.
+A fixture that left it on would fail the gate for doing exactly what it was built to do.
+Conflating the respiratory mechanisms is the standard error Build Plan §5.1 names; this would
+have been that error committed in the gate rather than the generator.
+
+### What G4 does not establish, stated because the gate reads stronger than it is
+
+It injects `g4_fixture_chi_mod_depth` = 2.0, **13× the depth the generator ships**. At the
+shipped 0.15 the recovered line is 1.02× its own null — invisible — and the gate's detection arm
+**fails** on it (8/12, p = 0.19; measured in `probe_g4_falsify.py`). G4 asks whether the
+estimator attributes a *detectable* line to the *right frequency*, and a line must be detectable
+before that question means anything. It follows that G4 says nothing about whether the shipped
+modulation is recoverable. **It is not.** That is a property of the cheap two-band χ proxy,
+whose floor over a 300 s record is ~0.10 in its own units, and replacing it is T1-M2 work.
+
+### The null arm is absence of evidence, and says so
+
+Leakage is checked at f₂ **and at both sidebands** f₂±f₁ — intermodulation products that need
+energy at both frequencies to exist, which is precisely why D12 called the arm vacuous before
+mechanism (a) was built. Measured: **6/12, 6/12, 4/12, ratios 1.000, 1.001, 1.000.** Exactly
+chance. But a sign test at n = 12 resolves a shift only when it flips most pairs, and mechanism
+(a) moves the f₂ line by 0.2% of the null median — so the arm establishes that leakage is **not
+gross**, not that it is zero. The report prints the effect ratio beside the p-value for that
+reason.
+
+### It can fail
+
+Three deliberate breakages, all confirmed FAIL (`prep/reference/probe_g4_falsify.py`): asking
+the gate to find the line at the wrong frequency (0/12), injecting nothing (0/12), and injecting
+at the shipped depth (8/12, p = 0.19). A gate that cannot fail is not evidence, and G4 spent two
+decisions in exactly that state.
+
+---
+
 ## Pending decisions
 
 | ID | Question | Blocks | Due |

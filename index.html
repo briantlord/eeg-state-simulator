@@ -142,7 +142,7 @@
               <tr><th>recovered</th><td class="derived" id="c-rec">—</td></tr>
               <tr><th>retained</th><td id="c-ret">—</td></tr>
               <tr><th>noise floor</th><td class="derived" id="c-floor">—</td></tr>
-              <tr><th>χ modulation (c)</th><td class="derived" id="c-chi">—</td></tr>
+              <tr><th>mechanism (c)</th><td class="derived" id="c-chi">—</td></tr>
             </table>
             <p class="note">
               Move the high-pass cutoff above the respiratory rate and the <strong>(a)</strong>
@@ -151,6 +151,14 @@
               movement artifact, the filter removes it — correctly, it <em>is</em> an
               artifact — and the physiological coupling was never what the number was
               reporting.
+            </p>
+            <p class="note">
+              <strong>(c)</strong> is labelled by mechanism, not by quantity, on purpose. It
+              reads χ̂ at the respiratory rate, and χ̂'s low band is 2–8 Hz while (c)'s
+              <em>amplitude</em> half moves 0.5–4 Hz power — so the bands overlap and this row
+              is mostly reading the amplitude half. At the depth this generator ships, the
+              exponent half is invisible to the estimator that measures it (G4 measures it at
+              1.02× its own null). Honest as a control; not a measurement of χ modulation.
             </p>
             <p class="note">
               The <strong>noise floor</strong> is the same estimator run off-resonance, where
