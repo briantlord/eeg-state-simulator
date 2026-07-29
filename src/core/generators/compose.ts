@@ -82,6 +82,18 @@ export interface ComposeOptions {
    * the shipped UI -- it is how the gate separates the injected effect from the confound.
    */
   readonly independentChiModFreq?: number;
+  /**
+   * Omit graphoelements from the channel mix, keeping everything else identical.
+   *
+   * Exists for G3's matched null: "detector on pure aperiodic background at matched chi;
+   * false-positive rate near zero." Matched means the SAME background, so the events are
+   * suppressed at the summation rather than at the draw — see the call site.
+   *
+   * The event list is still returned and still describes what WOULD have been injected. A
+   * caller that trusted the list here would be wrong, which is why the exporter's sidecar
+   * records the suppression rather than leaving it to be inferred from a silent channel.
+   */
+  readonly suppressGraphoelements?: boolean;
   /** Coefficient-update scheme for the tilt filter. See src/core/filters/tilt.ts. */
   readonly tiltScheme?: 'blockwise' | 'filterbank';
   /**
@@ -121,6 +133,16 @@ export interface ComposeResult {
     respAmpModDepth: number;
     respFreqHz: number;
     independentChiModFreq: number | null;
+    /**
+     * Projection generators the graphoelement synthesizer used, for the epoch sidecar.
+     *
+     * Passed through from `synthesizeGraphoelements` rather than reconstructed, because event
+     * type and generator id are different vocabularies — a `kcomplex` event projects through
+     * `kc`. Populated even under `suppressGraphoelements`: the events still describe what would
+     * have been injected, and the sidecar's `graphoelementsSuppressed` says they did not reach
+     * the signal.
+     */
+    graphoelementGenerators: readonly string[];
   };
 }
 
@@ -307,11 +329,19 @@ export function composeState(
   }
 
   // Graphoelements. Injected as events; the waveform is derived from the list (seam 1).
+  //
+  // SYNTHESISED EVEN WHEN SUPPRESSED, and the draws are not skipped. G3's null needs the same
+  // background with no spindles in it, and skipping the synthesis would also skip every RNG
+  // draw it makes — so the background would differ from the gate's by more than the absence of
+  // graphoelements, and the null would no longer be matched. Seam 4's substreams make the
+  // suppression free: the cost is one wasted synthesis on a path only a gate takes.
   const grapho = synthesizeGraphoelements(seed, state, nSamples, fs);
-  for (let c = 0; c < nCh; c++) {
-    const dst = out[c]!;
-    const src = grapho.channels[c]!;
-    for (let i = 0; i < nSamples; i++) dst[i] = dst[i]! + sourceGain * src[i]!;
+  if (opts.suppressGraphoelements !== true) {
+    for (let c = 0; c < nCh; c++) {
+      const dst = out[c]!;
+      const src = grapho.channels[c]!;
+      for (let i = 0; i < nSamples; i++) dst[i] = dst[i]! + sourceGain * src[i]!;
+    }
   }
 
   // eta_c: small INDEPENDENT sensor noise. The only per-channel term in the model.
@@ -340,6 +370,7 @@ export function composeState(
       respAmpModDepth,
       respFreqHz: resp.meanRatePerMin / 60,
       independentChiModFreq: opts.independentChiModFreq ?? null,
+      graphoelementGenerators: grapho.generators,
     },
   };
 }

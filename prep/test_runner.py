@@ -173,9 +173,32 @@ def test_preflight_refuses_a_gate_disagreeing_with_the_frozen_ledger(planted):
         preflight(strict_ledger=False)
 
 
-def test_preflight_refuses_a_ledger_gate_with_no_module():
+def test_preflight_accepts_the_completed_ledger():
+    """Every ledger entry now has a module and a matched null, so strict preflight must pass.
+
+    This is the assertion that lets `npm run verify` drop `--allow-partial`. If it ever fails,
+    the build has lost a gate and must refuse to run rather than quietly test less.
+    """
+    preflight(strict_ledger=True)
+
+
+def test_preflight_refuses_a_ledger_gate_with_no_module(monkeypatch):
     """Without --allow-partial, a ledger entry nobody implements is a refusal rather than a
-    silently smaller test set."""
+    silently smaller test set.
+
+    PLANTED, NOT INHERITED. The original version of this test simply called
+    `preflight(strict_ledger=True)` and expected a raise -- which passed only because the gate
+    set was incomplete at the time it was written. Completing the ledger turned a real
+    assertion into a failing one, and the mechanism it meant to test had never been exercised
+    on its own. It now plants a ledger entry with no module, so it tests the refusal rather
+    than the state of the repository.
+    """
+    monkeypatch.setitem(
+        GATE_LEDGER,
+        "G9",
+        GateSpec(id="G9", title="a gate nobody wrote", gate_class="C",
+                 runtime_tier="fast", failable=True, criterion_key="gate_determinism"),
+    )
     with pytest.raises(PreflightError, match="no module implements"):
         preflight(strict_ledger=True)
 

@@ -60,13 +60,17 @@ const STEPS = [
     skipIf: () => (PY ? null : 'no .venv found — run: python -m venv .venv'),
   },
   {
-    name: 'gate runner (fast tier)',
+    name: 'gate runner (all tiers)',
     why: 'the gates themselves, with V/C/U printing and matched nulls',
     cmd: PY,
-    // --allow-partial while the gate set is being written: the ledger declares seven arms and
-    // only G2 is implemented. REMOVE THIS FLAG once the ledger is fully implemented, or the
-    // runner will stop noticing that a gate has gone missing.
-    args: ['-m', 'prep.runner', '--tier', 'fast', '--seeds', '6', '--allow-partial'],
+    // NO --allow-partial. The ledger declares seven arms and all seven are implemented, each
+    // with its matched null, so the runner now refuses to start if one goes missing — which is
+    // the whole point of freezing the ledger. Restoring the flag would restore a build that
+    // does not notice a deleted gate.
+    //
+    // `--tier all` rather than `fast`, because G3 is the only slow-tier gate and skipping it
+    // would leave the one class-V morphology check out of every commit.
+    args: ['-m', 'prep.runner', '--tier', 'all', '--seeds', '6'],
     skipIf: () => (PY ? null : 'no .venv found — run: python -m venv .venv'),
   },
 ];

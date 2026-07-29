@@ -154,12 +154,18 @@ def generate(
     state: str,
     epochs: int = 1,
     snr_db: float | None = None,
+    no_graphoelements: bool = False,
     node: str = "node",
 ) -> Run:
     """Invoke the headless TypeScript exporter and load what it wrote.
 
     This is the D7 boundary: the harness measures the shipped generator through the epoch
     directory, rather than reimplementing it in Python.
+
+    `no_graphoelements` omits spindles, K-complexes and slow oscillations from the CHANNEL MIX
+    while leaving the background bit-identical -- G3's matched null. The event list in the
+    exported directory still describes what would have been injected, and the sidecar's
+    `graphoelementsSuppressed` records that they did not reach the signal.
     """
     out = Path(out)
     cmd = [
@@ -174,6 +180,8 @@ def generate(
     ]
     if snr_db is not None:
         cmd += ["--snr-db", str(snr_db)]
+    if no_graphoelements:
+        cmd += ["--no-graphoelements", "true"]
     proc = subprocess.run(cmd, cwd=_ROOT, capture_output=True, text=True)
     if proc.returncode != 0:
         raise EpochIOError(

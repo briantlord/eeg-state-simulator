@@ -79,6 +79,9 @@ export type ParamKey =
   | 'gate_chi_tol_knee'
   | 'gate_coupling_depth_tol'
   | 'gate_determinism'
+  | 'gate_g1_null_zero'
+  | 'gate_g1b_null_zero'
+  | 'gate_g3_null_fp_rate'
   | 'gate_g4_criterion'
   | 'gate_g4_seed_aggregation'
   | 'gate_g5_null_ordering'
@@ -273,6 +276,9 @@ export interface ParamKindMap {
   'gate_chi_tol_knee': 'absent';
   'gate_coupling_depth_tol': 'absent';
   'gate_determinism': 'procedure';
+  'gate_g1_null_zero': 'procedure';
+  'gate_g1b_null_zero': 'procedure';
+  'gate_g3_null_fp_rate': 'procedure';
   'gate_g4_criterion': 'procedure';
   'gate_g4_seed_aggregation': 'procedure';
   'gate_g5_null_ordering': 'procedure';

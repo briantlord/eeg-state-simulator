@@ -922,3 +922,117 @@ establishes that leakage is not gross. The report prints the effect ratio beside
 that limit is visible rather than inferred.
 
 Reproduce: `probe_g4.py`, `probe_g4_decompose.py`, `probe_g4_fixture.py`, `probe_g4_falsify.py`.
+
+---
+
+# Finding 14 — the four remaining gates, and what building each one measured
+
+G1a, G1b, G3 and G6 are implemented with matched nulls. `--allow-partial` is removed from
+`npm run verify`: all seven ledger arms exist, so the runner now refuses to start if one goes
+missing, which is what freezing the ledger was for.
+
+Every one of the four exposed something. Three were defects in the gate rather than the
+generator — which is the expected ratio the first time a measurement is written down, and worth
+recording because each failed in a way that would have read as a *result*.
+
+## G1b's narrowband estimator noise exceeds the χ spacing between states `[CONSTRAINS P10]`
+
+The most consequential number here, and it came out of a null rather than a gate. On white
+noise over 300 s, fixed-mode χ̂ over 30–45 Hz:
+
+| | value |
+|---|---|
+| mean | −0.016 to −0.025 (unbiased) |
+| **per-seed sd** | **0.18 – 0.23** |
+| range over 12 seeds | −0.32 to +0.25 |
+
+30–45 Hz is **0.176 decades** of leverage. A slope estimated over that span scatters widely
+however long the record — this is not a short-record artifact.
+
+**That sd is larger than the χ difference between adjacent states in the registry** —
+`chi_wake_ec` 1.10 against `chi_n1` 1.40 is 0.30, barely above one standard deviation. So **no
+state ordering is supportable from narrowband χ on a single 300 s record**, and any comparison
+that appears to work is reading noise. This constrains P10 directly: fitting χ and the knee
+jointly per state does not help if the estimator that will later be used to *check* the ordering
+cannot resolve it.
+
+It also explains the first failure of G1a's null, which required every seed to satisfy
+|χ̂| < 0.10 and read −0.2028 on its first real run. The bound was right; applying it per seed
+was not. The nulls now test the **mean** and report the sd, so the limit is visible in every run
+instead of only here.
+
+## G6's null had a fixed point, and it was on the generator that most needed testing
+
+G6 compares `argmax` over projection weights against `topo_expect_*`, which is `literature` and
+independent by registry constraint. Its null must show that mis-centring the projection breaks
+the comparison — otherwise the gate could be reading its expectation from the file it is testing.
+
+The first perturbation was an anterior–posterior mirror. It broke **3 of 4** comparisons.
+`spindle_fast` peaks at **Cz**, which lies on the AP midline, so the mirror maps it to itself —
+a fixed point of the perturbation. And `spindle_fast` is the generator whose expected set
+(`C3/C4/Cz`) is hardest to miss by accident, so it is precisely the one the null most needed to
+exercise.
+
+Replaced with a **transposition of weight vectors between generators**: `spindle_fast ↔ kc`,
+`alpha ↔ spindle_slow`. No geometry, no fixed points, and it targets a failure that could really
+occur — a projection file with two entries swapped. The pairing is not arbitrary:
+`topo_expect_kc` is `Fz/F3/F4` and `topo_expect_spindle_slow` is `F3/Fz/F4` — **the same three
+electrodes** — so swapping those two would have broken neither comparison and silently halved
+the null's coverage. Now 4/4.
+
+## G3's F1 curve ran backwards because "found a marginal spindle" was scored as "fired on noise"
+
+The spec asks for F1 as a function of inclusion threshold on the graded prominence field. First
+implementation, median over 6 seeds:
+
+| threshold | p≥0.0 | p≥0.2 | p≥0.4 | p≥0.6 | p≥0.8 |
+|---|---|---|---|---|---|
+| **first version** | 0.604 | 0.603 | 0.472 | 0.398 | **0.143** |
+| **corrected** | 0.604 | 0.611 | 0.571 | 0.649 | 0.619 |
+
+The first curve falls monotonically, which reads as *the detector is worse at canonical
+spindles* — the opposite of the truth. Raising the threshold shrank the ground truth while
+leaving the detection count fixed, so every detection of an excluded event was charged to
+precision. What it measured was YASA correctly finding the marginal events we had just decided
+not to ask about.
+
+Detections matching excluded events are now **excused** — neither true nor false positives. The
+false-positive question belongs to the null, which asks it on a background containing no events
+at all. Conflating the two is the same error the project keeps finding elsewhere: charging one
+mechanism's behaviour to another.
+
+**What the corrected curve says:** it is roughly flat, and recall is the limiter — a median of
+**25 injected against 12 detected**. YASA finds about half our spindles, equally often whether
+they are marginal or canonical. Record-only, no pass band, and per the spec a low F1 here is not
+automatically a failure — but the flatness means the prominence field is not yet doing the work
+seam 1 built it for, which is a T1 question against MODA.
+
+## G1a's knee arm cannot work in N3, by design
+
+First run reported a recovered knee of **`-0.3+0.6j Hz`** — a complex number, from a negative
+fitted parameter raised to a fractional power. The symptom was a missing guard; the cause was
+asking N3 for a knee it does not have. `knee_freq_n3` is **0.5 Hz**, below the 1–45 Hz fit band,
+and that is deliberate: D11 recorded that with one `k` per state, the only way to express
+`knee_present: absent` is to *move* the knee out of band rather than weaken it.
+
+G1a now runs **two states** — REM (`knee_freq` 20 Hz, prominent) and N3 (0.5 Hz, out of band) —
+and reports each. Measured at Pz, 10 epochs × 6 seeds:
+
+| state | injected χ | G1a error | knee | G1b error |
+|---|---|---|---|---|
+| rem | 2.100 | **+0.442** (IQR 0.050) | 20.0 → 15.3 Hz | −0.465 (IQR 0.137) |
+| n3 | 1.660 | −0.068 (IQR 0.019) | out of band, 6/6 unrecoverable | −0.158 (IQR 0.190) |
+
+REM's large G1a error is the regime effect the Finding 2 correction predicted: oscillatory peaks
+inside 1–45 Hz attack knee-mode fitting specifically, and REM carries both theta and alpha.
+
+## And the test suite caught a test asserting on a transient condition
+
+`test_preflight_refuses_a_ledger_gate_with_no_module` called `preflight(strict_ledger=True)` and
+expected a raise — which passed only because the gate set was incomplete when it was written.
+Completing the ledger turned it red, and the mechanism it meant to test had never been exercised
+on its own. It now **plants** a ledger entry with no module. A test that passes because of the
+state of the repository rather than the behaviour of the code is worth less than no test, for
+the same reason the harness spec gives about gates.
+
+Reproduce: `npm run verify`, or `python -m prep.runner --tier all --seeds 6`.

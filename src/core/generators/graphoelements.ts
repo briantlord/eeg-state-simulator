@@ -178,6 +178,16 @@ export interface GraphoelementResult {
   channels: Float64Array[];
   /** The event list. Primary output; the waveform above is derived from it. */
   events: GeneratedEvent[];
+  /**
+   * The projection generators this run actually used.
+   *
+   * REPORTED RATHER THAN DERIVABLE FROM `events`, because event type and generator id are not
+   * the same vocabulary and only this module knows the mapping: a `kcomplex` event projects
+   * through `kc`, and a `slow_oscillation` through `delta`. The epoch sidecar records the
+   * weights actually applied, and reconstructing that list from event types outside this file
+   * would be a second copy of a mapping that is free to change here.
+   */
+  generators: GeneratorId[];
 }
 
 /**
@@ -197,6 +207,7 @@ export function synthesizeGraphoelements(
   const nCh = ALL_CHANNELS.length;
   const channels: Float64Array[] = Array.from({ length: nCh }, () => new Float64Array(nSamples));
   const events: GeneratedEvent[] = [];
+  const used = new Set<GeneratorId>();
 
   const add = (
     wave: Float64Array,
@@ -204,6 +215,7 @@ export function synthesizeGraphoelements(
     generator: GeneratorId,
     perChannelDelay?: Float64Array,
   ) => {
+    used.add(generator);
     const weights = weightsFor(generator);
     for (let c = 0; c < nCh; c++) {
       const w = weights[c]!;
@@ -303,7 +315,7 @@ export function synthesizeGraphoelements(
     }
   }
 
-  return { channels, events };
+  return { channels, events, generators: [...used] };
 }
 
 // ---------------------------------------------------------------------- helpers

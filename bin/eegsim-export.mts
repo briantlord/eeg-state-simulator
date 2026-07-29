@@ -135,7 +135,14 @@ function main(): void {
       : {}),
   };
 
-  const composed = composeState(seed, stateArg, totalSamples, fs, { snrDb, ...respOpts });
+  // G3's matched null: the same background with the graphoelements left out of the mix.
+  const suppressGraphoelements = args['no-graphoelements'] === 'true';
+
+  const composed = composeState(seed, stateArg, totalSamples, fs, {
+    snrDb,
+    suppressGraphoelements,
+    ...respOpts,
+  });
 
   const truth: InjectedTruth = {
     chi: composed.truth.chi,
@@ -155,6 +162,17 @@ function main(): void {
         // topographies rather than one uniform one.
         ...Array.from({ length: scalarValue('background_n_sources') }, (_, i) => `background_${i}`),
         ...composed.truth.oscillations.map((o) => o.generator),
+        // Graphoelement generators, DERIVED FROM THE EVENT LIST rather than listed for every
+        // state. G6 needs these weights, and the temptation was to add spindle/kc
+        // unconditionally so the gate always finds them — but this field means "weights
+        // ACTUALLY APPLIED", and a wake record does not apply a spindle topography. Writing
+        // one there would make the sidecar agree with a question nobody asked of that record.
+        // G6 instead reads each generator from the state that generates it.
+        //
+        // Under --no-graphoelements the events still exist and the weights are still listed:
+        // they describe the topography those events would have had, and
+        // `graphoelementsSuppressed` in this same block says they did not reach the signal.
+        ...composed.truth.graphoelementGenerators,
       ].map((g) => [g, [...weightsFor(g as Parameters<typeof weightsFor>[0])]]),
     ),
     // `rmbo` is mechanism (b), respiration-entrained neural activity. Still not implemented,
@@ -165,6 +183,7 @@ function main(): void {
       amplitudeModulation: respOpts.amplitudeModulation,
       chiModulation: respOpts.chiModulation,
     },
+    graphoelementsSuppressed: suppressGraphoelements,
   };
 
   for (let e = 0; e < nEpochs; e++) {

@@ -62,6 +62,14 @@ export interface InjectedTruth {
     amplitudeModulation: boolean;
     chiModulation: boolean;
   };
+  /**
+   * True when graphoelements were omitted from the channel mix (G3's matched null).
+   *
+   * RECORDED RATHER THAN INFERRED. The event list still describes what would have been
+   * injected, so a reader comparing events against the signal would find every one of them
+   * missing and have no way to tell a deliberate null from a broken generator.
+   */
+  readonly graphoelementsSuppressed: boolean;
 }
 
 export interface EpochSidecar {

@@ -8,17 +8,18 @@
 ## In one paragraph
 
 The generator produces multichannel EEG that matches real resting recordings on effective rank,
-amplitude, alpha frequency, near-field correlation and PC1 share. The harness runs, three gates
-are implemented with their nulls — including **G4, which the spec calls the most important gate
-in Tier 0 and which spent two decisions with no pass criterion at all** — and the registry
-mechanism prevents a numeric constant from existing outside it. **All three demonstrations now
-work**: Demo 1 moves 100% → 1% across the clinical cutoff range against a measured noise floor.
+amplitude, alpha frequency, near-field correlation and PC1 share. **All seven ledger arms are
+implemented with their matched nulls and `--allow-partial` is gone**, so the runner now refuses
+to start if a gate goes missing. All three demonstrations work: Demo 1 moves 100% → 1% across
+the clinical cutoff range against a measured noise floor.
 
-Both of the last two work packages ended by correcting a claim rather than confirming one. The
-filter demo's loss turned out to be entirely the movement artifact, with the physiological
-mechanisms untouched. And G4, once buildable, established that **the shipped χ modulation is
-invisible to the estimator that reads it** — the gate must inject 13× that depth, and fails at
-the shipped one.
+**Tier 0 is functionally complete.** One item remains — the literal linter.
+
+The last three work packages each ended by correcting a claim rather than confirming one, and
+the two most important results in this document came out of gates *while they were being built*:
+the shipped χ modulation is invisible to the estimator that reads it, and narrowband χ cannot
+resolve the spacing between adjacent states. Both say the same thing about what to do next — the
+estimators need characterizing before the parameters are worth fitting.
 
 ---
 
@@ -26,7 +27,7 @@ the shipped one.
 
 | Area | State | Evidence |
 |---|---|---|
-| Registry mechanism | **done** | 183 rows; source discipline + circularity rule enforced; fixed-point check in CI |
+| Registry mechanism | **done** | 193 rows; source discipline + circularity rule enforced; fixed-point check in CI |
 | Seams 1, 2, 4, 7, 9 | **done** | `test/rng.test.ts`, `test/exponent.test.ts`, `prep/test_epochio.py` |
 | Aperiodic + knee | **done** | χ recovery −0.03…+0.11 via `specparam` (Finding 2 correction) |
 | Oscillations | **done** | alpha as a damped bistable oscillator, non-sinusoidal (D13, P7) |
@@ -37,10 +38,10 @@ the shipped one.
 | SNR calibration | **done** | `snr_nominal` = 1.4288 dB, solved on the fixture seed |
 | Web artifact | **done** | scrolling trace, filter panel, reference montages, 119 kB static |
 | Gate runner | **done** | class/status separation, matched-null refusal, per-arm thresholds |
-| **Gates G2, G4, G5** | **done** | with nulls; G4 falsified against three deliberate breakages |
-| **Gates G1a, G1b, G3, G6** | **not built** | measurements exist as probes; need wrapping as modules |
+| **All seven ledger arms** | **done** | G1a, G1b, G2, G3, G4, G5, G6, each with its matched null |
+| ``--allow-partial`` | **removed** | the runner now refuses to start if a gate goes missing |
 
-`npm run verify` — 5 checks, 71 tests, green.
+`npm run verify` — 5 checks, 40 TS tests, 36 harness tests, all 14 gate arms, green.
 
 ## Measured against real EEG
 
@@ -72,11 +73,16 @@ This is a property of the cheap two-band χ proxy (floor ~0.10 in its own units 
 of the generator. Replacing it is T1-M2 estimator-characterization work, and until then **no
 claim may rest on recovered χ modulation.**
 
-### 2. Four gates unimplemented
+### 2. Narrowband χ cannot resolve the spacing between states
 
-G1a, G1b, G3, G6 all have working measurements in `prep/reference/`. They need wrapping in the
-gate-module contract with matched nulls. `--allow-partial` is currently switched on in
-`npm run verify`, which means **the build does not notice a gate going missing.**
+G1b's null measures the fixed-mode estimator's noise floor at **sd 0.18–0.23** over 30–45 Hz on
+a 300 s record. The χ difference between adjacent states in the registry is 0.30. So **no state
+ordering is supportable from narrowband χ on a single record** (Finding 14).
+
+This constrains P10 more sharply than P10 states: fitting χ and the knee jointly per state does
+not help if the estimator used to *check* the ordering cannot resolve it. It is not a short-
+record artifact — 30–45 Hz is 0.176 decades of leverage, and a slope over that span scatters
+however long the record.
 
 ### 3. The literal linter does not exist
 
@@ -89,14 +95,14 @@ that it is enforced was removed from the registry and `PARAMETERS.md` rather tha
 
 | standing | rows | meaning |
 |---|---|---|
-| `invented` | 99 | not empirically constrained — the T1-M1 work plan |
-| `chosen` | 50 | deliberate convention; **not** Tier 1 work |
+| `invented` | 104 | not empirically constrained — the T1-M1 work plan |
+| `chosen` | 51 | deliberate convention; **not** Tier 1 work |
 | `definitional` | 11 | fixed by AASM or a named standard |
 | `literature` | 8 | published, author and year recorded |
-| `derived` | 7 | computed from a stated procedure |
-| `absent` | 8 | deliberately unset, and why |
+| `derived` | 8 | computed from a stated procedure |
+| `absent` | 11 | deliberately unset, and why |
 
-33 rows are `pending`: they hold **no value**, only a provisional number reachable solely
+34 rows are `pending`: they hold **no value**, only a provisional number reachable solely
 through `provisionalValue()`, so a placeholder cannot silently become the value of record.
 
 Milestones: **95 rows** route to T1-M1 (corpus fitting), **4** to T1-M2 (estimator
@@ -112,7 +118,7 @@ characterization).
 | `PARAMETERS.md` | **generated** from `registry/parameters.yaml`; never edit |
 | `DECISIONS.md` | D1–D14 and pending P1–P10, append-only |
 | `Execution-Scheme.md` | the plan: gate ledger, work packages, build order |
-| `Tier0-Estimator-Probe.md` | Findings 1–13, every one reproducible from `prep/reference/` |
+| `Tier0-Estimator-Probe.md` | Findings 1–14, every one reproducible from `prep/reference/` |
 | `STATUS.md` | this file |
 
 Corrections are marked in place rather than rewritten: Finding 2 carries a correction block
@@ -123,9 +129,11 @@ records what the adversarial review withdrew from D8 and D9.
 
 ## Next, in the order that unblocks the most
 
-1. **Wrap G1a, G1b, G3, G6** as gate modules with nulls, then **remove `--allow-partial`** —
-   the last change that stops the build silently tolerating a missing gate.
-2. **Write `tools/lint/literals.mjs`**, then restore the claim it enforces.
-3. Tier 1 proper: corpus fitting (P10 jointly, P8, P9) and estimator characterization. The χ
-   proxy's floor (§1 above) makes T1-M2 more urgent than the milestone ordering suggests: it
-   is not a refinement, it is the reason a shipped mechanism reads as absent.
+1. **Write `tools/lint/literals.mjs`**, then restore the claim it enforces. It is the sole
+   mitigation for the register's top-rated risk and the only Tier 0 item still outstanding.
+2. **T1-M2, estimator characterization — promoted above T1-M1.** The milestone ordering puts
+   corpus fitting first, and both problems above say that is backwards. A χ proxy whose floor
+   exceeds the injected modulation (§1) and a narrowband fit whose noise exceeds the state
+   spacing (§2) mean that fitting parameters more carefully cannot be verified with the
+   estimators we would verify them with. Characterize the estimators, then fit.
+3. Then T1-M1 proper: corpus fitting (P10 jointly, P8, P9).

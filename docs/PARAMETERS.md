@@ -402,6 +402,9 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 | `gate_chi_tol_knee` | — *(absent)* | — | `absent` | T1-M2 estimator characterization | all |
 | `gate_chi_tol_fixed` | — *(absent)* | — | `absent` | T1-M2 estimator characterization | all |
 | `gate_spindle_f1` | — *(absent)* | — | `absent` | T1 sets the criterion by roll-off shape against MODA's per-event agreement counts | n2 |
+| `gate_g1_null_zero` | On synthetic white noise: |MEAN chi_hat| < 0.10 in both modes and |mean knee parameter k| < 1.0 in knee mode, over 12 realisations of 300 s. | — | `chosen` | Numerical resolution of a 300 s Welch estimate, from Tier0-Estimator-Probe Finding 1: white noise returns chi +0.010 fixed, +0.0098 knee, knee parameter -0.024. The bounds sit an order of magnitude above the measured values. | all |
+| `gate_g1b_null_zero` | On synthetic white noise: |MEAN chi_hat| < 0.10 in fixed mode over 30-45 Hz, across 12 realisations of 300 s. No knee clause -- fixed mode has none to invent. | — | `chosen` | Numerical resolution of a 300 s Welch estimate, from Tier0-Estimator-Probe Finding 1: white noise returns chi +0.010 in fixed mode. | all |
+| `gate_g3_null_fp_rate` | YASA run on the same background with graphoelements suppressed must detect fewer events than it does with them present, by a paired comparison across seeds, and its absolute count must be a small fraction of the injected count. | — | `derived` | Paired sign test against p = 0.5, as for G4 (D14): each seed is measured twice, with and without graphoelements in the mix, everything else identical. The 0.5 comes from the pairing. | n2 |
 | `gate_alpha_ratio` | >3 | — | `invented` |  | wake_ec |
 | `gate_pac_tol` | — *(absent)* | deg | `absent` | Derive the required event count from the target precision, or gate on resultant length rather than preferred phase. Tier 1. | n3 |
 | `gate_coupling_depth_tol` | — *(absent)* | — | `absent` | Characterize SPRiNT's transfer function first. T1-M2. | all |
@@ -425,6 +428,12 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 
 **`gate_chi_tol_fixed`.** G1b's bias is STRUCTURAL: measured error 0.417 against an analytic prediction of 0.429 from the generative form itself. It comes from our modelled 20 Hz knee, not from the literature's unmodelled 45 Hz one, so its magnitude is a function of the invented k_* rows. That is a weaker claim than DECISIONS D3's comparability argument.
 
+**`gate_g1_null_zero`.** THESE ARE NOT THE TOLERANCES G1 IS MISSING, and the distinction is the reason this row exists separately rather than reusing gate_chi_tol_knee. That row is `absent` because a Tier 0 tolerance on RECOVERY ERROR would have to be invented or read from our own generator's spread. The bounds here are of a different kind: they answer "did the fit return zero", at the numerical resolution of the estimate, on a signal whose correct answer is known analytically rather than measured from anything we built. Standing is `chosen` — a convention about what counts as zero — not `derived`, because no procedure computes 0.10 from anything; Finding 1 only establishes that the true values are far below it. The null is a check on the harness's PSD-and-fit path, NOT on the generator: it synthesises white noise because no generated state has chi = 0, and inventing one to satisfy a gate would be the circularity section 1 prohibits.
+
+**`gate_g1b_null_zero`.** Split from gate_g1_null_zero because G1a and G1b are separate gates with separate criteria, and one shared row would have to declare a single gate id. TESTED ON THE MEAN, NOT PER SEED, and that was a measured correction rather than a preference. A per-seed bound at 0.10 FAILED on its first real run: measured over 12 white-noise realisations, the fixed-mode fit over 30-45 Hz has sd 0.18-0.23, so individual seeds routinely exceed 0.10 while the estimator is behaving correctly. The band is only 0.176 decades wide and a slope estimated over that span scatters however long the record. That sd matters more than this criterion does: it EXCEEDS THE CHI SPACING BETWEEN ADJACENT STATES (chi_wake_ec 1.10 vs chi_n1 1.40), so no state ordering is supportable from narrowband chi on a single record. See Finding 14; constrains P10.
+
+**`gate_g3_null_fp_rate`.** The harness spec asks for "false-positive rate near zero", which is not directly testable as written: 'near zero' has no stated value and any number chosen for it would be invented. What IS testable without inventing anything is the PAIRED contrast — the same background, the same seed, the same everything, with and without the events — and that is the stronger claim anyway, because it attributes the detections to the events rather than to the record. The suppression happens at the summation, not at the draw, so the background is bit-identical between the two arms (see suppressGraphoelements in compose.ts). Without that the null would differ from the gate by more than the thing being tested.
+
 **`gate_alpha_ratio`.** RECORDED, NOT A PASS CRITERION, until T1-M2. G6 uses structural argmax instead.
 
 **`gate_pac_tol`.** Encoded as absent rather than as an invented value of 15, so that no code path can read a number the registry's own note declares impossible. A registry able to hold a refuted value with no machine-readable refutation is one import away from using it.
@@ -436,9 +445,9 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 | Standing | Rows |
 |---|---|
 | `definitional` | 11 |
-| `chosen` | 49 |
+| `chosen` | 51 |
 | `literature` | 8 |
-| `derived` | 7 |
+| `derived` | 8 |
 | `invented` | 104 |
 | `absent` | 11 |
-| **total** | **190** |
+| **total** | **193** |
