@@ -89,11 +89,154 @@ This is recorded here because the alternative reading — that G1b is simply wro
 
 ---
 
+## D7 — Tier 0 is TypeScript-only; the harness measures exported epoch directories
+
+**Decided.** The Tier 0 core generator is TypeScript. It ships a headless Node CLI
+(`bin/eegsim-export.mts`) writing seam-9 epoch directories. `/prep` invokes that CLI and
+measures the exported artifact. **No Python generator exists at Tier 0.**
+
+**Reasoning.** The Build Plan says the Tier 2 Python package is "what the harness measures",
+but at Tier 0 it does not exist, and writing one now would recreate the cross-implementation
+parity trap §1 explicitly strikes. Harness §8 already makes the seam an *artifact* boundary —
+*"Validate against a lossless format — the epoch directory from seam 9"* — not an in-process
+API. Tier 2 swaps the Python package in behind the same directory contract: a prefix, not a
+placeholder.
+
+**Two amendments, both load-bearing.**
+
+- **The harness-facing format is binary float64, not CSV.** Build Plan §8 says CSV; harness §8
+  requires float64. More sharply: **G2's bit-identity check run through a lossy serializer
+  tests the serializer, not the generator** — the identical argument harness §8 uses to reject
+  EDF. Epoch directories carry `.f64` per channel *and* a CSV projection for human inspection;
+  the harness and G2 read only the binary.
+- **The sidecar carries injected ground truth** — χ with band and mode, knee `k`, modulation
+  depth and phase, SNR, per-generator weights. Without it the harness must reimplement
+  generator internals to reconstruct truth, which at Tier 2 means the package and the harness
+  must agree on that reconstruction — reintroducing parity through the back door.
+
+---
+
+## D8 — G4's f₁ arm takes a spectral-neighbourhood null; f₂ keeps the circular shift
+
+**Decided. Supersedes D4's pass criterion.** D4's *reasoning* stands — the threshold must come
+from estimator properties, not invention. Its *mechanism* does not.
+
+**The defect, measured.** For an alignment-sensitive index `MI = |⟨χ(t)·e^{iφ(t)}⟩|` and a
+phase reference that is a clean ramp `φ(t) = 2πf₁t`, a circular shift by τ gives
+`e^{iφ(t+τ)} = e^{iφ(t)}·e^{i2πf₁τ}` — the magnitude is multiplied by a **unit-magnitude
+constant and is unchanged**. Measured over 200 surrogates: observed MI, null median and null
+95th percentile all `0.250000`, IQR exactly zero. `obs > p95` is false on a perfect signal.
+**The most important gate in Tier 0 could never have passed.**
+
+**The diagnosis.** G4 conflates two different tests under one criterion:
+
+- *"Is χ coupled to respiration?"* — a **phase-reference** question. Circular shift is the
+  right null, and measurement confirms it works: observed 0.250 against a null median of
+  0.032, obs/p95 = 1.61, healthy IQR. This is the f₂ arm.
+- *"Is χ modulated at f₁?"* — a **spectral-line** question. There is no reference to shift; the
+  f₁ "reference" is our own injected modulator, which is by construction a clean ramp.
+
+**Decided.**
+
+- **f₁ (positive arm):** threshold is the `g4_percentile_level` percentile of the coupling
+  index over neighbouring frequency bins, excluding f₂ and the sidebands f₂±f₁ together with
+  the `g4_min_bin_separation` guard band. This remains "derived from estimator properties" —
+  it is the standard null for a spectral line — and it survives the invariance that kills the
+  circular shift, because neighbouring bins are not related to f₁ by a unit-magnitude factor.
+- **f₂ (negative arm):** keep the circular-shift null.
+- **Seed aggregation:** exact binomial test of the f₂ exceedance count against the per-seed
+  false-exceedance rate the percentile defines. **Not "all seeds must pass"** — at
+  `n_seeds` = 20 that fails ~64% of the time on a working generator (0.95²⁰ = 0.36), because
+  the f₂ arm has a 5% per-seed false-exceedance rate *by design*.
+- `g4_percentile` splits into `g4_percentile_level` (`chosen` — 95 could as easily be 99) and
+  `g4_threshold_value` (`derived`, computed per run).
+
+**Two further G4 repairs, recorded here because they block the gate.**
+
+- **The f₂ arm is vacuous unless respiratory movement artifact is on at f₂.** The sidebands
+  the gate exists to catch are intermodulation products requiring energy at *both*
+  frequencies. With §5.1(a) off, nothing exists at f₂ and "must not exceed" passes trivially.
+  The G4 fixture must declare which mechanisms are enabled.
+- **G4 needs a capability described nowhere: χ modulation decoupled from respiration.** §5.2
+  defines χ(t) as *driven by* respiration phase, so there is no specified way to modulate χ at
+  f₁ while respiration runs at f₂. An independent-modulator input is added to the tilt filter,
+  used by the G4 fixture and by nothing in the shipped UI.
+
+Evidence: `Tier0-Estimator-Probe.md` Finding 6; `prep/reference/probe_g4_null.py`.
+
+---
+
+## D9 — G5's positive arm is record-only; its null carries the verdict
+
+**Decided.** G5 reports the N3 pass fraction as a **recorded quantity with no threshold**. Its
+null is pass/fail and is a strict ordering:
+`pass_fraction(N3 @ snr_nominal)` > `pass_fraction(N2)` and > `pass_fraction(N3 @ −6 dB)`.
+
+**Reasoning.** D5 already establishes that after calibration the positive arm is "largely a
+regression check" and that "the null carries the discriminative weight". But it also requires a
+pass *fraction* without saying what fraction passes — and any number would be invented, or read
+from our own generator's spread. Both are prohibited. An **ordering needs no invented number**
+and tests exactly what D5 says the gate retains.
+
+---
+
+## D10 — `delta_amp` takes a Tier 0 value from a non-AASM source
+
+**Decided.** `delta_amp` = 100–200 µV, standing `invented`, sourced explicitly *not* to the
+75 µV criterion, pending T1-M1 — matching its neighbours `so_amp` and `kc_amp`, which both
+already carry textbook ranges.
+
+**Reasoning.** This closes a circularity that D5 opened while fixing another. With `delta_amp`
+blank **and** `snr_nominal` solved so that N3 satisfies the AASM criterion, the pair is
+**under-determined by one degree of freedom, and the calibration absorbs it** — the delta
+amplitude ends up set by the 75 µV figure through the back door. That is precisely the defect
+D5 exists to close, re-entering through the one row D5's own prose leaves empty. Fixing
+`delta_amp` independently makes `snr_nominal` a genuine single-scalar solve.
+
+---
+
+## D11 — The registry inverts: normative YAML, generated `PARAMETERS.md`
+
+**Decided.** `registry/parameters.yaml` is the single source of truth; `docs/PARAMETERS.md` is
+generated from it, with a fixed-point check (`npm run registry:check`) in CI.
+
+**Reasoning.** "Code reads this file" was not achievable against the markdown as written: an
+orphaned one-row table silently dropped `snr_calibration_seed` — the row the entire G5
+held-out design depends on — `k_wake` … `k_rem` was an ellipsis standing for five keys, four
+rows had an empty `Standing`, and three values were English words. The markdown is parsed
+exactly once, by a throwaway importer, and never again.
+
+**The value field is a tagged union.** The registry's ranges meant at least three incompatible
+things — filter passbands where both endpoints are in force, uncertainty spreads the generator
+must reduce to a point plus `Dv`, and UI slider domains. One accessor returning all three is
+how a plausible-looking number reaches a filter.
+
+**Pending rows hold no value.** `provisionalValue(key)` is the only path to the number the
+generator runs on today, so a placeholder cannot silently become the value of record.
+
+**Standing enum is six, plus `absent`.** Build Plan seam 6 names four; it is the stale list,
+and the two it omits (`chosen`, `derived`) are the standings of `snr_nominal`,
+`g4_percentile`, `gate_g4_criterion` and `gate_topography`. `absent` is added for rows
+deliberately unset and scheduled — distinct from an `invented` guess — which no enum could
+otherwise represent.
+
+---
+
 ## Pending decisions
 
 | ID | Question | Blocks | Due |
 |---|---|---|---|
 | P1 | `lz_parse`: LZ76 (suffix automaton) or LZW | nothing at Tier 0; any citation of published magnitudes | before first published comparison |
-| P2 | `tilt_n_poles` and spacing for flatness across 1–45 Hz | G4 | T0-M4 |
-| P3 | `tilt_mod_settling_ratio` sufficient to suppress sidebands | G4 | T0-M4 |
+| ~~P2~~ | ~~`tilt_n_poles` and spacing~~ | — | **Closed.** `tilt_n_poles` = 12, standing `derived`; see `Tier0-Estimator-Probe.md` Finding 4 |
+| ~~P3~~ | ~~`tilt_mod_settling_ratio`~~ | — | **Closed as not answerable as posed.** Settling has 61× margin and is not the binding constraint; the residual risk is the coefficient-interpolation scheme, and measuring it *is* G4. Registered `absent` with a procedure. Finding 5 |
 | P4 | Corpus selection for T1-M1 fitting | every `invented` row | T1-M1 |
+| P5 | Re-measure G1a vs G1b error under the **full** generator | amending D3 | T0-M5 |
+
+**P5 is new.** D3 states *"G1a will show larger recovery error than G1b."* Measured on clean
+aperiodic signal the ordering is reversed by two orders of magnitude (median |error| 0.005 vs
+0.417), and G1b's error matches the analytic slope of the generative form to 3% — so it is
+structural, and it originates in our **modelled 20 Hz knee**, not the literature's unmodelled
+45 Hz one. That makes D3's comparability argument weaker than stated: the bias magnitude is a
+function of the `invented` `k_*` rows rather than something inherited from published
+measurement conditions. The clean-signal regime flatters G1a, so this justifies re-opening D3,
+not amending it. Finding 2.

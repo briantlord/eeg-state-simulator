@@ -1,0 +1,7 @@
+mne==1.12.1
+numpy==1.26.4
+pytest==9.1.1
+PyYAML==6.0.3
+scipy==1.15.3
+specparam==2.0.0rc7
+yasa==0.7.0

@@ -162,5 +162,5 @@ export function appliesTo(key: ParamKey, state: StateId): boolean {
 
 /** Every row whose standing requires the UI to mark it "not empirically constrained". */
 export function inventedKeys(): ParamKey[] {
-  return (Object.keys(REG.params) as ParamKey[]).filter((k) => REG.params[k].standing === 'invented');
+  return (Object.keys(REG.params) as ParamKey[]).filter((k) => REG.params[k]?.standing === 'invented');
 }

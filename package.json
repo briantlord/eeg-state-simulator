@@ -11,11 +11,13 @@
   "scripts": {
     "registry:emit": "node tools/registry/emit.mjs",
     "registry:check": "node tools/registry/emit.mjs --check",
-    "lint:literals": "node tools/lint/literals.mjs",
-    "test": "node --test test/",
-    "typecheck": "tsc --noEmit"
+    "test": "node --test --experimental-strip-types \"test/**/*.test.ts\"",
+    "typecheck": "tsc --noEmit",
+    "export": "node --experimental-strip-types --no-warnings bin/eegsim-export.mts",
+    "verify": "node tools/verify.mjs"
   },
   "devDependencies": {
+    "@types/node": "^22.20.1",
     "typescript": "^5.6.0",
     "yaml": "^2.6.0"
   }
