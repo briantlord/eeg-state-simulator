@@ -122,6 +122,55 @@ params:
     section: "1. Sampling, display, infrastructure"
     milestone: T1-M1
 
+  display_sensitivity:
+    value: {kind: scalar, v: 7}
+    units: uV/mm
+    standing: chosen
+    source: {kind: none, rationale: "clinical EEG convention; 7 uV/mm is a common routine sensitivity"}
+    states: all
+    section: "1. Sampling, display, infrastructure"
+    note: >-
+      FIXED. The display never autoscales: "the amplitude difference between N3 delta and
+      waking alpha is one of the most important facts on screen", and autoscaling would make
+      every state the same height silently.
+
+  display_cal_pulse_amp:
+    value: {kind: scalar, v: 50}
+    units: uV
+    standing: chosen
+    source: {kind: none, rationale: "height of the calibration pulse drawn beside the traces"}
+    states: all
+    section: "1. Sampling, display, infrastructure"
+    note: >-
+      Without a calibration bar, "fixed uV/mm" is an unverifiable claim. With one, the trace
+      can be measured against a bar of stated height -- which is what the paper chart this
+      display imitates was for.
+
+  display_px_per_mm:
+    value: {kind: scalar, v: 3.8}
+    units: px/mm
+    standing: chosen
+    source: {kind: none, rationale: "assumed CSS pixel density, so the uV/mm figure means something on screen"}
+    states: all
+    section: "1. Sampling, display, infrastructure"
+    note: >-
+      A browser cannot know the physical size of a display, so uV/mm is a claim about an
+      ASSUMED density. Stated rather than hidden: at a different density the sensitivity
+      annotation is wrong by that ratio, and a reader measuring the calibration bar with a
+      ruler would find it.
+
+  render_decimation:
+    value: {kind: enum, options: [min_max]}
+    units: null
+    standing: chosen
+    source: {kind: none, rationale: "one min/max pair per pixel column"}
+    states: all
+    section: "1. Sampling, display, infrastructure"
+    note: >-
+      Min/max per pixel column preserves the ENVELOPE: a spike narrower than one column still
+      reaches the top of that column. Naive subsampling would drop it entirely, which on an
+      artifact whose subject is graphoelements would be a silent lie.
+
   export_schema_version:
     value: {kind: scalar, v: 1}
     units: null

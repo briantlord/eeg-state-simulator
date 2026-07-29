@@ -37,6 +37,10 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 | `n_channels` | 19 | — | `definitional` | International 10-20 system (Jasper 1958), as adopted by IFCN/ACNS | all |
 | `reference_channels` | A1/A2 | — | `definitional` | AASM Manual for the Scoring of Sleep and Associated Events — contralateral mastoid reference | all |
 | `sensor_noise_rms` | 1–2 *(uncertainty)* | uV | `invented` |  | all |
+| `display_sensitivity` | 7 | uV/mm | `chosen` | clinical EEG convention; 7 uV/mm is a common routine sensitivity | all |
+| `display_cal_pulse_amp` | 50 | uV | `chosen` | height of the calibration pulse drawn beside the traces | all |
+| `display_px_per_mm` | 3.8 | px/mm | `chosen` | assumed CSS pixel density, so the uV/mm figure means something on screen | all |
+| `render_decimation` | min_max | — | `chosen` | one min/max pair per pixel column | all |
 | `export_schema_version` | 1 | — | `chosen` | epoch-directory schema (seam 9) | all |
 | `rng_algorithm_ts` | xoshiro128++ | — | `chosen` | 32-bit state, native in typed arrays; see DECISIONS D2 | all |
 | `n_seeds` | 20 | — | `chosen` | provisional; to be set from observed variance — power analysis, not circularity | all |
@@ -46,6 +50,14 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 **`synth_overlap`.** Added on import. Build Plan 3.2 specifies overlapping blocks with cosine crossfade and the risk register lists streaming discontinuities, but no overlap length was registered.
 
 **`reference_channels`.** Added on import, and load-bearing. A 19-channel 10-20 montage contains no mastoids, but gate_aasm_n3 is referenced to contralateral mastoid and anchors snr_nominal and therefore every absolute uV amplitude in this registry. Without A1/A2 the criterion cannot be computed at all. These are additional to the 19.
+
+**`display_sensitivity`.** FIXED. The display never autoscales: "the amplitude difference between N3 delta and waking alpha is one of the most important facts on screen", and autoscaling would make every state the same height silently.
+
+**`display_cal_pulse_amp`.** Without a calibration bar, "fixed uV/mm" is an unverifiable claim. With one, the trace can be measured against a bar of stated height -- which is what the paper chart this display imitates was for.
+
+**`display_px_per_mm`.** A browser cannot know the physical size of a display, so uV/mm is a claim about an ASSUMED density. Stated rather than hidden: at a different density the sensitivity annotation is wrong by that ratio, and a reader measuring the calibration bar with a ruler would find it.
+
+**`render_decimation`.** Min/max per pixel column preserves the ENVELOPE: a spike narrower than one column still reaches the top of that column. Naive subsampling would drop it entirely, which on an artifact whose subject is graphoelements would be a silent lie.
 
 **`rng_algorithm_ts`.** Source markdown offered 'xoshiro128++ or PCG32'. An unresolved disjunction is not a value; xoshiro128++ selected so seam 4 is pinned.
 
@@ -393,9 +405,9 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 | Standing | Rows |
 |---|---|
 | `definitional` | 11 |
-| `chosen` | 43 |
+| `chosen` | 47 |
 | `literature` | 8 |
 | `derived` | 7 |
 | `invented` | 96 |
 | `absent` | 8 |
-| **total** | **173** |
+| **total** | **177** |

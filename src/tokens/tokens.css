@@ -1,0 +1,172 @@
+/**
+ * Design tokens — T0-M7a.
+ *
+ * "The anchor is the paper polygraph chart — pen traces, calibration pulses, montage labels
+ * down the left margin, sensitivity and time-constant annotations. The prohibition: no sci-fi
+ * neuro-interface styling, no glow, no dark-mode-with-cyan."
+ *
+ * Every colour here is one you could find on a paper chart or in a clinical report: paper,
+ * ink, a red event pen, a blue reference pen. Nothing emits light.
+ */
+
+:root {
+  /* --- paper and ink --------------------------------------------------- */
+  --paper: #f7f5ef;
+  --paper-rule: #e0dbcd;
+  --paper-rule-major: #cfc7b3;
+  --ink: #1a1a18;
+  --ink-soft: #55524a;
+  --ink-faint: #8b877c;
+
+  /* --- pens. A polygraph has a few, and they mean things. --------------- */
+  --pen-trace: #1a1a18;
+  --pen-event: #a8322a;      /* graphoelements, marked events */
+  --pen-reference: #2c5aa0;  /* ground truth, injected values */
+  --pen-derived: #6b6357;    /* recovered / estimated values */
+
+  /* --- status. Muted, because a gate result is not an alarm. ------------ */
+  --status-ok: #3f6b46;
+  --status-warn: #8a6a2b;
+  --status-bad: #a8322a;
+
+  /* --- an `invented` parameter must LOOK unfinished ---------------------- */
+  --invented-mark: #8a6a2b;
+  --invented-bg: #f3ead4;
+
+  /* --- type ------------------------------------------------------------- */
+  --font-label: ui-sans-serif, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --size-xs: 10px;
+  --size-sm: 12px;
+  --size-md: 14px;
+  --size-lg: 18px;
+
+  /* --- spacing ---------------------------------------------------------- */
+  --gap-xs: 4px;
+  --gap-sm: 8px;
+  --gap-md: 16px;
+  --gap-lg: 24px;
+
+  /* --- chart geometry --------------------------------------------------- */
+  --chart-margin-left: 58px;   /* montage labels live here */
+  --chart-margin-right: 12px;
+  --rule-width: 1px;
+  --trace-width: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --scroll-enabled: 0;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-label);
+  font-size: var(--size-md);
+  line-height: 1.5;
+}
+
+h1 {
+  font-size: var(--size-lg);
+  font-weight: 600;
+  margin: 0 0 var(--gap-xs);
+}
+
+.subtitle {
+  color: var(--ink-soft);
+  font-size: var(--size-sm);
+  margin: 0 0 var(--gap-md);
+}
+
+.panel {
+  border: 1px solid var(--paper-rule-major);
+  background: var(--paper);
+  padding: var(--gap-md);
+  margin-bottom: var(--gap-md);
+}
+
+.panel h2 {
+  font-size: var(--size-sm);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin: 0 0 var(--gap-sm);
+}
+
+label {
+  display: block;
+  font-size: var(--size-sm);
+  color: var(--ink-soft);
+  margin-bottom: var(--gap-xs);
+}
+
+select,
+input[type='range'] {
+  font-family: inherit;
+  font-size: var(--size-sm);
+  width: 100%;
+}
+
+.row {
+  display: flex;
+  gap: var(--gap-md);
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.readout {
+  font-family: var(--font-mono);
+  font-size: var(--size-sm);
+}
+
+.readout dt {
+  color: var(--ink-soft);
+  font-size: var(--size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.readout dd {
+  margin: 0 0 var(--gap-sm);
+}
+
+/**
+ * `invented` parameters must be visibly marked. Risk register, rated High:
+ * "Constants ship `invented` and the UI fails to mark them." A slider labelled
+ * "not empirically constrained" is more interesting than a hidden literal.
+ */
+.invented {
+  background: var(--invented-bg);
+  border-left: 3px solid var(--invented-mark);
+  padding-left: var(--gap-sm);
+}
+
+.invented::after {
+  content: 'not empirically constrained';
+  display: block;
+  font-size: var(--size-xs);
+  color: var(--invented-mark);
+  letter-spacing: 0.04em;
+}
+
+.truth {
+  color: var(--pen-reference);
+}
+
+.derived {
+  color: var(--pen-derived);
+}
+
+.note {
+  font-size: var(--size-xs);
+  color: var(--ink-faint);
+  margin-top: var(--gap-xs);
+}

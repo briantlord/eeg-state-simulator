@@ -43,6 +43,9 @@ export type ParamKey =
   | 'chi_wake_eo'
   | 'delta_amp'
   | 'delta_band'
+  | 'display_cal_pulse_amp'
+  | 'display_px_per_mm'
+  | 'display_sensitivity'
   | 'emg_amp_wake'
   | 'emg_band'
   | 'emg_rem_level'
@@ -112,6 +115,7 @@ export type ParamKey =
   | 'notch_q'
   | 'osc_carrier_flatten'
   | 'reference_channels'
+  | 'render_decimation'
   | 'resp_ie_ratio'
   | 'resp_pause_fraction'
   | 'resp_period_cv'
@@ -220,6 +224,9 @@ export interface ParamKindMap {
   'chi_wake_eo': 'pending';
   'delta_amp': 'interval';
   'delta_band': 'interval';
+  'display_cal_pulse_amp': 'scalar';
+  'display_px_per_mm': 'scalar';
+  'display_sensitivity': 'scalar';
   'emg_amp_wake': 'interval';
   'emg_band': 'bound';
   'emg_rem_level': 'scalar';
@@ -289,6 +296,7 @@ export interface ParamKindMap {
   'notch_q': 'scalar';
   'osc_carrier_flatten': 'scalar';
   'reference_channels': 'electrodes';
+  'render_decimation': 'enum';
   'resp_ie_ratio': 'interval';
   'resp_pause_fraction': 'scalar';
   'resp_period_cv': 'pending';

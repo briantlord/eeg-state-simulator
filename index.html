@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>EEG State Simulator — a model, not a measurement</title>
+    <link rel="stylesheet" href="/src/tokens/tokens.css" />
+    <style>
+      .layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: var(--gap-md); }
+      @media (max-width: 900px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+      main { max-width: 1400px; margin: 0 auto; padding: var(--gap-lg) var(--gap-md); }
+      canvas { width: 100%; display: block; background: var(--paper); }
+      #trace { height: 620px; border: 1px solid var(--paper-rule-major); }
+      #demo3 { height: 200px; border: 1px solid var(--paper-rule-major); }
+      .prime { border-left: 3px solid var(--ink); padding-left: var(--gap-sm); margin-bottom: var(--gap-md); }
+      .prime strong { display: block; }
+      table.readout-table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: var(--size-sm); }
+      table.readout-table th { text-align: left; font-weight: 500; color: var(--ink-soft); font-size: var(--size-xs);
+        text-transform: uppercase; letter-spacing: 0.05em; padding: 2px 0; }
+      table.readout-table td { padding: 2px 0; text-align: right; }
+      .control { margin-bottom: var(--gap-md); }
+      .seg { display: flex; gap: 0; border: 1px solid var(--paper-rule-major); }
+      .seg button { flex: 1; border: 0; background: transparent; font: inherit; font-size: var(--size-sm);
+        padding: 5px 4px; cursor: pointer; color: var(--ink-soft); }
+      .seg button[aria-pressed='true'] { background: var(--ink); color: var(--paper); }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>EEG State Simulator</h1>
+      <p class="subtitle">A generator of multichannel EEG for arousal states.</p>
+
+      <div class="prime">
+        <strong>This is a model, not a measurement.</strong>
+        No pixel here is data recorded from a brain. The second observable axis is
+        <em>signal complexity</em> — never “awareness” or “content”.
+      </div>
+
+      <div class="layout">
+        <div>
+          <canvas id="trace"></canvas>
+          <p class="note" id="trace-note"></p>
+
+          <div class="panel">
+            <h2>Demo 3 — ringing the filter invented</h2>
+            <canvas id="demo3"></canvas>
+            <p class="note">
+              An isolated K-complex, before and after the high-pass above. The red trace is the
+              <em>difference</em>: deflections that exist only because of the filter. Some of
+              them sit at spindle-like frequencies. With real data you could not label these,
+              because you never had the unfiltered signal.
+            </p>
+          </div>
+        </div>
+
+        <div>
+          <div class="panel">
+            <h2>State</h2>
+            <div class="control">
+              <select id="state"></select>
+            </div>
+            <div class="control">
+              <label for="seed">Seed</label>
+              <input id="seed" type="number" value="20260728" step="1" />
+            </div>
+          </div>
+
+          <div class="panel">
+            <h2>Filter panel</h2>
+            <div class="control">
+              <label for="hpf">High-pass cutoff (Hz)</label>
+              <select id="hpf"></select>
+              <p class="note">
+                Standard practice high-passes at 0.5–1 Hz — directly on top of the respiratory
+                rate.
+              </p>
+            </div>
+            <div class="control">
+              <label>Filter type</label>
+              <div class="seg" id="ftype">
+                <button data-v="zeroPhase" aria-pressed="true">zero-phase</button>
+                <button data-v="causal" aria-pressed="false">causal IIR</button>
+              </div>
+              <p class="note">
+                Causal is what an acquisition system actually does, and it distorts phase near
+                the cutoff.
+              </p>
+            </div>
+            <p class="note">
+              Alternatives to high-pass filtering exist — <em>robust detrending</em> (de
+              Cheveigné &amp; Arzounian) fits and removes a slow polynomial instead. It is a
+              Tier&nbsp;1 addition. High-pass filtering trades a known artifact for a known
+              distortion; it is not a mistake.
+            </p>
+          </div>
+
+          <div class="panel">
+            <h2>Demo 1 — coupling loss</h2>
+            <table class="readout-table">
+              <tr><th>injected</th><td class="truth" id="c-inj">—</td></tr>
+              <tr><th>recovered</th><td class="derived" id="c-rec">—</td></tr>
+              <tr><th>retained</th><td id="c-ret">—</td></tr>
+            </table>
+            <p class="note">
+              Ground truth is known because the generator injected it. No real dataset can show
+              this comparison.
+            </p>
+          </div>
+
+          <div class="panel">
+            <h2>Observables</h2>
+            <table class="readout-table">
+              <tr><th>χ 1–45 Hz knee</th><td id="o-broad">—</td></tr>
+              <tr><th>χ 30–45 Hz fixed</th><td id="o-narrow">—</td></tr>
+              <tr><th>LZc normalized</th><td id="o-lz">—</td></tr>
+            </table>
+            <p class="note" id="lz-null"></p>
+            <p class="note">
+              The two exponents are <em>different quantities</em>, not two estimates of one.
+              Comparing them is a type error in the source.
+            </p>
+          </div>
+
+          <div class="panel" id="invented-panel">
+            <h2>Parameters in use</h2>
+            <div id="invented-list"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+    <script type="module" src="/src/ui/app.ts"></script>
+  </body>
+</html>

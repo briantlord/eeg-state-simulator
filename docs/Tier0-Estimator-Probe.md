@@ -499,6 +499,80 @@ the Build Plan quotes for N1–N3 separation by slope.
 
 ---
 
+# Finding 10 — the filter demonstration does not yet demonstrate coupling loss `[BLOCKS THE THESIS]`
+
+The Tier 0 shipping test names the filter demonstration as the artifact's thesis and says to
+protect it above everything else. Built and measured, **Demo 1 shows no loss**:
+
+| high-pass cutoff | injected depth | recovered | retained |
+|---|---|---|---|
+| 0.01 Hz | 0.150 | 0.140 | 93% |
+| 0.1 Hz | 0.150 | 0.140 | 93% |
+| 0.5 Hz | 0.150 | 0.140 | 93% |
+| **1.0 Hz** | 0.150 | 0.136 | **91%** |
+
+Two percentage points across the entire clinical range. The demonstration is supposed to show
+a ground-truth line *visibly diverging* from the recovered estimate.
+
+### Why, and it is not a bug in the filter
+
+**The coupling is carried entirely above the cutoff.** χ(t) is estimated from a ratio of band
+powers at 2–8 Hz and 16–40 Hz. A high-pass at 1 Hz does not touch either band. Respiration
+modulates the *spectral slope*, and slope modulation lives in the envelope of frequencies well
+above the filter's stopband — so no high-pass in the clinical range can remove it.
+
+That is a true statement about mechanism **(c)**, and it is the only respiratory mechanism
+currently implemented.
+
+### What the demonstration actually needs
+
+Build Plan §5.1 lists three mechanisms and insists they be kept separate:
+
+- **(a) respiratory movement artifact** — mechanical, *at* the respiratory rate. Energy at
+  0.25 Hz. A 0.5–1 Hz high-pass removes it **completely**. *Not implemented.*
+- **(b) RMBO** — respiration-entrained neural activity. *Not implemented.*
+- **(c) respiration-phase modulation of amplitude and of the aperiodic exponent.** Only the
+  *exponent* half is implemented; the *amplitude* half — respiration modulating the amplitude
+  of low-frequency content — would also be removed by the filter, because that content sits
+  in the stopband.
+
+**So the demonstration is measuring the one mechanism a high-pass cannot damage, and omitting
+the two it destroys.** The plan's own framing is right — *"standard EEG practice high-passes at
+0.5–1 Hz, directly on top of the respiratory rate"* — but "directly on top of the respiratory
+rate" bites on mechanisms (a) and the amplitude half of (c), not on slope modulation.
+
+**This is the same gap the review found in G4.** Its negative arm was called vacuous "unless
+the respiratory movement artifact is enabled at f₂", because the sidebands the gate hunts are
+intermodulation products needing energy at *both* frequencies. Mechanism (a) missing breaks
+the gate and the demo for one reason.
+
+### What to do
+
+Implement mechanism (a), and the amplitude half of (c), before claiming the demonstration
+works. Both are small — (a) is a low-frequency component at the respiratory rate with a
+mechanical topography; the amplitude half of (c) modulates the delta/theta envelope by
+respiratory phase. Neither needs new architecture: both project through the existing path.
+
+Until then the artifact ships **Demo 2 and Demo 3 working and Demo 1 flat**, which is worth
+stating plainly rather than letting a 91% readout imply the filter was gentle.
+
+### Demo 3 does work, and is the most visceral of the three as the plan predicted
+
+Energy the filter *invented* on an isolated K-complex, measured as filtered − original:
+
+| cutoff | invented RMS | vs signal RMS 22.7 µV |
+|---|---|---|
+| 0.01 Hz | 0.64 µV | 3% |
+| 0.1 Hz | 2.05 µV | 9% |
+| 0.5 Hz | 3.98 µV | 18% |
+| 1.0 Hz | 5.31 µV | **23%** |
+
+At the standard clinical cutoff nearly a quarter of the trace's amplitude, on a K-complex, is
+deflection the filter created. With ground truth we can draw exactly which deflections those
+are — which no real recording can.
+
+---
+
 ## Reproduce
 
 ```bash
