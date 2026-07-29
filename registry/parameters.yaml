@@ -686,6 +686,23 @@ params:
     section: "4. Oscillations"
     milestone: T1-M1
 
+  background_global_fraction:
+    value: {kind: scalar, v: 0.35}
+    units: null
+    standing: invented
+    source: {kind: none, rationale: "fraction of background variance carried by a spatially uniform common mode, the rest by regional sources"}
+    states: all
+    section: "4. Oscillations"
+    milestone: T1-M1
+    note: >-
+      FITTED AGAINST REAL DATA, and still `invented` because n = 8 subjects from one lab is
+      not a corpus. PhysioNet EEGMAT resting, linked-ear reference, gives median |correlation|
+      of 0.767 for near electrode pairs and 0.440 for far ones. Regional sources ALONE cannot
+      reach the far value: widening topo_sigma_background peaks it at 0.29 and then decreases
+      it, because independent realizations average out rather than sharing anything. Real
+      scalp EEG has a genuinely common mode, and this sets how much of the background it
+      carries. T1-M1 must refit against a staged corpus.
+
   background_n_sources:
     value: {kind: scalar, v: 6}
     units: null

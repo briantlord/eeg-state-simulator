@@ -150,6 +150,7 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 | `delta_amp` | 100–200 *(uncertainty)* | uV_pp | `invented` | textbook range, matching neighbouring so_amp and kc_amp. Explicitly NOT derived from the 75 uV AASM criterion. | n3 |
 | `so_freq` | <1 | Hz | `invented` | distinct from the AASM delta band; uncited | n3 |
 | `so_amp` | 100–200 *(uncertainty)* | uV_pp | `invented` | uncited | n3 |
+| `background_global_fraction` | 0.35 | — | `invented` | fraction of background variance carried by a spatially uniform common mode, the rest by regional sources | all |
 | `background_n_sources` | 6 | — | `invented` | number of spatially distinct aperiodic background sources | all |
 | `background_rms_uv` | 15–25 *(uncertainty)* | uV | `invented` | broadband RMS of the aperiodic background | all |
 | `amp_pp_to_rms` | 2.828 | — | `invented` | peak-to-peak to RMS for a quasi-sinusoidal rhythm: 2*sqrt(2) | all |
@@ -173,6 +174,8 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 **`alpha_shape_rdsym`.** 0.5 is symmetric; below 0.5 is a steeper rise, above is a steeper decay. Stated as the MEASURED QUANTITY rather than as a signed deviation, because the deviation form was got wrong twice in one sitting -- the registry note inverted the formula, and independently the implementation used a phase warp that produced no asymmetry at all while appearing to. A parameter that IS the measurement cannot be misread, and test/oscillations.test.ts pins it against the generated signal. BOTH THE MAGNITUDE AND THE DIRECTION ARE UNFITTED. The shape literature reports log sharpness and steepness ratios per cycle, not rdsym for occipital alpha specifically, and no source consulted gives a direction for posterior alpha. 0.42 is a mild steeper rise, chosen to be visibly non-sinusoidal without asserting a direction the data does not support. T1-M2 fits it against a corpus with bycycle.
 
 **`delta_amp`.** Given a Tier 0 value on import; see Execution-Scheme D10. Left blank, this row and snr_nominal are under-determined by one degree of freedom and the calibration absorbs it, setting delta amplitude from the 75 uV figure through the back door — the exact circularity D5 exists to close, re-entering through the one row D5's prose leaves empty. The AASM number appears in gate_aasm_n3 and nowhere else. UNITS CORRECTED to uV_pp on review: the textbook 100-200 figure for slow waves is peak-to-peak, and it had been placed on a row declared in plain uV. Read as peak it is 200-400 uV p-p, which at snr_null_offset = -6 dB still clears the 75 uV criterion — so G5's null could not have failed, and under D9 that null is G5's only failable arm. D10's claim that fixing this row "makes snr_nominal a genuine single-scalar solve" is FALSE and is withdrawn: so_amp (100-200 uV, so_freq < 1 Hz) also lands inside gate_aasm_n3_band, the aperiodic offset b has no registry row at all, and the interval-to-point reduction rule is unregistered with zero Dv rows in the registry. At least three further degrees of freedom remain. See Execution-Scheme section 7.
+
+**`background_global_fraction`.** FITTED AGAINST REAL DATA, and still `invented` because n = 8 subjects from one lab is not a corpus. PhysioNet EEGMAT resting, linked-ear reference, gives median |correlation| of 0.767 for near electrode pairs and 0.440 for far ones. Regional sources ALONE cannot reach the far value: widening topo_sigma_background peaks it at 0.29 and then decreases it, because independent realizations average out rather than sharing anything. Real scalp EEG has a genuinely common mode, and this sets how much of the background it carries. T1-M1 must refit against a staged corpus.
 
 **`background_n_sources`.** MEASURED DEFECT THIS FIXES. With ONE background source at uniform scalp weighting the generated channels had an effective rank of 1.14 -- PC1 carried 93% of all variance and the median inter-channel correlation was 0.988. Every channel was the same trace scaled. Build Plan 3.1 forbids per-channel independent signals because that "is instantly wrong to anyone who has looked at EEG"; a single shared source is the opposite error and is equally visible in a covariance matrix. Several sources with distinct topographies give correlation that falls with distance, which is what volume conduction produces. The COUNT is invented: it trades effective rank against the risk of asserting spatial structure nobody fitted. T1-M1 should replace these with fitted topographies, or with eigenmode columns through the same projection file -- the schema already supports it.
 
@@ -421,6 +424,6 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 | `chosen` | 50 |
 | `literature` | 8 |
 | `derived` | 7 |
-| `invented` | 98 |
+| `invented` | 99 |
 | `absent` | 8 |
-| **total** | **182** |
+| **total** | **183** |

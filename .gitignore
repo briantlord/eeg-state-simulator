@@ -6,3 +6,5 @@ dist/
 .vite/
 prep/out/
 *.bak
+
+prep/realdata/

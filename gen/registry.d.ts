@@ -23,6 +23,7 @@ export type ParamKey =
   | 'analysis_window'
   | 'ap_axis_span'
   | 'aperiodic_model'
+  | 'background_global_fraction'
   | 'background_n_sources'
   | 'background_rms_uv'
   | 'beta_amp'
@@ -209,6 +210,7 @@ export interface ParamKindMap {
   'analysis_window': 'scalar';
   'ap_axis_span': 'scalar';
   'aperiodic_model': 'procedure';
+  'background_global_fraction': 'scalar';
   'background_n_sources': 'scalar';
   'background_rms_uv': 'interval';
   'beta_amp': 'interval';

@@ -52,6 +52,38 @@
   "generators": {
     "background_0": {
       "weights": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "provenance": {
+        "method": "uniform_global",
+        "note": "the common mode; amplitude set by background_global_fraction",
+        "registry_keys": [
+          "background_global_fraction"
+        ]
+      }
+    },
+    "background_1": {
+      "weights": [
         0.677001,
         0.242956,
         0.84541,
@@ -87,7 +119,7 @@
         ]
       }
     },
-    "background_1": {
+    "background_2": {
       "weights": [
         0.242956,
         0.677001,
@@ -124,7 +156,7 @@
         ]
       }
     },
-    "background_2": {
+    "background_3": {
       "weights": [
         0.199047,
         0.058194,
@@ -161,7 +193,7 @@
         ]
       }
     },
-    "background_3": {
+    "background_4": {
       "weights": [
         0.058194,
         0.199047,
@@ -198,7 +230,7 @@
         ]
       }
     },
-    "background_4": {
+    "background_5": {
       "weights": [
         0.023547,
         0.009362,
@@ -226,43 +258,6 @@
         "method": "gaussian_on_projected_10_20",
         "centre": [
           -0.45,
-          -0.55
-        ],
-        "sigma": 0.55,
-        "registry_keys": [
-          "background_n_sources",
-          "topo_sigma_background"
-        ]
-      }
-    },
-    "background_5": {
-      "weights": [
-        0.009362,
-        0.023547,
-        0.008484,
-        0.041033,
-        0.115975,
-        0.156524,
-        0.094451,
-        0.018825,
-        0.13682,
-        0.435149,
-        0.605629,
-        0.368854,
-        0.072503,
-        0.262149,
-        0.714481,
-        1,
-        0.807175,
-        0.296257,
-        0.745116,
-        0.008848,
-        0.247741
-      ],
-      "provenance": {
-        "method": "gaussian_on_projected_10_20",
-        "centre": [
-          0.45,
           -0.55
         ],
         "sigma": 0.55,

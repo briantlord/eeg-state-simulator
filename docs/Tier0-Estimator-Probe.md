@@ -634,6 +634,76 @@ is, on both observable axes at once.
 
 ---
 
+# Finding 12 — measured against real EEG, for the first time
+
+Every other check in this project is a round trip through code we wrote. Harness §6 says of the
+Tier 1 discriminator: *"every gate above is a round trip; none tests whether the output
+resembles EEG at all."* This is a cheap, small-n precursor to that. **It is not a gate.**
+
+**Corpus.** PhysioNet **EEGMAT** (Zyma et al. 2019), Open Data Commons Attribution v1.0. The
+`_1` files are background EEG recorded *before* the arithmetic task — resting adults. It was
+chosen because it matches our scheme almost exactly: **the same 19 channels of the 10-20
+system**, **referenced to interconnected ears** (our `linked-mastoid` mode), awake and at rest.
+n = 8 subjects, 172 s each, resampled 500 → 256 Hz.
+
+| metric | REAL median [IQR] | our wake_ec | verdict |
+|---|---|---|---|
+| **effective rank** | **3.09** [2.88–3.28] | **3.12** | ✅ |
+| PC1 variance fraction | 0.534 [0.503–0.556] | 0.485 | ✅ |
+| median \|corr\|, near pairs | 0.767 [0.745–0.798] | 0.745 | ✅ |
+| median \|corr\|, far pairs | 0.440 [0.402–0.486] | **0.286** | ❌ |
+| Pz RMS | 14.8 µV [12.5–16.8] | 14.0 µV | ✅ |
+| alpha peak | 10.5 Hz [9.9–11.1] | 10.0 Hz | ✅ |
+| alpha × aperiodic | 16.2× [11.2–44.6] | 56.5× | ⚠ above IQR |
+| χ over 1–20 Hz | 0.99 [0.95–1.05] | **0.32** | ❌ |
+
+### The rank answer
+
+**Effective rank 3.12 against a real 3.09.** Before Finding 11's fix it was 1.14. So the answer
+to "is our effective rank reflective of real data" is now *yes*, and it emphatically was not an
+hour ago. Amplitude, alpha frequency, near-field correlation and PC1 share all land inside or
+beside the real IQR.
+
+### The two that do not match, and one is structural
+
+**Far-field correlation, 0.29 against 0.44.** Distant electrodes in our generator are too
+independent. Adding a spatially uniform common mode (`background_global_fraction`) moved it
+0.254 → 0.286, but there is a **tension a few Gaussians cannot resolve**: more global component
+raises far-field correlation and *lowers* effective rank, and real EEG has both a rank of 3.09
+*and* a far-field correlation of 0.44 simultaneously. A handful of independent Gaussian sources
+approximates the eigenstructure of volume conduction only roughly.
+
+**This is the seam-3 upgrade, not a tuning problem.** Build Plan §3.4 already names the fix:
+replace the projection file's contents with *"LΨᵀ columns or a SEREEGA lead field"*. The schema
+does not change and the loader does not change. Further parameter tuning here would be fitting
+the wrong model harder.
+
+**χ over 1–20 Hz, 0.32 against 0.99.** Our spectrum is too flat in the band the real data can
+actually speak to. The cause is the knee: `knee_freq_wake_ec` = 12 Hz sits *inside* 1–20 Hz and
+flattens the low side. Diagnosed by isolating components — sensor noise is *not* responsible
+(0 → 3 µV white moves the 30–45 slope only 1.78 → 1.70), and moving the knee from 12 Hz to
+1 Hz recovers the injected exponent almost exactly. **Left unfitted**, because χ and the knee
+must be fitted *jointly* per state (Finding 9) and against a staged corpus, not against n = 8
+awake subjects from one lab.
+
+### A caveat that is itself the point
+
+The first version of this comparison reported **χ = 3.49 over 30–45 Hz** for the real data and
+0.75 for ours, and I nearly recorded "our high frequencies are far too flat."
+
+**That number is their anti-aliasing filter, not their cortex.** Measured on the raw 500 Hz
+recording: local slope **6.7** over 20–30 Hz, the 50 Hz mains line sitting **below** its
+neighbours (a notch), and a flat instrument floor at −70 dB above 80 Hz. No cortical process
+produces a log-log slope of 6.7.
+
+Build Plan §3.7 states it: *"A published exponent is a joint function of PSD method, fit band,
+knee model, reference, artifact rejection and electrode. **It does not transfer.**"* Here is
+that claim demonstrated on real data — and it very nearly caused a wrong parameter change in
+the direction of the artefact. **The 30–45 Hz comparison is therefore not made at all**, rather
+than made and caveated, and only 1–20 Hz is quoted.
+
+---
+
 ## Reproduce
 
 ```bash

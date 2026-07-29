@@ -66,8 +66,23 @@ const BG_CENTRES = [
   [-0.6, 0.0], [0.6, 0.0],
   [-0.45, -0.55], [0.45, -0.55],
 ];
-for (let i = 0; i < bgN; i++) {
-  const [cx, cy] = BG_CENTRES[i % BG_CENTRES.length];
+// Source 0 is GLOBAL — uniform across the scalp. Sources 1..N-1 are regional.
+//
+// Regional sources alone cannot reproduce the observed long-range correlation: measured
+// against PhysioNet EEGMAT resting (near 0.767, far 0.440), widening the regional sigma
+// peaks the far-field correlation at 0.29 and then DECREASES it, because six independent
+// realizations average out rather than sharing anything. Real scalp EEG has a genuinely
+// common mode. `background_global_fraction` sets how much variance it carries.
+projections['background_0'] = {
+  weights: channels.map(() => 1),
+  provenance: {
+    method: 'uniform_global',
+    note: 'the common mode; amplitude set by background_global_fraction',
+    registry_keys: ['background_global_fraction'],
+  },
+};
+for (let i = 1; i < bgN; i++) {
+  const [cx, cy] = BG_CENTRES[(i - 1) % BG_CENTRES.length];
   const weights = channels.map((ch) =>
     Math.exp(-(((ch.x - cx) ** 2 + (ch.y - cy) ** 2)) / (2 * bgSigma * bgSigma)),
   );
