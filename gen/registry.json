@@ -1,0 +1,2576 @@
+{
+  "schema_version": 1,
+  "generator_version": "0.1.0",
+  "states": [
+    "wake_eo",
+    "wake_ec",
+    "n1",
+    "n2",
+    "n3",
+    "rem"
+  ],
+  "toolchain": {
+    "specparam": {
+      "version": "2.0.0rc7",
+      "prerelease": true,
+      "gates": [
+        "G1a",
+        "G1b"
+      ]
+    },
+    "yasa": {
+      "version": "0.7.0",
+      "prerelease": false,
+      "gates": [
+        "G3"
+      ]
+    },
+    "mne": {
+      "version": "1.12.1",
+      "prerelease": false,
+      "gates": []
+    },
+    "numpy": {
+      "version": "1.26.4",
+      "prerelease": false,
+      "gates": []
+    },
+    "scipy": {
+      "version": "1.15.3",
+      "prerelease": false,
+      "gates": []
+    }
+  },
+  "params": {
+    "fs": {
+      "value": {
+        "kind": "scalar",
+        "v": 256
+      },
+      "units": "Hz",
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "Nyquist for 45 Hz analysis with ample margin. Sampling theory mandates >90 Hz; 256 is our choice among adequate rates."
+      },
+      "states": "all",
+      "section": "1. Sampling, display, infrastructure",
+      "note": "Re-standed definitional -> chosen on import. Sampling theory constrains fs to exceed 90 Hz; it does not select 256. A convention is not a standard."
+    },
+    "synth_block": {
+      "value": {
+        "kind": "scalar",
+        "v": 4096
+      },
+      "units": "samples",
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "FFT efficiency; 16 s at fs=256"
+      },
+      "states": "all",
+      "section": "1. Sampling, display, infrastructure"
+    },
+    "synth_overlap": {
+      "value": {
+        "kind": "scalar",
+        "v": 1024
+      },
+      "units": "samples",
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "25% of synth_block; overlap-add region for the cosine crossfade"
+      },
+      "states": "all",
+      "section": "1. Sampling, display, infrastructure",
+      "note": "Added on import. Build Plan 3.2 specifies overlapping blocks with cosine crossfade and the risk register lists streaming discontinuities, but no overlap length was registered."
+    },
+    "epoch_display": {
+      "value": {
+        "kind": "scalar",
+        "v": 30
+      },
+      "units": "s",
+      "standing": "definitional",
+      "source": {
+        "kind": "standard",
+        "name": "AASM Manual for the Scoring of Sleep and Associated Events",
+        "clause": "scoring epoch"
+      },
+      "states": "all",
+      "section": "1. Sampling, display, infrastructure"
+    },
+    "analysis_window": {
+      "value": {
+        "kind": "scalar",
+        "v": 30
+      },
+      "units": "s",
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "matches display"
+      },
+      "states": "all",
+      "section": "1. Sampling, display, infrastructure"
+    },
+    "analysis_update": {
+      "value": {
+        "kind": "scalar",
+        "v": 1
+      },
+      "units": "Hz",
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "perceptual"
+      },
+      "states": "all",
+      "section": "1. Sampling, display, infrastructure"
+    },
+    "n_channels": {
+      "value": {
+        "kind": "scalar",
+        "v": 19
+      },
+      "units": null,
+      "standing": "definitional",
+      "source": {
+        "kind": "standard",
+        "name": "International 10-20 system (Jasper 1958), as adopted by IFCN/ACNS"
+      },
+      "states": "all",
+      "section": "1. Sampling, display, infrastructure"
+    },
+    "reference_channels": {
+      "value": {
+        "kind": "electrodes",
+        "labels": [
+          "A1",
+          "A2"
+        ]
+      },
+      "units": null,
+      "standing": "definitional",
+      "source": {
+        "kind": "standard",
+        "name": "AASM Manual for the Scoring of Sleep and Associated Events",
+        "clause": "contralateral mastoid reference"
+      },
+      "states": "all",
+      "section": "1. Sampling, display, infrastructure",
+      "note": "Added on import, and load-bearing. A 19-channel 10-20 montage contains no mastoids, but gate_aasm_n3 is referenced to contralateral mastoid and anchors snr_nominal and therefore every absolute uV amplitude in this registry. Without A1/A2 the criterion cannot be computed at all. These are additional to the 19."
+    },
+    "sensor_noise_rms": {
+      "value": {
+        "kind": "interval",
+        "lo": 1,
+        "hi": 2,
+        "meaning": "uncertainty"
+      },
+      "units": "uV",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": ""
+      },
+      "states": "all",
+      "section": "1. Sampling, display, infrastructure",
+      "milestone": "T1-M1"
+    },
+    "export_schema_version": {
+      "value": {
+        "kind": "scalar",
+        "v": 1
+      },
+      "units": null,
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "epoch-directory schema (seam 9)"
+      },
+      "states": "all",
+      "section": "1. Sampling, display, infrastructure"
+    },
+    "rng_algorithm_ts": {
+      "value": {
+        "kind": "enum",
+        "options": [
+          "xoshiro128++"
+        ]
+      },
+      "units": null,
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "32-bit state, native in typed arrays; see DECISIONS D2"
+      },
+      "states": "all",
+      "section": "1. Sampling, display, infrastructure",
+      "note": "Source markdown offered 'xoshiro128++ or PCG32'. An unresolved disjunction is not a value; xoshiro128++ selected so seam 4 is pinned."
+    },
+    "n_seeds": {
+      "value": {
+        "kind": "scalar",
+        "v": 20
+      },
+      "units": null,
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "provisional; to be set from observed variance — power analysis, not circularity"
+      },
+      "states": "all",
+      "section": "1. Sampling, display, infrastructure"
+    },
+    "snr_nominal": {
+      "value": {
+        "kind": "solved",
+        "procedure": "Solve on snr_calibration_seed and snr_calibration_epoch for the mix value at which generated N3 satisfies gate_aasm_n3.",
+        "artifact": "prep/fixtures/snr_calibration.json"
+      },
+      "units": "dB",
+      "standing": "derived",
+      "source": {
+        "kind": "procedure",
+        "text": "One-time calibration; see harness G5 and DECISIONS D5. Calibration and gate are separate steps."
+      },
+      "states": "all",
+      "section": "2. SNR and amplitude calibration",
+      "note": "Anchors every absolute uV amplitude here. Evaluated on HELD-OUT seeds by G5, reported as a pass fraction. Tuning this until G5 passes would make G5 pass by construction."
+    },
+    "snr_range_ui": {
+      "value": {
+        "kind": "interval",
+        "lo": -12,
+        "hi": 12,
+        "meaning": "ui_domain"
+      },
+      "units": "dB",
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "sweep range for the control, relative to nominal"
+      },
+      "states": "all",
+      "section": "2. SNR and amplitude calibration"
+    },
+    "snr_calibration_seed": {
+      "value": {
+        "kind": "scalar",
+        "v": 20260728
+      },
+      "units": null,
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "fixed named seed, held out of every G5 evaluation"
+      },
+      "states": [
+        "n3"
+      ],
+      "section": "2. SNR and amplitude calibration",
+      "note": "In the source markdown this row sat in a one-row table separated from its header by a blank line. Every markdown table parser drops it — and it is the row the entire G5 held-out design depends on. Recovered on import."
+    },
+    "snr_calibration_epoch": {
+      "value": {
+        "kind": "scalar",
+        "v": 0
+      },
+      "units": null,
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "epoch index within the calibration record"
+      },
+      "states": [
+        "n3"
+      ],
+      "section": "2. SNR and amplitude calibration",
+      "note": "Added on import. D5 requires a named fixture seed AND epoch; only the seed was registered."
+    },
+    "snr_null_offset": {
+      "value": {
+        "kind": "scalar",
+        "v": -6
+      },
+      "units": "dB",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "offset at which generated N3 must FAIL gate_aasm_n3"
+      },
+      "states": [
+        "n3"
+      ],
+      "section": "2. SNR and amplitude calibration",
+      "milestone": "T1-M2",
+      "note": "Added on import. This number appears in Build Plan 9, harness 5 and DECISIONS D5 and was registered in none of them — a threshold on the arm all three documents say carries the discriminative weight."
+    },
+    "aperiodic_model": {
+      "value": {
+        "kind": "procedure",
+        "text": "knee form: L(f) = b - log10(k + f^chi)"
+      },
+      "units": null,
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "single-knee form"
+      },
+      "states": "all",
+      "section": "3. Aperiodic background"
+    },
+    "chi_direction": {
+      "value": {
+        "kind": "ordering",
+        "text": "wake flattest < N1 < N2 ~ N3 < REM steepest",
+        "relations": [
+          [
+            "wake_eo",
+            "n1"
+          ],
+          [
+            "n1",
+            "n2"
+          ],
+          [
+            "n2",
+            "rem"
+          ],
+          [
+            "n3",
+            "rem"
+          ]
+        ]
+      },
+      "units": null,
+      "standing": "literature",
+      "source": {
+        "kind": "citation",
+        "authors": "Lendner et al.",
+        "year": 2020,
+        "venue": "eLife",
+        "note": "NSRR replication, final analytic sample N=10,255"
+      },
+      "states": "all",
+      "section": "3. Aperiodic background",
+      "note": "Deliberately NOT a total order. N2 and N3 are related to REM but not to each other: Build Plan 3.2 records N1-N3 correlate r~0.7 and are poorly separated by slope alone, 7 notes a small N3 reversal, and 10 instructs that a clean monotonic ladder be treated as a bug. A strictly monotone encoding would contradict all three."
+    },
+    "chi_wake_eo": {
+      "value": {
+        "kind": "pending"
+      },
+      "provisional": {
+        "v": 0.9,
+        "basis": "flattest state; ordered below all others per chi_direction",
+        "expires_at_milestone": "T1-M1",
+        "constrained_by": "must not be set from any gate threshold"
+      },
+      "units": null,
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": ""
+      },
+      "states": [
+        "wake_eo"
+      ],
+      "section": "3. Aperiodic background",
+      "milestone": "T1-M1"
+    },
+    "chi_wake_ec": {
+      "value": {
+        "kind": "pending"
+      },
+      "provisional": {
+        "v": 1.1,
+        "basis": "eyes-closed, slightly steeper than eyes-open",
+        "expires_at_milestone": "T1-M1",
+        "constrained_by": "must not be set from any gate threshold"
+      },
+      "units": null,
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": ""
+      },
+      "states": [
+        "wake_ec"
+      ],
+      "section": "3. Aperiodic background",
+      "milestone": "T1-M1"
+    },
+    "chi_n1": {
+      "value": {
+        "kind": "pending"
+      },
+      "provisional": {
+        "v": 1.4,
+        "basis": "intermediate per chi_direction",
+        "expires_at_milestone": "T1-M1",
+        "constrained_by": "must not be set from any gate threshold"
+      },
+      "units": null,
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": ""
+      },
+      "states": [
+        "n1"
+      ],
+      "section": "3. Aperiodic background",
+      "milestone": "T1-M1",
+      "note": "Absent from the source markdown although chi_direction and knee_present both reference N1."
+    },
+    "chi_n2": {
+      "value": {
+        "kind": "pending"
+      },
+      "provisional": {
+        "v": 1.7,
+        "basis": "steeper than wake; poorly separated from N3 by design",
+        "expires_at_milestone": "T1-M1",
+        "constrained_by": "must not be set from any gate threshold"
+      },
+      "units": null,
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": ""
+      },
+      "states": [
+        "n2"
+      ],
+      "section": "3. Aperiodic background",
+      "milestone": "T1-M1"
+    },
+    "chi_n3": {
+      "value": {
+        "kind": "pending"
+      },
+      "provisional": {
+        "v": 1.75,
+        "basis": "N2 ~ N3; deliberately close, not ordered against N2",
+        "expires_at_milestone": "T1-M1",
+        "constrained_by": "must not be set from any gate threshold"
+      },
+      "units": null,
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": ""
+      },
+      "states": [
+        "n3"
+      ],
+      "section": "3. Aperiodic background",
+      "milestone": "T1-M1"
+    },
+    "chi_rem": {
+      "value": {
+        "kind": "pending"
+      },
+      "provisional": {
+        "v": 2.1,
+        "basis": "steepest, counterintuitively; Lendner et al. 2020",
+        "expires_at_milestone": "T1-M1",
+        "constrained_by": "must not be set from any gate threshold"
+      },
+      "units": null,
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": ""
+      },
+      "states": [
+        "rem"
+      ],
+      "section": "3. Aperiodic background",
+      "milestone": "T1-M1"
+    },
+    "knee_modelled": {
+      "value": {
+        "kind": "procedure",
+        "text": "the ~20 Hz knee only"
+      },
+      "units": null,
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "see DECISIONS D3"
+      },
+      "states": "all",
+      "section": "3. Aperiodic background"
+    },
+    "knee_freq_low": {
+      "value": {
+        "kind": "scalar",
+        "v": 20
+      },
+      "units": "Hz",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "approximate location reported in a 2024 J Neurosci intrinsic-timescales paper; author not recorded, value not read out under a known pipeline"
+      },
+      "states": "all",
+      "section": "3. Aperiodic background",
+      "milestone": "T1-M1",
+      "note": "Re-standed literature -> invented on import. A venue and year with no author fails source discipline, and the registry's own rule is to re-stand rather than re-source by guess."
+    },
+    "knee_freq_high_unmodelled": {
+      "value": {
+        "kind": "scalar",
+        "v": 45
+      },
+      "units": "Hz",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "ibid.; documented, NOT generated at any tier"
+      },
+      "states": "all",
+      "section": "3. Aperiodic background",
+      "milestone": "T1-M1",
+      "note": "Re-standed literature -> invented, same reason. Registered so the acceptance check can authorize it in copy; nothing generates it."
+    },
+    "knee_present": {
+      "value": {
+        "kind": "ordering",
+        "text": "REM prominent; wake/N1/N2 attenuated; N3 absent",
+        "relations": [
+          [
+            "n3",
+            "n2"
+          ],
+          [
+            "n2",
+            "rem"
+          ]
+        ]
+      },
+      "units": null,
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "ibid.; direction reported, magnitudes not read out"
+      },
+      "states": "all",
+      "section": "3. Aperiodic background",
+      "milestone": "T1-M1"
+    },
+    "k_wake_eo": {
+      "value": {
+        "kind": "pending"
+      },
+      "provisional": {
+        "v": 0.9,
+        "basis": "knee frequency ~20 Hz => k = knee_freq_low ^ chi",
+        "expires_at_milestone": "T1-M1",
+        "constrained_by": "sets G1b's structural bias; see Tier0-Estimator-Probe Finding 2"
+      },
+      "units": "Hz",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": ""
+      },
+      "states": [
+        "wake_eo"
+      ],
+      "section": "3. Aperiodic background",
+      "milestone": "T1-M1"
+    },
+    "k_wake_ec": {
+      "value": {
+        "kind": "pending"
+      },
+      "provisional": {
+        "v": 1,
+        "basis": "as above",
+        "expires_at_milestone": "T1-M1",
+        "constrained_by": "sets G1b's structural bias"
+      },
+      "units": "Hz",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": ""
+      },
+      "states": [
+        "wake_ec"
+      ],
+      "section": "3. Aperiodic background",
+      "milestone": "T1-M1"
+    },
+    "k_n1": {
+      "value": {
+        "kind": "pending"
+      },
+      "provisional": {
+        "v": 1,
+        "basis": "attenuated",
+        "expires_at_milestone": "T1-M1",
+        "constrained_by": "sets G1b's structural bias"
+      },
+      "units": "Hz",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": ""
+      },
+      "states": [
+        "n1"
+      ],
+      "section": "3. Aperiodic background",
+      "milestone": "T1-M1"
+    },
+    "k_n2": {
+      "value": {
+        "kind": "pending"
+      },
+      "provisional": {
+        "v": 0.8,
+        "basis": "attenuated",
+        "expires_at_milestone": "T1-M1",
+        "constrained_by": "sets G1b's structural bias"
+      },
+      "units": "Hz",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": ""
+      },
+      "states": [
+        "n2"
+      ],
+      "section": "3. Aperiodic background",
+      "milestone": "T1-M1"
+    },
+    "k_n3": {
+      "value": {
+        "kind": "pending"
+      },
+      "provisional": {
+        "v": 0.05,
+        "basis": "knee effectively absent in N3",
+        "expires_at_milestone": "T1-M1",
+        "constrained_by": "sets G1b's structural bias"
+      },
+      "units": "Hz",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": ""
+      },
+      "states": [
+        "n3"
+      ],
+      "section": "3. Aperiodic background",
+      "milestone": "T1-M1"
+    },
+    "k_rem": {
+      "value": {
+        "kind": "pending"
+      },
+      "provisional": {
+        "v": 1.6,
+        "basis": "knee most prominent in REM",
+        "expires_at_milestone": "T1-M1",
+        "constrained_by": "sets G1b's structural bias"
+      },
+      "units": "Hz",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": ""
+      },
+      "states": [
+        "rem"
+      ],
+      "section": "3. Aperiodic background",
+      "milestone": "T1-M1"
+    },
+    "fit_band_broad": {
+      "value": {
+        "kind": "interval",
+        "lo": 1,
+        "hi": 45,
+        "meaning": "band_edges"
+      },
+      "units": "Hz",
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "one of eleven bands in use in the literature; ours by choice"
+      },
+      "states": "all",
+      "section": "3. Aperiodic background"
+    },
+    "fit_band_narrow": {
+      "value": {
+        "kind": "interval",
+        "lo": 30,
+        "hi": 45,
+        "meaning": "band_edges"
+      },
+      "units": "Hz",
+      "standing": "literature",
+      "source": {
+        "kind": "citation",
+        "authors": "Lendner et al.",
+        "year": 2020,
+        "venue": "eLife"
+      },
+      "states": "all",
+      "section": "3. Aperiodic background"
+    },
+    "alpha_band": {
+      "value": {
+        "kind": "interval",
+        "lo": 8,
+        "hi": 12,
+        "meaning": "band_edges"
+      },
+      "units": "Hz",
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "conventional band edges; no single standard fixes them"
+      },
+      "states": [
+        "wake_ec",
+        "rem"
+      ],
+      "section": "4. Oscillations",
+      "note": "Re-standed definitional -> chosen on import: a convention in wide use is not a named standard. Same for beta_band, theta_band."
+    },
+    "alpha_peak": {
+      "value": {
+        "kind": "scalar",
+        "v": 10
+      },
+      "units": "Hz",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "individual peak varies 8-13; no fitted value"
+      },
+      "states": [
+        "wake_ec"
+      ],
+      "section": "4. Oscillations",
+      "milestone": "T1-M1"
+    },
+    "alpha_amp": {
+      "value": {
+        "kind": "interval",
+        "lo": 20,
+        "hi": 50,
+        "meaning": "uncertainty"
+      },
+      "units": "uV",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "textbook range, not a measurement under a known pipeline"
+      },
+      "states": [
+        "wake_ec"
+      ],
+      "section": "4. Oscillations",
+      "milestone": "T1-M1"
+    },
+    "alpha_rem_shift": {
+      "value": {
+        "kind": "interval",
+        "lo": -2,
+        "hi": -1,
+        "meaning": "uncertainty"
+      },
+      "units": "Hz",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "direction well known; magnitude uncited"
+      },
+      "states": [
+        "rem"
+      ],
+      "section": "4. Oscillations",
+      "milestone": "T1-M1"
+    },
+    "beta_band": {
+      "value": {
+        "kind": "interval",
+        "lo": 15,
+        "hi": 25,
+        "meaning": "band_edges"
+      },
+      "units": "Hz",
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "conventional band edges"
+      },
+      "states": [
+        "wake_eo"
+      ],
+      "section": "4. Oscillations"
+    },
+    "beta_amp": {
+      "value": {
+        "kind": "interval",
+        "lo": 5,
+        "hi": 15,
+        "meaning": "uncertainty"
+      },
+      "units": "uV",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "textbook range"
+      },
+      "states": [
+        "wake_eo"
+      ],
+      "section": "4. Oscillations",
+      "milestone": "T1-M1"
+    },
+    "theta_band": {
+      "value": {
+        "kind": "interval",
+        "lo": 4,
+        "hi": 7,
+        "meaning": "band_edges"
+      },
+      "units": "Hz",
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "conventional band edges"
+      },
+      "states": [
+        "n2",
+        "rem"
+      ],
+      "section": "4. Oscillations"
+    },
+    "theta_amp": {
+      "value": {
+        "kind": "interval",
+        "lo": 15,
+        "hi": 40,
+        "meaning": "uncertainty"
+      },
+      "units": "uV",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "textbook range"
+      },
+      "states": [
+        "n2",
+        "rem"
+      ],
+      "section": "4. Oscillations",
+      "milestone": "T1-M1"
+    },
+    "delta_band": {
+      "value": {
+        "kind": "interval",
+        "lo": 0.5,
+        "hi": 2,
+        "meaning": "band_edges"
+      },
+      "units": "Hz",
+      "standing": "definitional",
+      "source": {
+        "kind": "standard",
+        "name": "AASM Manual for the Scoring of Sleep and Associated Events",
+        "clause": "slow wave activity band"
+      },
+      "states": [
+        "n3"
+      ],
+      "section": "4. Oscillations"
+    },
+    "delta_amp": {
+      "value": {
+        "kind": "interval",
+        "lo": 100,
+        "hi": 200,
+        "meaning": "uncertainty"
+      },
+      "units": "uV",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "textbook range, matching neighbouring so_amp and kc_amp. Explicitly NOT derived from the 75 uV AASM criterion."
+      },
+      "states": [
+        "n3"
+      ],
+      "section": "4. Oscillations",
+      "milestone": "T1-M1",
+      "note": "Given a Tier 0 value on import; see Execution-Scheme D10. Left blank, this row and snr_nominal are under-determined by one degree of freedom and the calibration absorbs it, setting delta amplitude from the 75 uV figure through the back door — the exact circularity D5 exists to close, re-entering through the one row D5's prose leaves empty. The AASM number appears in gate_aasm_n3 and nowhere else."
+    },
+    "so_freq": {
+      "value": {
+        "kind": "bound",
+        "op": "lt",
+        "v": 1
+      },
+      "units": "Hz",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "distinct from the AASM delta band; uncited"
+      },
+      "states": [
+        "n3"
+      ],
+      "section": "4. Oscillations",
+      "milestone": "T1-M1"
+    },
+    "so_amp": {
+      "value": {
+        "kind": "interval",
+        "lo": 100,
+        "hi": 200,
+        "meaning": "uncertainty"
+      },
+      "units": "uV",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "uncited"
+      },
+      "states": [
+        "n3"
+      ],
+      "section": "4. Oscillations",
+      "milestone": "T1-M1"
+    },
+    "filter_order": {
+      "value": {
+        "kind": "scalar",
+        "v": 4
+      },
+      "units": null,
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "Butterworth bandpass"
+      },
+      "states": "all",
+      "section": "4. Oscillations"
+    },
+    "topo_sigma_alpha": {
+      "value": {
+        "kind": "pending"
+      },
+      "provisional": {
+        "v": 0.35,
+        "basis": "hand-tuned; posterior centre",
+        "expires_at_milestone": "T1-M1",
+        "constrained_by": "must not be derived from topo_expect_* — G6 compares the two"
+      },
+      "units": "normalized_10_20",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": ""
+      },
+      "states": [
+        "wake_ec"
+      ],
+      "section": "5. Topography and geometry",
+      "milestone": "T1-M1"
+    },
+    "topo_sigma_beta": {
+      "value": {
+        "kind": "pending"
+      },
+      "provisional": {
+        "v": 0.4,
+        "basis": "hand-tuned; frontocentral centre",
+        "expires_at_milestone": "T1-M1",
+        "constrained_by": "must not be derived from topo_expect_*"
+      },
+      "units": "normalized_10_20",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": ""
+      },
+      "states": [
+        "wake_eo"
+      ],
+      "section": "5. Topography and geometry",
+      "milestone": "T1-M1"
+    },
+    "topo_sigma_theta": {
+      "value": {
+        "kind": "pending"
+      },
+      "provisional": {
+        "v": 0.4,
+        "basis": "hand-tuned; central/frontal centre",
+        "expires_at_milestone": "T1-M1",
+        "constrained_by": "must not be derived from topo_expect_*"
+      },
+      "units": "normalized_10_20",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": ""
+      },
+      "states": [
+        "n2",
+        "rem"
+      ],
+      "section": "5. Topography and geometry",
+      "milestone": "T1-M1"
+    },
+    "topo_sigma_delta": {
+      "value": {
+        "kind": "pending"
+      },
+      "provisional": {
+        "v": 0.45,
+        "basis": "hand-tuned; frontal centre",
+        "expires_at_milestone": "T1-M1",
+        "constrained_by": "must not be derived from topo_expect_*"
+      },
+      "units": "normalized_10_20",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": ""
+      },
+      "states": [
+        "n3"
+      ],
+      "section": "5. Topography and geometry",
+      "milestone": "T1-M1"
+    },
+    "topo_sigma_spindle_fast": {
+      "value": {
+        "kind": "pending"
+      },
+      "provisional": {
+        "v": 0.3,
+        "basis": "hand-tuned; central-parietal centre",
+        "expires_at_milestone": "T1-M1",
+        "constrained_by": "must not be derived from topo_expect_*"
+      },
+      "units": "normalized_10_20",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": ""
+      },
+      "states": [
+        "n2"
+      ],
+      "section": "5. Topography and geometry",
+      "milestone": "T1-M1"
+    },
+    "topo_sigma_spindle_slow": {
+      "value": {
+        "kind": "pending"
+      },
+      "provisional": {
+        "v": 0.3,
+        "basis": "hand-tuned; frontal centre",
+        "expires_at_milestone": "T1-M1",
+        "constrained_by": "must not be derived from topo_expect_*"
+      },
+      "units": "normalized_10_20",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": ""
+      },
+      "states": [
+        "n2"
+      ],
+      "section": "5. Topography and geometry",
+      "milestone": "T1-M1"
+    },
+    "topo_sigma_kc": {
+      "value": {
+        "kind": "pending"
+      },
+      "provisional": {
+        "v": 0.35,
+        "basis": "hand-tuned; frontal centre",
+        "expires_at_milestone": "T1-M1",
+        "constrained_by": "must not be derived from topo_expect_*"
+      },
+      "units": "normalized_10_20",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": ""
+      },
+      "states": [
+        "n2"
+      ],
+      "section": "5. Topography and geometry",
+      "milestone": "T1-M1"
+    },
+    "ap_axis_span": {
+      "value": {
+        "kind": "scalar",
+        "v": 180
+      },
+      "units": "mm",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "anterior-posterior extent used for the travel delay in 3.5"
+      },
+      "states": [
+        "n3"
+      ],
+      "section": "5. Topography and geometry",
+      "milestone": "T1-M1"
+    },
+    "so_travel_v": {
+      "value": {
+        "kind": "interval",
+        "lo": 1,
+        "hi": 7,
+        "meaning": "uncertainty"
+      },
+      "units": "m/s",
+      "standing": "literature",
+      "source": {
+        "kind": "citation",
+        "authors": "Massimini et al.",
+        "year": 2004,
+        "venue": "J Neurosci"
+      },
+      "states": [
+        "n3"
+      ],
+      "section": "5. Topography and geometry"
+    },
+    "topo_expect_spindle_fast": {
+      "value": {
+        "kind": "electrodes",
+        "labels": [
+          "C3",
+          "C4",
+          "Cz"
+        ]
+      },
+      "units": null,
+      "standing": "literature",
+      "source": {
+        "kind": "standard",
+        "name": "AASM Manual for the Scoring of Sleep and Associated Events",
+        "clause": "central maximum for fast spindles"
+      },
+      "states": [
+        "n2"
+      ],
+      "section": "5. Topography and geometry"
+    },
+    "topo_expect_spindle_slow": {
+      "value": {
+        "kind": "electrodes",
+        "labels": [
+          "F3",
+          "Fz",
+          "F4"
+        ]
+      },
+      "units": null,
+      "standing": "literature",
+      "source": {
+        "kind": "standard",
+        "name": "AASM Manual for the Scoring of Sleep and Associated Events",
+        "clause": "frontal maximum for slow spindles"
+      },
+      "states": [
+        "n2"
+      ],
+      "section": "5. Topography and geometry"
+    },
+    "topo_expect_kc": {
+      "value": {
+        "kind": "electrodes",
+        "labels": [
+          "Fz",
+          "F3",
+          "F4"
+        ]
+      },
+      "units": null,
+      "standing": "literature",
+      "source": {
+        "kind": "standard",
+        "name": "AASM Manual for the Scoring of Sleep and Associated Events",
+        "clause": "K-complex frontal maximum"
+      },
+      "states": [
+        "n2"
+      ],
+      "section": "5. Topography and geometry"
+    },
+    "topo_expect_alpha": {
+      "value": {
+        "kind": "electrodes",
+        "labels": [
+          "O1",
+          "O2",
+          "Pz"
+        ]
+      },
+      "units": null,
+      "standing": "literature",
+      "source": {
+        "kind": "standard",
+        "name": "AASM Manual for the Scoring of Sleep and Associated Events",
+        "clause": "posterior dominant rhythm, occipital maximum"
+      },
+      "states": [
+        "wake_ec"
+      ],
+      "section": "5. Topography and geometry",
+      "note": "Re-sourced on import, not re-standed. In the source markdown this row read 'clinical convention (posterior dominant rhythm)' — naming neither author/year nor standard, which the registry's own discipline calls a contradiction on its face. It is the row G6 reads and D6 built the gate around its independence, so the violation sat on the load-bearing path. AASM does define the posterior dominant rhythm, so the standard is nameable and the literature standing survives."
+    },
+    "spindle_band": {
+      "value": {
+        "kind": "interval",
+        "lo": 11,
+        "hi": 16,
+        "meaning": "band_edges"
+      },
+      "units": "Hz",
+      "standing": "definitional",
+      "source": {
+        "kind": "standard",
+        "name": "AASM Manual for the Scoring of Sleep and Associated Events",
+        "clause": "sleep spindle frequency"
+      },
+      "states": [
+        "n2",
+        "n3"
+      ],
+      "section": "6. Graphoelements"
+    },
+    "spindle_dur_min": {
+      "value": {
+        "kind": "scalar",
+        "v": 0.5
+      },
+      "units": "s",
+      "standing": "definitional",
+      "source": {
+        "kind": "standard",
+        "name": "AASM Manual for the Scoring of Sleep and Associated Events",
+        "clause": "minimum spindle duration"
+      },
+      "states": [
+        "n2"
+      ],
+      "section": "6. Graphoelements"
+    },
+    "spindle_amp": {
+      "value": {
+        "kind": "interval",
+        "lo": 20,
+        "hi": 60,
+        "meaning": "uncertainty"
+      },
+      "units": "uV",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "textbook range"
+      },
+      "states": [
+        "n2"
+      ],
+      "section": "6. Graphoelements",
+      "milestone": "T1-M1"
+    },
+    "spindle_rate": {
+      "value": {
+        "kind": "interval",
+        "lo": 2,
+        "hi": 5,
+        "meaning": "uncertainty"
+      },
+      "units": "1/min",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "uncited"
+      },
+      "states": [
+        "n2",
+        "n3"
+      ],
+      "section": "6. Graphoelements",
+      "milestone": "T1-M1",
+      "note": "States extended to N3 on import: DECISIONS/Build-Plan 4.1 parameterize SO-spindle coupling for N3 (so_spindle_pref_phase, so_spindle_strength) but spindle_rate existed only for N2, leaving the N3 spindle generator with no rate."
+    },
+    "spindle_fast_freq": {
+      "value": {
+        "kind": "interval",
+        "lo": 13,
+        "hi": 15,
+        "meaning": "uncertainty"
+      },
+      "units": "Hz",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "uncited; central-parietal"
+      },
+      "states": [
+        "n2"
+      ],
+      "section": "6. Graphoelements",
+      "milestone": "T1-M1"
+    },
+    "spindle_slow_freq": {
+      "value": {
+        "kind": "interval",
+        "lo": 11,
+        "hi": 13,
+        "meaning": "uncertainty"
+      },
+      "units": "Hz",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "uncited; frontal"
+      },
+      "states": [
+        "n2"
+      ],
+      "section": "6. Graphoelements",
+      "milestone": "T1-M1"
+    },
+    "kc_amp": {
+      "value": {
+        "kind": "interval",
+        "lo": 100,
+        "hi": 200,
+        "meaning": "uncertainty"
+      },
+      "units": "uV_pp",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "textbook range"
+      },
+      "states": [
+        "n2"
+      ],
+      "section": "6. Graphoelements",
+      "milestone": "T1-M1"
+    },
+    "kc_dur_min": {
+      "value": {
+        "kind": "scalar",
+        "v": 0.5
+      },
+      "units": "s",
+      "standing": "definitional",
+      "source": {
+        "kind": "standard",
+        "name": "AASM Manual for the Scoring of Sleep and Associated Events",
+        "clause": "minimum K-complex duration"
+      },
+      "states": [
+        "n2"
+      ],
+      "section": "6. Graphoelements"
+    },
+    "kc_rate": {
+      "value": {
+        "kind": "interval",
+        "lo": 1,
+        "hi": 3,
+        "meaning": "uncertainty"
+      },
+      "units": "1/min",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "uncited"
+      },
+      "states": [
+        "n2"
+      ],
+      "section": "6. Graphoelements",
+      "milestone": "T1-M1"
+    },
+    "so_spindle_pref_phase": {
+      "value": {
+        "kind": "pending"
+      },
+      "provisional": {
+        "v": 0,
+        "basis": "spindle envelope peaks at SO up-state; radians relative to SO phase",
+        "expires_at_milestone": "T1-M1",
+        "constrained_by": "must not be derived from a PAC estimator we also gate on"
+      },
+      "units": "rad",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": ""
+      },
+      "states": [
+        "n3"
+      ],
+      "section": "6. Graphoelements",
+      "milestone": "T1-M1"
+    },
+    "so_spindle_strength": {
+      "value": {
+        "kind": "pending"
+      },
+      "provisional": {
+        "v": 0.6,
+        "basis": "modulation index of spindle envelope by SO phase, 0-1",
+        "expires_at_milestone": "T1-M1",
+        "constrained_by": "must not be derived from a PAC estimator we also gate on"
+      },
+      "units": null,
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": ""
+      },
+      "states": [
+        "n3"
+      ],
+      "section": "6. Graphoelements",
+      "milestone": "T1-M1"
+    },
+    "resp_rate_wake": {
+      "value": {
+        "kind": "interval",
+        "lo": 12,
+        "hi": 18,
+        "meaning": "uncertainty"
+      },
+      "units": "1/min",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "uncited"
+      },
+      "states": [
+        "wake_eo",
+        "wake_ec"
+      ],
+      "section": "7. Respiration and coupling",
+      "milestone": "T1-M1"
+    },
+    "resp_rate_n2": {
+      "value": {
+        "kind": "interval",
+        "lo": 12,
+        "hi": 15,
+        "meaning": "uncertainty"
+      },
+      "units": "1/min",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "uncited"
+      },
+      "states": [
+        "n2"
+      ],
+      "section": "7. Respiration and coupling",
+      "milestone": "T1-M1"
+    },
+    "resp_rate_n3": {
+      "value": {
+        "kind": "interval",
+        "lo": 12,
+        "hi": 15,
+        "meaning": "uncertainty"
+      },
+      "units": "1/min",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "uncited; most regular"
+      },
+      "states": [
+        "n3"
+      ],
+      "section": "7. Respiration and coupling",
+      "milestone": "T1-M1"
+    },
+    "resp_rate_rem": {
+      "value": {
+        "kind": "interval",
+        "lo": 10,
+        "hi": 22,
+        "meaning": "uncertainty"
+      },
+      "units": "1/min",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "irregularity is well established; magnitude uncited"
+      },
+      "states": [
+        "rem"
+      ],
+      "section": "7. Respiration and coupling",
+      "milestone": "T1-M1",
+      "note": "Source markdown gave the English word 'variable', which is not machine-readable. Widened interval plus resp_period_cv carries the irregularity."
+    },
+    "resp_ie_ratio": {
+      "value": {
+        "kind": "interval",
+        "lo": 1.5,
+        "hi": 2,
+        "meaning": "uncertainty"
+      },
+      "units": null,
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "expiration:inspiration duration ratio; uncited"
+      },
+      "states": "all",
+      "section": "7. Respiration and coupling",
+      "milestone": "T1-M1",
+      "note": "Source markdown wrote '1:1.5 - 1:2'. Normalized to a numeric ratio."
+    },
+    "resp_period_cv": {
+      "value": {
+        "kind": "pending"
+      },
+      "provisional": {
+        "v": 0.08,
+        "basis": "coefficient of variation of breath period; N3 most regular, REM most variable",
+        "expires_at_milestone": "T1-M1",
+        "constrained_by": "must not be derived from G4's own output"
+      },
+      "units": null,
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": ""
+      },
+      "states": "all",
+      "section": "7. Respiration and coupling",
+      "milestone": "T1-M1"
+    },
+    "chi_mod_depth": {
+      "value": {
+        "kind": "pending"
+      },
+      "provisional": {
+        "v": 0.15,
+        "basis": "amplitude of respiration-driven chi modulation, in chi units",
+        "expires_at_milestone": "T1-M1",
+        "constrained_by": "must not be derived from SPRiNT recovery, which attenuates it"
+      },
+      "units": null,
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "Kluger et al. 2023 Fig. 2 reports this but the value has not been read out"
+      },
+      "states": "all",
+      "section": "7. Respiration and coupling",
+      "milestone": "T1-M1",
+      "note": "Routed to T1-M1 but the source names a specific figure — reading it out is an afternoon, not 8 days of corpus work. Flagged for early conversion to literature."
+    },
+    "chi_mod_phase_wake": {
+      "value": {
+        "kind": "procedure",
+        "text": "slope decreases in late inspiration, increases in late expiration"
+      },
+      "units": "rad",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "2025 respiratory-excitability study, N=23; author not recorded"
+      },
+      "states": [
+        "wake_eo",
+        "wake_ec",
+        "n1"
+      ],
+      "section": "7. Respiration and coupling",
+      "milestone": "T1-M1",
+      "note": "Re-standed literature -> invented: venue-less, author-less. Also note the value is a sentence with units 'rad' — 5.2's formula needs a number for phi_0, supplied by chi_mod_phi0_wake."
+    },
+    "chi_mod_phi0_wake": {
+      "value": {
+        "kind": "pending"
+      },
+      "provisional": {
+        "v": 3.14159265358979,
+        "basis": "phi_0 in chi(t) = chi_state + A*cos(phi_resp - phi_0); wake sense per chi_mod_phase_wake",
+        "expires_at_milestone": "T1-M1",
+        "constrained_by": "sign must be verified against the tilt filter's measured convention, not assumed"
+      },
+      "units": "rad",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": ""
+      },
+      "states": [
+        "wake_eo",
+        "wake_ec",
+        "n1"
+      ],
+      "section": "7. Respiration and coupling",
+      "milestone": "T1-M1",
+      "note": "Added on import: 5.2 states a formula requiring a numeric phi_0 per state, and no row supplied one."
+    },
+    "chi_mod_phi0_sleep": {
+      "value": {
+        "kind": "pending"
+      },
+      "provisional": {
+        "v": 0,
+        "basis": "REVERSED relative to wake, from N2 onward",
+        "expires_at_milestone": "T1-M1",
+        "constrained_by": "the reversal is the artifact's signature behaviour; verify by measurement, not by sign inspection"
+      },
+      "units": "rad",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": ""
+      },
+      "states": [
+        "n2",
+        "n3",
+        "rem"
+      ],
+      "section": "7. Respiration and coupling",
+      "milestone": "T1-M1"
+    },
+    "chi_mod_phase_sleep": {
+      "value": {
+        "kind": "procedure",
+        "text": "reversed relative to wake, from N2 onward"
+      },
+      "units": "rad",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "ibid.; author not recorded"
+      },
+      "states": [
+        "n2",
+        "n3",
+        "rem"
+      ],
+      "section": "7. Respiration and coupling",
+      "milestone": "T1-M1"
+    },
+    "alpha_mod_depth": {
+      "value": {
+        "kind": "pending"
+      },
+      "provisional": {
+        "v": 0.1,
+        "basis": "respiration modulation of alpha envelope",
+        "expires_at_milestone": "T1-M1",
+        "constrained_by": ""
+      },
+      "units": null,
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "Kluger & Gross 2021 — not yet read out"
+      },
+      "states": "all",
+      "section": "7. Respiration and coupling",
+      "milestone": "T1-M1"
+    },
+    "nasal_oral_factor": {
+      "value": {
+        "kind": "pending"
+      },
+      "provisional": {
+        "v": 0.3,
+        "basis": "oral breathing attenuates RMBO to this fraction",
+        "expires_at_milestone": "T1-M1",
+        "constrained_by": ""
+      },
+      "units": null,
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "Zelano et al. 2016 shows attenuation; magnitude unread"
+      },
+      "states": "all",
+      "section": "7. Respiration and coupling",
+      "milestone": "T1-M1"
+    },
+    "tilt_n_poles": {
+      "value": {
+        "kind": "scalar",
+        "v": 12
+      },
+      "units": null,
+      "standing": "derived",
+      "source": {
+        "kind": "procedure",
+        "text": "Measured: 4 cascaded log-spaced pole-zero pairs per decade over 0.1-115 Hz gives peak-to-peak ripple of ~15% of delta-chi across 1-45 Hz, and relative ripple is depth-independent. 1/decade gives ~100%; 8/decade gives ~10% for double the sections. See docs/Tier0-Estimator-Probe.md Finding 4."
+      },
+      "states": "all",
+      "section": "7. Respiration and coupling",
+      "note": "Resolves pending decision P2. MUST be realized as second-order sections: direct-form transfer-function realization of this cascade overflows to non-finite values at this order (Finding 3). The PSD exponent is -2g where zeros sit at pole * D^g; pin that sign with a unit test, because it is the sign that silently inverts the wake/sleep reversal."
+    },
+    "tilt_pole_spacing": {
+      "value": {
+        "kind": "procedure",
+        "text": "logarithmic, 4 pole-zero pairs per decade across 0.1-115 Hz (1 decade of pad either side of the 1-45 Hz band)"
+      },
+      "units": null,
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "a first-order shelf cannot give uniform slope change across the band"
+      },
+      "states": "all",
+      "section": "7. Respiration and coupling"
+    },
+    "tilt_mod_settling_ratio": {
+      "value": {
+        "kind": "absent",
+        "reason": "Cannot be determined before G4 exists. Measured settling is t99 = 0.164 s against a 10 s modulation period — 61x margin — so the settling constraint is not the binding one. The residual sideband risk lives in the coefficient-interpolation scheme, and any proxy cheap enough to measure it before G4 is nonlinear enough to fabricate the answer. See Tier0-Estimator-Probe Finding 5."
+      },
+      "units": null,
+      "standing": "absent",
+      "source": {
+        "kind": "procedure",
+        "text": "The chosen interpolation scheme is the one whose G4 f2 coupling sits below the surrogate null. Compared as a documented experiment at T0-M4."
+      },
+      "states": "all",
+      "section": "7. Respiration and coupling",
+      "note": "Resolves pending decision P3 by showing it is not answerable as posed. Build both interpolation schemes behind one interface and let G4 choose."
+    },
+    "blink_dur": {
+      "value": {
+        "kind": "interval",
+        "lo": 0.2,
+        "hi": 0.4,
+        "meaning": "uncertainty"
+      },
+      "units": "s",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "uncited"
+      },
+      "states": [
+        "wake_eo",
+        "wake_ec"
+      ],
+      "section": "9. Artifacts",
+      "milestone": "T1-M1"
+    },
+    "blink_amp": {
+      "value": {
+        "kind": "interval",
+        "lo": 100,
+        "hi": 400,
+        "meaning": "uncertainty"
+      },
+      "units": "uV",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "uncited; frontopolar max"
+      },
+      "states": [
+        "wake_eo",
+        "wake_ec"
+      ],
+      "section": "9. Artifacts",
+      "milestone": "T1-M1"
+    },
+    "blink_rate": {
+      "value": {
+        "kind": "interval",
+        "lo": 10,
+        "hi": 20,
+        "meaning": "uncertainty"
+      },
+      "units": "1/min",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "uncited"
+      },
+      "states": [
+        "wake_eo"
+      ],
+      "section": "9. Artifacts",
+      "milestone": "T1-M1",
+      "note": "Added on import; the blink generator needs a rate and none was registered."
+    },
+    "emg_band": {
+      "value": {
+        "kind": "bound",
+        "op": "gt",
+        "v": 20
+      },
+      "units": "Hz",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "uncited"
+      },
+      "states": [
+        "wake_eo",
+        "wake_ec"
+      ],
+      "section": "9. Artifacts",
+      "milestone": "T1-M1"
+    },
+    "emg_amp_wake": {
+      "value": {
+        "kind": "interval",
+        "lo": 5,
+        "hi": 20,
+        "meaning": "uncertainty"
+      },
+      "units": "uV",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "uncited"
+      },
+      "states": [
+        "wake_eo",
+        "wake_ec"
+      ],
+      "section": "9. Artifacts",
+      "milestone": "T1-M1",
+      "note": "Added on import."
+    },
+    "emg_rem_level": {
+      "value": {
+        "kind": "scalar",
+        "v": 0.05
+      },
+      "units": null,
+      "standing": "literature",
+      "source": {
+        "kind": "standard",
+        "name": "AASM Manual for the Scoring of Sleep and Associated Events",
+        "clause": "REM atonia staging criterion"
+      },
+      "states": [
+        "rem"
+      ],
+      "section": "9. Artifacts",
+      "note": "Source markdown gave 'near zero', which is not machine-readable. Encoded as a fraction of emg_amp_wake."
+    },
+    "line_freq": {
+      "value": {
+        "kind": "enum",
+        "options": [
+          50,
+          60
+        ]
+      },
+      "units": "Hz",
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "regional mains; selected by deployment, not by a standard this project cites"
+      },
+      "states": "all",
+      "section": "9. Artifacts",
+      "note": "Re-standed definitional -> chosen: 'regional mains' names no standard."
+    },
+    "line_amp": {
+      "value": {
+        "kind": "interval",
+        "lo": 1,
+        "hi": 10,
+        "meaning": "uncertainty"
+      },
+      "units": "uV",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "uncited"
+      },
+      "states": "all",
+      "section": "9. Artifacts",
+      "milestone": "T1-M1",
+      "note": "Added on import."
+    },
+    "notch_q": {
+      "value": {
+        "kind": "scalar",
+        "v": 30
+      },
+      "units": null,
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "notch filter quality factor"
+      },
+      "states": "all",
+      "section": "9. Artifacts",
+      "note": "Added on import."
+    },
+    "hpf_options": {
+      "value": {
+        "kind": "enum",
+        "options": [
+          0.01,
+          0.1,
+          0.5,
+          1
+        ]
+      },
+      "units": "Hz",
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "spans clinical and ERP practice"
+      },
+      "states": "all",
+      "section": "10. Filter and analysis controls"
+    },
+    "welch_nperseg": {
+      "value": {
+        "kind": "scalar",
+        "v": 1024
+      },
+      "units": "samples",
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "4 s at fs=256; 0.25 Hz resolution"
+      },
+      "states": "all",
+      "section": "10. Filter and analysis controls",
+      "note": "Added on import. 7 mandates a Welch PSD and 8 budgets 5.0 ms per second for it, but no Welch settings were registered — and they determine recovered chi as much as band and mode do."
+    },
+    "welch_noverlap": {
+      "value": {
+        "kind": "scalar",
+        "v": 512
+      },
+      "units": "samples",
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "50% overlap"
+      },
+      "states": "all",
+      "section": "10. Filter and analysis controls",
+      "note": "Added on import."
+    },
+    "welch_window": {
+      "value": {
+        "kind": "enum",
+        "options": [
+          "hann"
+        ]
+      },
+      "units": null,
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": ""
+      },
+      "states": "all",
+      "section": "10. Filter and analysis controls",
+      "note": "Added on import."
+    },
+    "specparam_peak_width_limits": {
+      "value": {
+        "kind": "interval",
+        "lo": 1,
+        "hi": 12,
+        "meaning": "band_edges"
+      },
+      "units": "Hz",
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "specparam algorithm_settings; in 2.0 these moved out of the constructor"
+      },
+      "states": "all",
+      "section": "10. Filter and analysis controls",
+      "note": "Added on import. Seam 7's premise is that an exponent is a (value, band, mode) tuple, but the fit settings shape the recovered value too and were registered nowhere."
+    },
+    "specparam_max_n_peaks": {
+      "value": {
+        "kind": "scalar",
+        "v": 6
+      },
+      "units": null,
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "specparam algorithm_settings"
+      },
+      "states": "all",
+      "section": "10. Filter and analysis controls",
+      "note": "Added on import."
+    },
+    "specparam_peak_threshold": {
+      "value": {
+        "kind": "scalar",
+        "v": 2
+      },
+      "units": null,
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "specparam algorithm_settings, in SD"
+      },
+      "states": "all",
+      "section": "10. Filter and analysis controls",
+      "note": "Added on import."
+    },
+    "lz_band": {
+      "value": {
+        "kind": "interval",
+        "lo": 1,
+        "hi": 45,
+        "meaning": "band_edges"
+      },
+      "units": "Hz",
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "bandpass applied before the Hilbert transform"
+      },
+      "states": "all",
+      "section": "10. Filter and analysis controls",
+      "note": "Added on import."
+    },
+    "lz_channel_order": {
+      "value": {
+        "kind": "procedure",
+        "text": "montage order as declared in data/montage_10_20.json; column-wise concatenation"
+      },
+      "units": null,
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "the parse result depends on concatenation order, so it must be pinned"
+      },
+      "states": "all",
+      "section": "10. Filter and analysis controls",
+      "note": "Added on import."
+    },
+    "lz_binarize": {
+      "value": {
+        "kind": "procedure",
+        "text": "binarize around the median of the Hilbert amplitude"
+      },
+      "units": null,
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "method described in a 2024 eNeuro slope-versus-LZc comparison; author not recorded"
+      },
+      "states": "all",
+      "section": "10. Filter and analysis controls",
+      "note": "Re-standed literature -> chosen on import, and mis-standed twice over: a binarization procedure is a method, not a value or range, and the source named a venue and year with no author."
+    },
+    "lz_surrogate": {
+      "value": {
+        "kind": "enum",
+        "options": [
+          "time_shuffled"
+        ]
+      },
+      "units": null,
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "DECISIONS D1. Destroys the spectrum, so surrogate complexity depends only on length and density — chi-dependence is zero by construction, caching is legal, no characterization needed."
+      },
+      "states": "all",
+      "section": "10. Filter and analysis controls",
+      "note": "Normalizes against 'same density, no structure'. The UI must state that null beside the LZc readout."
+    },
+    "lz_parse": {
+      "value": {
+        "kind": "absent",
+        "reason": "UNDECIDED — LZ76 vs LZW. Does not block Tier 0: landmarks are computed from the generator's own output and are self-consistent under any parse. The parse constrains only comparison to PUBLISHED magnitudes."
+      },
+      "units": null,
+      "standing": "absent",
+      "source": {
+        "kind": "procedure",
+        "text": "Decide by which parse the landmark literature used. Settle before citing any published value."
+      },
+      "states": "all",
+      "section": "10. Filter and analysis controls",
+      "note": "Pending decision P1. Standing was EMPTY in the source markdown, which no enum can represent."
+    },
+    "g4_record_length": {
+      "value": {
+        "kind": "scalar",
+        "v": 300
+      },
+      "units": "s",
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "1/T ~ 0.0033 Hz; the live 30 s window is too coarse to separate f1 from the sidebands"
+      },
+      "states": "all",
+      "section": "11. G4 — off-frequency null parameters"
+    },
+    "g4_f1": {
+      "value": {
+        "kind": "scalar",
+        "v": 0.1
+      },
+      "units": "Hz",
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "chi modulation frequency"
+      },
+      "states": "all",
+      "section": "11. G4 — off-frequency null parameters"
+    },
+    "g4_f2": {
+      "value": {
+        "kind": "scalar",
+        "v": 0.25
+      },
+      "units": "Hz",
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "respiration frequency"
+      },
+      "states": "all",
+      "section": "11. G4 — off-frequency null parameters"
+    },
+    "g4_min_bin_separation": {
+      "value": {
+        "kind": "bound",
+        "op": "ge",
+        "v": 10
+      },
+      "units": "bins",
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "f1, f2 and the sidebands f2+-f1 must all be separated by at least this many bins. At 300 s: f1-f2 = 45 bins; f1 to the nearest sideband (0.15 Hz) = 15 bins"
+      },
+      "states": "all",
+      "section": "11. G4 — off-frequency null parameters"
+    },
+    "g4_n_surrogates": {
+      "value": {
+        "kind": "scalar",
+        "v": 200
+      },
+      "units": null,
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "circular shifts of the respiration phase reference — f2 arm only"
+      },
+      "states": "all",
+      "section": "11. G4 — off-frequency null parameters"
+    },
+    "g4_percentile_level": {
+      "value": {
+        "kind": "scalar",
+        "v": 95
+      },
+      "units": "percent",
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "the percentile LEVEL is a convention — 99 would serve as well"
+      },
+      "states": "all",
+      "section": "11. G4 — off-frequency null parameters",
+      "note": "Split from g4_percentile on import. The level and the threshold value at that level have different standings; as one derived row the UI renders the level read-only and the report prints the wrong threshold standing for the gate whose provenance matters most."
+    },
+    "g4_threshold_value": {
+      "value": {
+        "kind": "solved",
+        "procedure": "The coupling index at g4_percentile_level of the null distribution, computed per run.",
+        "artifact": "per-run, in the report JSON"
+      },
+      "units": null,
+      "standing": "derived",
+      "source": {
+        "kind": "procedure",
+        "text": "f1 arm: percentile over the spectral neighbourhood, excluding f2 and the sidebands f2+-f1 plus the g4_min_bin_separation guard band. f2 arm: percentile over the circular-shift surrogate distribution."
+      },
+      "states": "all",
+      "section": "11. G4 — off-frequency null parameters",
+      "note": "The two arms take DIFFERENT nulls; see Execution-Scheme D8. A circular shift of a clean phase ramp multiplies an alignment-magnitude index by a unit-magnitude constant, so on the f1 arm the null is a point mass at the observed value and the gate can never pass — measured, with zero IQR. The f2 arm's circular-shift null is sound and is retained."
+    },
+    "g4_f1_neighbourhood_halfwidth": {
+      "value": {
+        "kind": "scalar",
+        "v": 60
+      },
+      "units": "bins",
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "half-width of the spectral neighbourhood used for the f1 arm's null, at 1/T = 0.0033 Hz"
+      },
+      "states": "all",
+      "section": "11. G4 — off-frequency null parameters",
+      "note": "Added on import to support D8's f1 null. Must exceed g4_min_bin_separation by enough to give a usable sample after the guard bands are excised."
+    },
+    "gate_aasm_n3_min_fraction": {
+      "value": {
+        "kind": "scalar",
+        "v": 0.2
+      },
+      "units": null,
+      "standing": "definitional",
+      "source": {
+        "kind": "standard",
+        "name": "AASM Manual for the Scoring of Sleep and Associated Events",
+        "clause": "N3 requires >=20% of the epoch occupied by slow wave activity"
+      },
+      "states": [
+        "n3"
+      ],
+      "section": "12. Gate criteria",
+      "gate": {
+        "id": "G5",
+        "arm": "positive",
+        "failable": false
+      },
+      "note": "Split from gate_aasm_n3 on import, which hid four separately-typed constants in one prose cell. The acceptance check could not authorize any of them, so the linter would have had to flag the project's single definitional threshold as a magic number or exempt the file wholesale."
+    },
+    "gate_aasm_n3_min_amp": {
+      "value": {
+        "kind": "scalar",
+        "v": 75
+      },
+      "units": "uV_pp",
+      "standing": "definitional",
+      "source": {
+        "kind": "standard",
+        "name": "AASM Manual for the Scoring of Sleep and Associated Events",
+        "clause": "slow wave amplitude >=75 uV peak-to-peak"
+      },
+      "states": [
+        "n3"
+      ],
+      "section": "12. Gate criteria",
+      "gate": {
+        "id": "G5",
+        "arm": "positive",
+        "failable": false
+      },
+      "note": "THE AASM NUMBER APPEARS HERE AND NOWHERE ELSE. delta_amp must not be set from it — that would generate N3 to satisfy the check meant to test it."
+    },
+    "gate_aasm_n3_band": {
+      "value": {
+        "kind": "interval",
+        "lo": 0.5,
+        "hi": 2,
+        "meaning": "band_edges"
+      },
+      "units": "Hz",
+      "standing": "definitional",
+      "source": {
+        "kind": "standard",
+        "name": "AASM Manual for the Scoring of Sleep and Associated Events",
+        "clause": "slow wave activity band"
+      },
+      "states": [
+        "n3"
+      ],
+      "section": "12. Gate criteria",
+      "gate": {
+        "id": "G5",
+        "arm": "positive",
+        "failable": false
+      }
+    },
+    "gate_aasm_n3_reference": {
+      "value": {
+        "kind": "procedure",
+        "text": "referenced to contralateral mastoid (reference_channels)"
+      },
+      "units": null,
+      "standing": "definitional",
+      "source": {
+        "kind": "standard",
+        "name": "AASM Manual for the Scoring of Sleep and Associated Events",
+        "clause": "derivation reference"
+      },
+      "states": [
+        "n3"
+      ],
+      "section": "12. Gate criteria",
+      "gate": {
+        "id": "G5",
+        "arm": "positive",
+        "failable": false
+      },
+      "note": "Evaluating under average reference gives a different number and would silently miscalibrate everything downstream."
+    },
+    "gate_g5_null_ordering": {
+      "value": {
+        "kind": "procedure",
+        "text": "pass_fraction(N3 @ snr_nominal) > pass_fraction(N2) AND > pass_fraction(N3 @ snr_nominal + snr_null_offset)"
+      },
+      "units": null,
+      "standing": "derived",
+      "source": {
+        "kind": "procedure",
+        "text": "A strict ordering needs no invented threshold. See Execution-Scheme D9."
+      },
+      "states": [
+        "n2",
+        "n3"
+      ],
+      "section": "12. Gate criteria",
+      "gate": {
+        "id": "G5",
+        "arm": "null",
+        "failable": true
+      },
+      "note": "G5's positive arm is RECORD-ONLY: it reports a pass fraction with no threshold, because any threshold on that fraction would be invented or read from our own generator's spread, both prohibited. The null carries the verdict — which D5 already says carries the discriminative weight."
+    },
+    "gate_g4_criterion": {
+      "value": {
+        "kind": "procedure",
+        "text": "coupling index exceeds g4_threshold_value at f1 (spectral-neighbourhood null) and does not at f2 (circular-shift null)"
+      },
+      "units": null,
+      "standing": "derived",
+      "source": {
+        "kind": "procedure",
+        "text": "from the null distributions; see Execution-Scheme D8"
+      },
+      "states": "all",
+      "section": "12. Gate criteria",
+      "gate": {
+        "id": "G4",
+        "arm": "positive",
+        "failable": true
+      }
+    },
+    "gate_g4_seed_aggregation": {
+      "value": {
+        "kind": "procedure",
+        "text": "exact binomial test of the observed f2 exceedance count against the per-seed false-exceedance rate implied by g4_percentile_level"
+      },
+      "units": null,
+      "standing": "derived",
+      "source": {
+        "kind": "procedure",
+        "text": "estimator property: a correctly-sized null exceeds its own percentile at the complementary rate by construction"
+      },
+      "states": "all",
+      "section": "12. Gate criteria",
+      "gate": {
+        "id": "G4",
+        "arm": "null",
+        "failable": true
+      },
+      "note": "Added on import. The spec never stated how per-seed results aggregate to a verdict, and 'all seeds must pass' fails ~64% of the time at n_seeds=20 on a working generator (0.95^20 = 0.36), because the f2 arm has a 5% per-seed false-exceedance rate BY DESIGN."
+    },
+    "gate_topography": {
+      "value": {
+        "kind": "procedure",
+        "text": "argmax over electrodes matches the topo_expect_* rows"
+      },
+      "units": null,
+      "standing": "derived",
+      "source": {
+        "kind": "procedure",
+        "text": "structural — no tolerance required; expectations are literature and independent of the projection file"
+      },
+      "states": "all",
+      "section": "12. Gate criteria",
+      "gate": {
+        "id": "G6",
+        "arm": "positive",
+        "failable": true
+      }
+    },
+    "gate_determinism": {
+      "value": {
+        "kind": "procedure",
+        "text": "bit-identical, within-platform and within-version only"
+      },
+      "units": null,
+      "standing": "definitional",
+      "source": {
+        "kind": "standard",
+        "name": "IEEE 754 binary64",
+        "clause": "bit-identity of float64 representations"
+      },
+      "states": "all",
+      "section": "12. Gate criteria",
+      "gate": {
+        "id": "G2",
+        "arm": "positive",
+        "failable": true
+      },
+      "note": "Build Plan 9 groups G2 with the record-only gates, but bit-identity has no distribution to record and a determinism gate that cannot fail is worthless. It is also the root of the dependency graph. Canonically PASS/FAIL; see Execution-Scheme section 1."
+    },
+    "gate_chi_tol_knee": {
+      "value": {
+        "kind": "absent",
+        "reason": "record-only at Tier 0; tolerance derived at T1-M2 from specparam bias/variance at our SNR and window"
+      },
+      "units": null,
+      "standing": "absent",
+      "source": {
+        "kind": "procedure",
+        "text": "T1-M2 estimator characterization"
+      },
+      "states": "all",
+      "section": "12. Gate criteria",
+      "gate": {
+        "id": "G1a",
+        "arm": "positive",
+        "failable": false
+      },
+      "note": "The source markdown expected G1a's error to EXCEED G1b's. Measured on clean aperiodic signal the ordering is reversed by two orders of magnitude: G1a median |error| 0.005, G1b 0.417. See Tier0-Estimator-Probe Finding 2. Re-measure under the full generator before amending DECISIONS D3."
+    },
+    "gate_chi_tol_fixed": {
+      "value": {
+        "kind": "absent",
+        "reason": "record-only at Tier 0; separate tolerance, different quantity, different band"
+      },
+      "units": null,
+      "standing": "absent",
+      "source": {
+        "kind": "procedure",
+        "text": "T1-M2 estimator characterization"
+      },
+      "states": "all",
+      "section": "12. Gate criteria",
+      "gate": {
+        "id": "G1b",
+        "arm": "positive",
+        "failable": false
+      },
+      "note": "G1b's bias is STRUCTURAL: measured error 0.417 against an analytic prediction of 0.429 from the generative form itself. It comes from our modelled 20 Hz knee, not from the literature's unmodelled 45 Hz one, so its magnitude is a function of the invented k_* rows. That is a weaker claim than DECISIONS D3's comparability argument."
+    },
+    "gate_spindle_f1": {
+      "value": {
+        "kind": "absent",
+        "reason": "record-only at Tier 0; a curve, not a threshold. F1 as a function of inclusion threshold on the prominence field"
+      },
+      "units": null,
+      "standing": "absent",
+      "source": {
+        "kind": "procedure",
+        "text": "T1 sets the criterion by roll-off shape against MODA's per-event agreement counts"
+      },
+      "states": [
+        "n2"
+      ],
+      "section": "12. Gate criteria",
+      "gate": {
+        "id": "G3",
+        "arm": "positive",
+        "failable": false
+      }
+    },
+    "gate_alpha_ratio": {
+      "value": {
+        "kind": "bound",
+        "op": "gt",
+        "v": 3
+      },
+      "units": null,
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": ""
+      },
+      "states": [
+        "wake_ec"
+      ],
+      "section": "12. Gate criteria",
+      "milestone": "T1-M2",
+      "gate": {
+        "id": "G6",
+        "arm": "positive",
+        "failable": false
+      },
+      "note": "RECORDED, NOT A PASS CRITERION, until T1-M2. G6 uses structural argmax instead."
+    },
+    "gate_pac_tol": {
+      "value": {
+        "kind": "absent",
+        "reason": "REFUTED. Circular SE ~ sqrt((1-R^2)/(nR^2)). At 2-5 spindles/min a 5 min segment gives ~15 events => 95% CI ~ +-50 deg at R=0.5, +-30 deg at R=0.7. The proposed +-15 deg is arithmetically unreachable at that n."
+      },
+      "units": "deg",
+      "standing": "absent",
+      "source": {
+        "kind": "procedure",
+        "text": "Derive the required event count from the target precision, or gate on resultant length rather than preferred phase. Tier 1."
+      },
+      "states": [
+        "n3"
+      ],
+      "section": "12. Gate criteria",
+      "note": "Encoded as absent rather than as an invented value of 15, so that no code path can read a number the registry's own note declares impossible. A registry able to hold a refuted value with no machine-readable refutation is one import away from using it."
+    },
+    "gate_coupling_depth_tol": {
+      "value": {
+        "kind": "absent",
+        "reason": "Tier 1. SPRiNT's sliding-window smoothing is comparable to a ~4 s respiratory cycle and attenuates recovered depth by an amount the estimator sets."
+      },
+      "units": null,
+      "standing": "absent",
+      "source": {
+        "kind": "procedure",
+        "text": "Characterize SPRiNT's transfer function first. T1-M2."
+      },
+      "states": "all",
+      "section": "12. Gate criteria"
+    },
+    "gate_hpf_loss": {
+      "value": {
+        "kind": "absent",
+        "reason": "Tier 1"
+      },
+      "units": null,
+      "standing": "absent",
+      "source": {
+        "kind": "procedure",
+        "text": "T1-M2"
+      },
+      "states": "all",
+      "section": "12. Gate criteria"
+    }
+  }
+}

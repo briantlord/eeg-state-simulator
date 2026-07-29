@@ -1,0 +1,22 @@
+{
+  "name": "eeg-state-simulator",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Generator of realistic multichannel EEG for arousal states. A model, not a measurement.",
+  "license": "BSD-3-Clause",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "registry:emit": "node tools/registry/emit.mjs",
+    "registry:check": "node tools/registry/emit.mjs --check",
+    "lint:literals": "node tools/lint/literals.mjs",
+    "test": "node --test test/",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "yaml": "^2.6.0"
+  }
+}
