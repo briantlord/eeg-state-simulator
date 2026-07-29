@@ -304,5 +304,12 @@ not be implemented against D4 as it stands.**
 .venv/Scripts/python.exe prep/reference/probe_g1_sweep.py
 ```
 
-*(Probe scripts move into `prep/reference/` when the harness tree lands; they are currently
-in the session scratchpad.)*
+| Script | Establishes |
+|---|---|
+| `prep/reference/probe_specparam.py` | the specparam 2.0 API recipe; Finding 1 |
+| `prep/reference/probe_g1_sweep.py` | Finding 2 — G1a vs G1b error across χ, with the analytic slope |
+| `prep/reference/probe_tilt2.py` | Findings 3–5 — SOS stability, ripple vs pole count, settling time |
+| `prep/reference/probe_g4_null.py` | Finding 6 — the degenerate G4 null, all four cases |
+
+These are characterization probes, not gates. They run on clean synthetic signal and **no
+tolerance may be derived from them** — that is T1-M2, against the full generator.
