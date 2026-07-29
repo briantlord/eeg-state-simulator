@@ -104,6 +104,17 @@ export function composeState(
   for (const spec of STATE_OSCILLATIONS[state]) {
     const { lo, hi } = bandEdges(spec.bandKey);
     const rmsUv = rmsFromPeakToPeak(spec.ampKey);
+    // Alpha arrives in discrete runs. Beta and theta burst structure is unfitted, so they
+    // keep the smooth envelope rather than borrowing alpha's numbers.
+    // TODO(T1-M1): fit burst parameters per rhythm; the interface already takes them.
+    const burst =
+      spec.generator === 'alpha'
+        ? {
+            durMeanS: pointFromUncertainty('alpha_burst_dur'),
+            ratePerMin: pointFromUncertainty('alpha_burst_rate'),
+            interburstLevel: scalarValue('alpha_interburst_level'),
+          }
+        : undefined;
     const s = synthesizeOscillation(
       Rng.substream(seed, `${spec.generator}/${state}`),
       nSamples,
@@ -113,6 +124,7 @@ export function composeState(
         rmsUv,
         envelopeDepth: DEFAULT_ENVELOPE_DEPTH,
         envelopeRateHz: DEFAULT_ENVELOPE_RATE_HZ,
+        ...(burst ? { burst } : {}),
       },
       fs,
     );

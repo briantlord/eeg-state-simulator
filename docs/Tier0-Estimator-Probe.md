@@ -332,6 +332,66 @@ not be implemented against D4 as it stands.**
 
 ---
 
+# Finding 7 — filtered-noise oscillations have an intrinsic beat that swamps imposed structure
+
+**This affects spindles, where duration is a definitional AASM criterion, not just alpha.**
+
+Prompted by a direct question: *does the generated alpha come in characteristic bursts?* Real
+posterior alpha arrives in runs of roughly 0.5–2 s. Measured on 600 s of generated wake-EC at
+Pz, Hilbert envelope of the 8–12 Hz band:
+
+| | before | after burst structure + carrier flattening |
+|---|---|---|
+| median run length | **0.23 s** | 0.35 s |
+| runs per minute | 56 | 58 |
+| envelope CV | 0.60 | 0.76 |
+| envelope power above 1 Hz | 46% | 31% |
+| *injected* burst length | — | 1.25 s at 25/min (52% duty) |
+
+**The original answer was no.** What looked like waxing and waning was the **intrinsic Rayleigh
+envelope of narrowband Gaussian noise**, whose timescale is fixed by the bandwidth at ~1/B —
+0.25 s for an 8–12 Hz band, which is exactly what was measured. The explicit 0.3 Hz envelope
+carried only 11% of the modulation power; it was not producing the structure, the filter was.
+
+**An envelope cannot impose burst structure on filtered noise.** Multiplying by a burst
+envelope leaves the intrinsic fluctuation underneath, so a detector still fragments each
+imposed 1.25 s burst into several short runs. Dividing the carrier by its own smoothed
+envelope raised to `osc_carrier_flatten` before imposing bursts suppresses the beat; the
+smoothing window is 1/B, derived from the bandwidth rather than tuned.
+
+**Two measurement errors on the way, both instructive.**
+
+1. The envelope estimator for flattening was **causal**, so it lagged the signal by half a
+   window and corrected the envelope at the wrong moment: it cut the carrier's envelope CV
+   only from 0.353 to 0.239. Centring it is a two-line change and invisible in review.
+2. The burst detector thresholded at a **fixed 75th percentile**, which is degenerate when the
+   percentile coincides with the duty cycle — the threshold then sits exactly on the burst
+   edge, where any wobble splits one real burst into several. At 25% duty that is the worst
+   possible choice, and it produced a full round of chasing the generator for a defect in the
+   probe. The threshold must be derived from the injected duty cycle.
+
+**What remains unresolved.** At the registered values a detector still reads 0.35 s where 1.25 s
+was injected. The machinery is demonstrably sound — at 3 s bursts and a 2% floor it measures
+1.96 s at 7.6/min, matching the injection — so this is a question of how hard to flatten the
+carrier, and `osc_carrier_flatten` = 0.75 is a compromise picked by eye. Flattening harder
+makes the carrier a frequency-modulated near-sinusoid, which is the tell that *"never a pure
+sinusoid"* exists to prevent.
+
+### Consequence for G3, which is the reason this matters
+
+`spindle_dur_min` = 0.5 s is **definitional**, from AASM, and G3 runs YASA's detector against
+our ground-truth event list. A spindle built as filtered noise in an 11–16 Hz band has an
+intrinsic beat of ~1/5 Hz = 0.2 s. **A generator that injects 0.8 s spindles could have them
+detected as 0.2 s events and fail G3 for a reason that has nothing to do with spindle
+morphology** — and the failure would look like a morphology problem, which is exactly the case
+harness §7 warns about: *"A spindle F1 anomaly when the amplitude scale is wrong is not a
+morphology problem, and tuning morphology to fix it makes the generator worse."*
+
+WP-E must apply carrier flattening to spindles, and G3 must record the detected-versus-injected
+duration distribution alongside F1, or the curve will be uninterpretable.
+
+---
+
 ## Reproduce
 
 ```bash

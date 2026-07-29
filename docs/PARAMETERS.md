@@ -113,6 +113,10 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 | `alpha_band` | 8–12 *(band_edges)* | Hz | `chosen` | conventional band edges; no single standard fixes them | wake_ec, rem |
 | `alpha_peak` | 10 | Hz | `invented` | individual peak varies 8-13; no fitted value | wake_ec |
 | `alpha_amp` | 20–50 *(uncertainty)* | uV_pp | `invented` | textbook range, not a measurement under a known pipeline | wake_ec |
+| `alpha_burst_dur` | 0.5–2 *(uncertainty)* | s | `invented` | conventional description of posterior alpha runs; uncited | wake_ec, rem |
+| `alpha_burst_rate` | 20–30 *(uncertainty)* | 1/min | `invented` | uncited; set from a target duty cycle rather than observed directly | wake_ec, rem |
+| `alpha_burst_duty_note` | duty cycle = alpha_burst_dur * alpha_burst_rate / 60; the two rows are not independent | — | `chosen` | records the constraint linking the two burst rows | wake_ec, rem |
+| `alpha_interburst_level` | 0.15 | — | `invented` | envelope floor between bursts, as a fraction of burst peak | wake_ec, rem |
 | `alpha_rem_shift` | -2–-1 *(uncertainty)* | Hz | `invented` | direction well known; magnitude uncited | rem |
 | `beta_band` | 15–25 *(band_edges)* | Hz | `chosen` | conventional band edges | wake_eo |
 | `beta_amp` | 5–15 *(uncertainty)* | uV_pp | `invented` | textbook range | wake_eo |
@@ -124,15 +128,22 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 | `so_amp` | 100–200 *(uncertainty)* | uV_pp | `invented` | uncited | n3 |
 | `background_rms_uv` | 15–25 *(uncertainty)* | uV | `invented` | broadband RMS of the aperiodic background | all |
 | `amp_pp_to_rms` | 2.828 | — | `invented` | peak-to-peak to RMS for a quasi-sinusoidal rhythm: 2*sqrt(2) | all |
+| `osc_carrier_flatten` | 0.75 | — | `invented` | exponent alpha in dividing the carrier by its own smoothed envelope^alpha before imposing burst structure | all |
 | `filter_order` | 4 | — | `chosen` | Butterworth bandpass | all |
 
 **`alpha_band`.** Re-standed definitional -> chosen on import: a convention in wide use is not a named standard. Same for beta_band, theta_band.
+
+**`alpha_burst_rate`.** Rate and duration are not independent: together they fix the DUTY CYCLE, which is the quantity with physiological meaning. At alpha_burst_dur's midpoint of 1.25 s, 20-30/min gives 42-63% — eyes-closed posterior alpha is the dominant rhythm and is present much of the time, so a duty cycle near half is more defensible than the 25% an earlier 8-16/min produced. T1-M1 should fit the duty cycle and one of the two, not all three independently.
+
+**`alpha_interburst_level`.** Not zero. Alpha becomes hard to see between bursts rather than provably absent, and a hard-gated envelope would put switching transients into the band -- a spectral artefact manufactured by the realism fix.
 
 **`delta_amp`.** Given a Tier 0 value on import; see Execution-Scheme D10. Left blank, this row and snr_nominal are under-determined by one degree of freedom and the calibration absorbs it, setting delta amplitude from the 75 uV figure through the back door — the exact circularity D5 exists to close, re-entering through the one row D5's prose leaves empty. The AASM number appears in gate_aasm_n3 and nowhere else. UNITS CORRECTED to uV_pp on review: the textbook 100-200 figure for slow waves is peak-to-peak, and it had been placed on a row declared in plain uV. Read as peak it is 200-400 uV p-p, which at snr_null_offset = -6 dB still clears the 75 uV criterion — so G5's null could not have failed, and under D9 that null is G5's only failable arm. D10's claim that fixing this row "makes snr_nominal a genuine single-scalar solve" is FALSE and is withdrawn: so_amp (100-200 uV, so_freq < 1 Hz) also lands inside gate_aasm_n3_band, the aperiodic offset b has no registry row at all, and the interval-to-point reduction rule is unregistered with zero Dv rows in the registry. At least three further degrees of freedom remain. See Execution-Scheme section 7.
 
 **`background_rms_uv`.** Added on measurement. It had been a bare literal (20) inside compose.ts — exactly the hidden constant the acceptance check exists to forbid, in the file that sets the denominator of every SNR in the project. It is also the scale `snr_nominal` is solved against, so it belongs beside the amplitudes rather than in code. NOTE this row is in RMS while every oscillation amplitude is peak-to-peak; the conversion is amp_pp_to_rms.
 
 **`amp_pp_to_rms`.** Added on measurement, and the measurement is worth recording. Feeding the textbook oscillation ranges to the generator AS RMS gave wake_ec an alpha source at 35 uV RMS against a 20 uV background — 1.75x the entire broadband signal — and G1a's recovered chi was +1.22 off the injected value, against -0.03 to +0.11 for the states with no strong oscillation. The generator was correct; the number handed to it was not. Textbook figures for a visible rhythm are peak-to-peak. 2*sqrt(2) is exact for a sinusoid; narrowband filtered noise has a higher crest factor, so this OVERSTATES the RMS somewhat and is marked invented rather than derived. T1-M1 must fit amplitude distributions directly and retire this conversion instead of refining it.
+
+**`osc_carrier_flatten`.** Added on measurement, and it fixes a defect that affects every burst-structured rhythm, not just alpha. Narrowband-filtered noise carries an INTRINSIC Rayleigh envelope whose timescale is set by the bandwidth (~1/B, i.e. 0.25 s for an 8-12 Hz band). Multiplying that carrier by a burst envelope does NOT impose burst structure, because the intrinsic fluctuation survives underneath: measured, imposed 1.25 s bursts still read as 0.25 s runs at 40/min, with a third of the envelope's power above 1 Hz. Dividing by the carrier's own smoothed envelope raised to this exponent suppresses the beat before the burst envelope is applied. 0 leaves it untouched; 1 flattens it completely, which would make the carrier a frequency-modulated near-sinusoid and reintroduce the tell that "never a pure sinusoid" exists to prevent. 0.75 is a compromise picked by eye and marked accordingly. THIS APPLIES TO SPINDLES TOO, where duration is a DEFINITIONAL AASM criterion (spindle_dur_min = 0.5 s) that G3 tests against YASA. A spindle generator whose events read as 0.25 s to a detector would fail G3 for a reason that has nothing to do with spindle morphology.
 
 ## 5. Topography and geometry
 
@@ -353,9 +364,9 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 | Standing | Rows |
 |---|---|
 | `definitional` | 11 |
-| `chosen` | 40 |
+| `chosen` | 41 |
 | `literature` | 8 |
 | `derived` | 7 |
-| `invented` | 83 |
+| `invented` | 87 |
 | `absent` | 8 |
-| **total** | **157** |
+| **total** | **162** |
