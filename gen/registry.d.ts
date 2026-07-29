@@ -86,6 +86,9 @@ export type ParamKey =
   | 'kc_amp'
   | 'kc_dur_min'
   | 'kc_rate'
+  | 'kc_sharp_width'
+  | 'kc_slow_ratio'
+  | 'kc_slow_width'
   | 'knee_freq_high_unmodelled'
   | 'knee_freq_low'
   | 'knee_freq_n1'
@@ -124,9 +127,11 @@ export type ParamKey =
   | 'snr_range_ui'
   | 'so_amp'
   | 'so_freq'
+  | 'so_rdsym'
   | 'so_spindle_pref_phase'
   | 'so_spindle_strength'
   | 'so_travel_v'
+  | 'so_travel_v_used'
   | 'specparam_max_n_peaks'
   | 'specparam_peak_threshold'
   | 'specparam_peak_width_limits'
@@ -257,6 +262,9 @@ export interface ParamKindMap {
   'kc_amp': 'interval';
   'kc_dur_min': 'scalar';
   'kc_rate': 'interval';
+  'kc_sharp_width': 'scalar';
+  'kc_slow_ratio': 'scalar';
+  'kc_slow_width': 'scalar';
   'knee_freq_high_unmodelled': 'scalar';
   'knee_freq_low': 'scalar';
   'knee_freq_n1': 'pending';
@@ -295,9 +303,11 @@ export interface ParamKindMap {
   'snr_range_ui': 'interval';
   'so_amp': 'interval';
   'so_freq': 'bound';
+  'so_rdsym': 'scalar';
   'so_spindle_pref_phase': 'pending';
   'so_spindle_strength': 'pending';
   'so_travel_v': 'interval';
+  'so_travel_v_used': 'scalar';
   'specparam_max_n_peaks': 'scalar';
   'specparam_peak_threshold': 'scalar';
   'specparam_peak_width_limits': 'interval';

@@ -191,8 +191,11 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 | `topo_expect_spindle_slow` | F3/Fz/F4 | — | `literature` | AASM Manual for the Scoring of Sleep and Associated Events — frontal maximum for slow spindles | n2 |
 | `topo_expect_kc` | Fz/F3/F4 | — | `literature` | AASM Manual for the Scoring of Sleep and Associated Events — K-complex frontal maximum | n2 |
 | `topo_expect_alpha` | O1/O2/Pz | — | `literature` | AASM Manual for the Scoring of Sleep and Associated Events — posterior dominant rhythm, occipital maximum | wake_ec |
+| `so_travel_v_used` | 3 | m/s | `chosen` | point value drawn from the so_travel_v literature interval 1-7 m/s | n3 |
 
 **`topo_expect_alpha`.** Re-sourced on import, not re-standed. In the source markdown this row read 'clinical convention (posterior dominant rhythm)' — naming neither author/year nor standard, which the registry's own discipline calls a contradiction on its face. It is the row G6 reads and D6 built the gate around its independence, so the violation sat on the load-bearing path. AASM does define the posterior dominant rhythm, so the standard is nameable and the literature standing survives.
+
+**`so_travel_v_used`.** so_travel_v is a literature INTERVAL (Massimini et al. 2004, 1-7 m/s); the generator needs a point. Registered separately rather than silently taking a midpoint inside the code, so the reduction is visible and can be replaced by a per-event draw once Dv rows exist. At 3 m/s across ap_axis_span = 180 mm the frontal-to-occipital delay is 60 ms, which is what makes the wave visibly sweep.
 
 ## 6. Graphoelements
 
@@ -207,10 +210,18 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 | `kc_amp` | 100–200 *(uncertainty)* | uV_pp | `invented` | textbook range | n2 |
 | `kc_dur_min` | 0.5 | s | `definitional` | AASM Manual for the Scoring of Sleep and Associated Events — minimum K-complex duration | n2 |
 | `kc_rate` | 1–3 *(uncertainty)* | 1/min | `invented` | uncited | n2 |
+| `kc_sharp_width` | 0.09 | s | `invented` | Gaussian width of the K-complex's sharp negative component | n2 |
+| `kc_slow_width` | 0.2 | s | `invented` | Gaussian width of the K-complex's slower positive component | n2 |
+| `kc_slow_ratio` | 0.55 | — | `invented` | amplitude of the positive component relative to the negative one | n2 |
+| `so_rdsym` | 0.4 | — | `invented` | rise-decay symmetry of the slow oscillation, bycycle convention | n3 |
 | `so_spindle_pref_phase` | — *(pending T1-M1; runs on 0)* | rad | `invented` |  | n3 |
 | `so_spindle_strength` | — *(pending T1-M1; runs on 0.6)* | — | `invented` |  | n3 |
 
 **`spindle_rate`.** States extended to N3 on import: DECISIONS/Build-Plan 4.1 parameterize SO-spindle coupling for N3 (so_spindle_pref_phase, so_spindle_strength) but spindle_rate existed only for N2, leaving the N3 spindle generator with no rate.
+
+**`kc_sharp_width`.** The K-complex is modelled as a difference of Gaussians: an earlier, larger, narrower NEGATIVE component followed by a later, smaller, broader positive one. Written in standard polarity, so the sharp component is negative here and renders upward under the negative-up display convention. Applying the convention in the generator as well would invert twice and silently restore the wrong sign.
+
+**`so_rdsym`.** Build Plan 4.1 states the slow oscillation "is emphatically non-sinusoidal", and PAC estimation has hard requirements around exactly that -- phase filters must be moderately narrow-band ESPECIALLY for non-sinusoidal rhythms. A symmetric SO would understate the confound the SO-spindle coupling demonstration exists to expose, in the same way a symmetric alpha did. Same convention as alpha_shape_rdsym: 0.5 symmetric, below 0.5 a steeper rise. Magnitude and direction both unfitted.
 
 ## 7. Respiration and coupling
 
@@ -379,9 +390,9 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 | Standing | Rows |
 |---|---|
 | `definitional` | 11 |
-| `chosen` | 41 |
+| `chosen` | 42 |
 | `literature` | 8 |
 | `derived` | 7 |
-| `invented` | 92 |
+| `invented` | 96 |
 | `absent` | 8 |
-| **total** | **167** |
+| **total** | **172** |

@@ -2010,6 +2010,93 @@
       "section": "6. Graphoelements",
       "milestone": "T1-M1"
     },
+    "kc_sharp_width": {
+      "value": {
+        "kind": "scalar",
+        "v": 0.09
+      },
+      "units": "s",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "Gaussian width of the K-complex's sharp negative component"
+      },
+      "states": [
+        "n2"
+      ],
+      "section": "6. Graphoelements",
+      "milestone": "T1-M1",
+      "note": "The K-complex is modelled as a difference of Gaussians: an earlier, larger, narrower NEGATIVE component followed by a later, smaller, broader positive one. Written in standard polarity, so the sharp component is negative here and renders upward under the negative-up display convention. Applying the convention in the generator as well would invert twice and silently restore the wrong sign."
+    },
+    "kc_slow_width": {
+      "value": {
+        "kind": "scalar",
+        "v": 0.2
+      },
+      "units": "s",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "Gaussian width of the K-complex's slower positive component"
+      },
+      "states": [
+        "n2"
+      ],
+      "section": "6. Graphoelements",
+      "milestone": "T1-M1"
+    },
+    "kc_slow_ratio": {
+      "value": {
+        "kind": "scalar",
+        "v": 0.55
+      },
+      "units": null,
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "amplitude of the positive component relative to the negative one"
+      },
+      "states": [
+        "n2"
+      ],
+      "section": "6. Graphoelements",
+      "milestone": "T1-M1"
+    },
+    "so_rdsym": {
+      "value": {
+        "kind": "scalar",
+        "v": 0.4
+      },
+      "units": null,
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "rise-decay symmetry of the slow oscillation, bycycle convention"
+      },
+      "states": [
+        "n3"
+      ],
+      "section": "6. Graphoelements",
+      "milestone": "T1-M2",
+      "note": "Build Plan 4.1 states the slow oscillation \"is emphatically non-sinusoidal\", and PAC estimation has hard requirements around exactly that -- phase filters must be moderately narrow-band ESPECIALLY for non-sinusoidal rhythms. A symmetric SO would understate the confound the SO-spindle coupling demonstration exists to expose, in the same way a symmetric alpha did. Same convention as alpha_shape_rdsym: 0.5 symmetric, below 0.5 a steeper rise. Magnitude and direction both unfitted."
+    },
+    "so_travel_v_used": {
+      "value": {
+        "kind": "scalar",
+        "v": 3
+      },
+      "units": "m/s",
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "point value drawn from the so_travel_v literature interval 1-7 m/s"
+      },
+      "states": [
+        "n3"
+      ],
+      "section": "5. Topography and geometry",
+      "note": "so_travel_v is a literature INTERVAL (Massimini et al. 2004, 1-7 m/s); the generator needs a point. Registered separately rather than silently taking a midpoint inside the code, so the reduction is visible and can be replaced by a per-event draw once Dv rows exist. At 3 m/s across ap_axis_span = 180 mm the frontal-to-occipital delay is 60 ms, which is what makes the wave visibly sweep."
+    },
     "so_spindle_pref_phase": {
       "value": {
         "kind": "pending"

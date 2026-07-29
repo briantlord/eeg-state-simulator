@@ -137,7 +137,9 @@ function main(): void {
       channels: MONTAGE,
       state: state.at(e * epochDur),
       truth,
-      events: [],
+      events: composed.events.filter(
+        (ev) => ev.onset < (e + 1) * epochDur && ev.onset + ev.duration > e * epochDur,
+      ),
       shape: [MONTAGE.length, nSamp],
       dtype: 'float64',
       byteOrder: 'little',
@@ -146,7 +148,7 @@ function main(): void {
     writeEpoch(outDir, { signal, sidecar });
   }
 
-  writeEventList(outDir, makeEventList([]));
+  writeEventList(outDir, makeEventList(composed.events));
 
   console.log(
     `wrote ${nEpochs} epoch(s) to ${outDir}\n` +

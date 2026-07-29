@@ -18,6 +18,8 @@ import {
   DEFAULT_ENVELOPE_RATE_HZ,
 } from './oscillations.ts';
 import { CHANNELS, projectInto, type GeneratorId } from './projection.ts';
+import { synthesizeGraphoelements } from './graphoelements.ts';
+import type { GeneratedEvent } from '../types/event.ts';
 
 /** Which oscillations each state carries, and which registry rows describe them. */
 interface OscSpec {
@@ -42,6 +44,8 @@ const STATE_OSCILLATIONS: Record<StateId, OscSpec[]> = {
 export interface ComposeResult {
   /** [channel][sample], microvolts. */
   readonly channels: Float64Array[];
+  /** The event list -- seam 1's primary output. The waveform above is derived from it. */
+  readonly events: readonly GeneratedEvent[];
   /** Ground truth actually injected, for the epoch sidecar. */
   readonly truth: {
     chi: number;
@@ -148,6 +152,14 @@ export function composeState(
     oscTruth.push({ generator: spec.generator, band: [lo, hi], rmsUv });
   }
 
+  // Graphoelements. Injected as events; the waveform is derived from the list (seam 1).
+  const grapho = synthesizeGraphoelements(seed, state, nSamples, fs);
+  for (let c = 0; c < nCh; c++) {
+    const dst = out[c]!;
+    const src = grapho.channels[c]!;
+    for (let i = 0; i < nSamples; i++) dst[i] = dst[i]! + src[i]!;
+  }
+
   // eta_c: small INDEPENDENT sensor noise. The only per-channel term in the model.
   const sensorRms = pointFromUncertainty('sensor_noise_rms');
   for (let c = 0; c < nCh; c++) {
@@ -158,6 +170,7 @@ export function composeState(
 
   return {
     channels: out,
+    events: grapho.events,
     truth: {
       chi,
       knee,
