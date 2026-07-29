@@ -28,12 +28,28 @@ def test_manifest_round_trips(run):
 
 
 def test_epoch_shape_matches_registry(run):
+    """Exported channels are the 19-channel montage PLUS the mastoid references.
+
+    `n_channels` = 19 is definitional (the 10-20 system) and does NOT include A1/A2 — the
+    mastoids are additional. They are generated because gate_aasm_n3 is referenced to
+    contralateral mastoid and anchors snr_nominal, so without them the project's one
+    definitional threshold could not be computed at all.
+    """
     ep = run.epoch(0)
-    n_ch = int(R.scalar_value("n_channels"))
+    n_scalp = int(R.scalar_value("n_channels"))
+    n_ref = len(R.electrode_set("reference_channels"))
     n_samp = int(R.scalar_value("fs") * R.scalar_value("epoch_display"))
-    assert ep.signal.shape == (n_ch, n_samp)
+    assert ep.signal.shape == (n_scalp + n_ref, n_samp)
     assert ep.signal.dtype == np.float64
     assert ep.fs == R.scalar_value("fs")
+
+
+def test_mastoid_references_are_present_and_distinct(run):
+    """The AASM derivation needs A1/A2 to exist and to differ from the scalp channels."""
+    ep = run.epoch(0)
+    for ref in R.electrode_set("reference_channels"):
+        assert ref in ep.channels, f"{ref} missing; the AASM criterion cannot be computed"
+        assert not np.array_equal(ep.channel(ref), ep.channel("C3"))
 
 
 def test_signal_is_lossless_float64(run, tmp_path):

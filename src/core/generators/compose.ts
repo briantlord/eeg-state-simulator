@@ -17,7 +17,7 @@ import {
   DEFAULT_ENVELOPE_DEPTH,
   DEFAULT_ENVELOPE_RATE_HZ,
 } from './oscillations.ts';
-import { CHANNELS, projectInto, type GeneratorId } from './projection.ts';
+import { ALL_CHANNELS, projectInto, type GeneratorId } from './projection.ts';
 import { synthesizeGraphoelements } from './graphoelements.ts';
 import { synthesizeRespiration, chiModulation, phaseRamp } from './respiration.ts';
 import { applyTimeVaryingTilt } from '../filters/tilt.ts';
@@ -64,6 +64,18 @@ export interface ComposeOptions {
   readonly independentChiModFreq?: number;
   /** Coefficient-update scheme for the tilt filter. See src/core/filters/tilt.ts. */
   readonly tiltScheme?: 'blockwise' | 'filterbank';
+  /**
+   * SNR mix, in dB relative to the registry amplitudes (seam 5).
+   *
+   * Scales every non-background source -- oscillations and graphoelements -- against the
+   * aperiodic background, which is held fixed. 0 dB is the registry as written.
+   *
+   * `snr_nominal` is the value at which generated N3 satisfies the AASM criterion, SOLVED
+   * ONCE on a fixture seed and then held. It is not a knob to be turned until a gate passes:
+   * tuning it until G5 passes would make G5 pass by construction, which is the same
+   * circularity as setting delta_amp from the 75 uV figure, one level up.
+   */
+  readonly snrDb?: number;
 }
 
 export interface ComposeResult {
@@ -82,6 +94,7 @@ export interface ComposeResult {
     backgroundRmsUv: number;
     oscillations: { generator: string; band: [number, number]; rmsUv: number }[];
     sensorNoiseRmsUv: number;
+    snrDb: number;
     chiModDepth: number;
     chiModPhi0: number;
     respFreqHz: number;
@@ -123,7 +136,7 @@ export function composeState(
   fs = scalarValue('fs'),
   opts: ComposeOptions = {},
 ): ComposeResult {
-  const nCh = CHANNELS.length;
+  const nCh = ALL_CHANNELS.length;
   const out: Float64Array[] = Array.from({ length: nCh }, () => new Float64Array(nSamples));
 
   const backgroundRms = pointFromUncertainty('background_rms_uv');
@@ -174,6 +187,10 @@ export function composeState(
 
   projectInto(out, background, 'background');
 
+  // Seam 5: the mix is explicit. Background is the reference and is never scaled.
+  const snrDb = opts.snrDb ?? 0;
+  const sourceGain = Math.pow(10, snrDb / 20);
+
   const oscTruth: ComposeResult['truth']['oscillations'] = [];
   for (const spec of STATE_OSCILLATIONS[state]) {
     const { lo, hi } = bandEdges(spec.bandKey);
@@ -217,6 +234,7 @@ export function composeState(
             },
             fs,
           );
+    if (sourceGain !== 1) for (let i = 0; i < nSamples; i++) s[i] = s[i]! * sourceGain;
     projectInto(out, s, spec.generator);
     oscTruth.push({ generator: spec.generator, band: [lo, hi], rmsUv });
   }
@@ -226,13 +244,13 @@ export function composeState(
   for (let c = 0; c < nCh; c++) {
     const dst = out[c]!;
     const src = grapho.channels[c]!;
-    for (let i = 0; i < nSamples; i++) dst[i] = dst[i]! + src[i]!;
+    for (let i = 0; i < nSamples; i++) dst[i] = dst[i]! + sourceGain * src[i]!;
   }
 
   // eta_c: small INDEPENDENT sensor noise. The only per-channel term in the model.
   const sensorRms = pointFromUncertainty('sensor_noise_rms');
   for (let c = 0; c < nCh; c++) {
-    const rng = Rng.substream(seed, `sensor_noise/${CHANNELS[c]}`);
+    const rng = Rng.substream(seed, `sensor_noise/${ALL_CHANNELS[c]}`);
     const dst = out[c]!;
     for (let i = 0; i < nSamples; i++) dst[i] = dst[i]! + rng.normal() * sensorRms;
   }
@@ -248,6 +266,7 @@ export function composeState(
       backgroundRmsUv: backgroundRms,
       oscillations: oscTruth,
       sensorNoiseRmsUv: sensorRms,
+      snrDb,
       chiModDepth,
       chiModPhi0,
       respFreqHz: resp.meanRatePerMin / 60,

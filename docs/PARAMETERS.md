@@ -57,7 +57,7 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 | `snr_range_ui` | -12–12 *(ui_domain)* | dB | `chosen` | sweep range for the control, relative to nominal | all |
 | `snr_calibration_seed` | 20260728 | — | `chosen` | fixed named seed, held out of every G5 evaluation | n3 |
 | `snr_calibration_epoch` | 0 | — | `chosen` | epoch index within the calibration record | n3 |
-| `snr_null_offset` | -6 | dB | `invented` | offset at which generated N3 must FAIL gate_aasm_n3 | n3 |
+| `snr_null_offset` | -6 | dB | `chosen` | -6 dB is a factor-of-two amplitude reduction: a standard engineering convention, deliberately adopted, not an estimate of anything | n3 |
 
 **`snr_nominal`.** Anchors every absolute uV amplitude here. Evaluated on HELD-OUT seeds by G5, reported as a pass fraction. Tuning this until G5 passes would make G5 pass by construction.
 
@@ -65,7 +65,7 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 
 **`snr_calibration_epoch`.** Added on import. D5 requires a named fixture seed AND epoch; only the seed was registered.
 
-**`snr_null_offset`.** Added on import. This number appears in Build Plan 9, harness 5 and DECISIONS D5 and was registered in none of them — a threshold on the arm all three documents say carries the discriminative weight.
+**`snr_null_offset`.** The offset at which generated N3 must FAIL gate_aasm_n3. It appears in Build Plan 9, harness 5 and DECISIONS D5 and was registered in none of them -- a threshold on the arm all three documents say carries the discriminative weight. RE-STANDED invented -> chosen. The runner's preflight refused to start with it as `invented`, correctly: G5's null is failable, its criterion gate_g5_null_ordering is `derived`, and that criterion CONSUMES this number -- so an invented value was being laundered through a derived criterion, which is exactly what harness section 1 prohibits. It is not, however, an empirical estimate that could be fitted: halving the amplitude is a convention chosen for being a substantial but not absurd attenuation. `chosen` is what it always was. The discriminative power of the second null clause is set entirely by this value -- hard at -1 dB, trivial at -20 dB -- so it is declared in the gate's `criterion_inputs` and the report prints its standing.
 
 ## 3. Aperiodic background
 
@@ -393,9 +393,9 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 | Standing | Rows |
 |---|---|
 | `definitional` | 11 |
-| `chosen` | 42 |
+| `chosen` | 43 |
 | `literature` | 8 |
 | `derived` | 7 |
-| `invented` | 97 |
+| `invented` | 96 |
 | `absent` | 8 |
 | **total** | **173** |

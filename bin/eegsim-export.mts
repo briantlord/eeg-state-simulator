@@ -31,11 +31,21 @@ import {
 } from '../src/io/epoch_dir.ts';
 import { scalarValue, electrodeSet, STATES } from '../src/core/registry.ts';
 import { composeState } from '../src/core/generators/compose.ts';
-import { CHANNELS, weightsFor } from '../src/core/generators/projection.ts';
+import { ALL_CHANNELS, weightsFor } from '../src/core/generators/projection.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
-const MONTAGE = CHANNELS;
+const MONTAGE = ALL_CHANNELS;
+
+/** The solved snr_nominal, or 0 dB if calibration has not been run. */
+function solvedSnrNominal(): number {
+  try {
+    const p = join(ROOT, 'prep', 'fixtures', 'snr_calibration.json');
+    return JSON.parse(readFileSync(p, 'utf8')).value_db as number;
+  } catch {
+    return 0;
+  }
+}
 
 function parseArgs(argv: string[]): Record<string, string> {
   const out: Record<string, string> = {};
@@ -66,6 +76,9 @@ function main(): void {
     process.exit(2);
   }
   const nEpochs = Number(args['epochs'] ?? 1);
+  // Defaults to the solved snr_nominal when the calibration artifact exists, so exported
+  // data is at the calibrated mix unless a caller deliberately overrides it.
+  const snrDb = args['snr-db'] !== undefined ? Number(args['snr-db']) : solvedSnrNominal();
   // `resolve`, not `join`: an absolute --out must be honoured, and join() would concatenate
   // it onto ROOT and produce a nonsense path.
   const outDir = resolve(ROOT, args['out'] ?? `prep/out/run_${stateArg}_${seed}`);
@@ -106,12 +119,12 @@ function main(): void {
   // the pattern G4 declares a pass, on the gate the Build Plan calls the most important thing
   // in Tier 0.
   const totalSamples = nSamp * nEpochs;
-  const composed = composeState(seed, stateArg, totalSamples, fs);
+  const composed = composeState(seed, stateArg, totalSamples, fs, { snrDb });
 
   const truth: InjectedTruth = {
     chi: composed.truth.chi,
     knee: composed.truth.knee,
-    snrDb: 0,
+    snrDb: composed.truth.snrDb,
     chiModDepth: 0,
     chiModPhi0: 0,
     respFreq: 0,

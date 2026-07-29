@@ -431,7 +431,38 @@ different orderings across sleep stages, and much of the apparent disagreement i
 literature is a band-choice artifact."* The artifact will show this the moment a user toggles
 the band control, which is the point of making it a control.
 
-### Three symptoms, one cause
+### ⚠ CORRECTION — "one cause" was wrong, and the calibration proved it
+
+The section below attributes three symptoms to `snr_nominal` not yet existing. **It now exists,
+and it does not fix them.** Solved on the fixture seed, `snr_nominal` = **+1.43 dB**, a gain of
+×1.18 — essentially nothing. YASA's spindle recall moved 0.29 → 0.36; the ratios that matter
+are unchanged:
+
+| | amplitude | / background | anchored by |
+|---|---|---|---|
+| `delta_amp` | 150 µV p-p → 53 µV RMS | **2.65** | the AASM criterion, definitionally |
+| `spindle_amp` | 40 µV p-p → 14 µV RMS | **0.71** | *nothing* |
+
+**`snr_nominal` is ONE GLOBAL SCALAR.** It multiplies every non-background source equally, so
+it cannot change the ratio *between* spindles and delta — those are set independently in the
+registry, and only delta is tied to a definitional threshold. The AASM criterion anchors the
+N3 delta amplitude scale **and nothing else in the project.**
+
+So the correct statement is weaker and more specific than the one below: the three symptoms
+share a *class* of cause — uncalibrated relative amplitudes — but they do not share a single
+parameter, and calibration was never going to resolve them. Spindle amplitude relative to
+background is unconstrained by any definitional threshold and requires T1-M1 corpus fitting.
+The instinct to wait for the upstream node was right; the identification of which node was not.
+
+**A second thing calibration revealed.** Solving for the mix at which N3 *exactly meets* the
+criterion puts the fixture epoch at the threshold boundary, so held-out epochs land on either
+side of it and the pass fraction comes out near 0.5 — measured 0.44. That is **by
+construction**, not a defect, and it is one more reason the positive arm cannot carry a
+verdict: the number it reports is largely a statement about where calibration was aimed.
+
+*Original text follows.*
+
+### ~~Three symptoms, one cause~~
 
 **LZc does not rise from N1 to N2**, which §7 documents that it should. N2's extra complexity
 should come from its spindles and K-complexes — N1 has neither — and instead LZc tracks χ

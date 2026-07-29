@@ -28,15 +28,32 @@ const montage = montageFile as {
 const projection = projectionFile as {
   schema: string;
   channels: string[];
+  scalp: string[];
+  reference: string[];
   generators: Record<string, { weights: number[] }>;
 };
 
+/** The 19 scalp electrodes. n_channels is definitional and excludes the mastoids. */
 export const CHANNELS: readonly string[] = montage.channels.map((c) => c.label);
+
+/** Mastoid references, ADDITIONAL to the 10-20 montage. gate_aasm_n3 needs them. */
+export const REFERENCE_LABELS: readonly string[] = montage.reference.map((c) => c.label);
+
+/** Every generated channel: scalp then reference. Projection weights are in this order. */
+export const ALL_CHANNELS: readonly string[] = [...montage.channels, ...montage.reference].map(
+  (c) => c.label,
+);
 export const CHANNEL_POSITIONS: readonly MontageChannel[] = montage.channels;
 export const REFERENCE_CHANNELS: readonly MontageChannel[] = montage.reference;
 
-if (projection.channels.length !== CHANNELS.length ||
-    projection.channels.some((c, i) => c !== CHANNELS[i])) {
+/** Positions for every generated channel, in ALL_CHANNELS order. */
+export const ALL_POSITIONS: readonly MontageChannel[] = [
+  ...montage.channels,
+  ...montage.reference,
+];
+
+if (projection.channels.length !== ALL_CHANNELS.length ||
+    projection.channels.some((c, i) => c !== ALL_CHANNELS[i])) {
   throw new Error(
     'projection file channel order does not match the montage. The weight vectors are ' +
       'positional, so a mismatch silently projects every generator to the wrong scalp.',

@@ -153,6 +153,7 @@ def generate(
     seed: int,
     state: str,
     epochs: int = 1,
+    snr_db: float | None = None,
     node: str = "node",
 ) -> Run:
     """Invoke the headless TypeScript exporter and load what it wrote.
@@ -171,6 +172,8 @@ def generate(
         "--epochs", str(epochs),
         "--out", str(out),
     ]
+    if snr_db is not None:
+        cmd += ["--snr-db", str(snr_db)]
     proc = subprocess.run(cmd, cwd=_ROOT, capture_output=True, text=True)
     if proc.returncode != 0:
         raise EpochIOError(

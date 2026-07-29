@@ -296,17 +296,16 @@
         "v": -6
       },
       "units": "dB",
-      "standing": "invented",
+      "standing": "chosen",
       "source": {
         "kind": "none",
-        "rationale": "offset at which generated N3 must FAIL gate_aasm_n3"
+        "rationale": "-6 dB is a factor-of-two amplitude reduction: a standard engineering convention, deliberately adopted, not an estimate of anything"
       },
       "states": [
         "n3"
       ],
       "section": "2. SNR and amplitude calibration",
-      "milestone": "T1-M2",
-      "note": "Added on import. This number appears in Build Plan 9, harness 5 and DECISIONS D5 and was registered in none of them — a threshold on the arm all three documents say carries the discriminative weight."
+      "note": "The offset at which generated N3 must FAIL gate_aasm_n3. It appears in Build Plan 9, harness 5 and DECISIONS D5 and was registered in none of them -- a threshold on the arm all three documents say carries the discriminative weight. RE-STANDED invented -> chosen. The runner's preflight refused to start with it as `invented`, correctly: G5's null is failable, its criterion gate_g5_null_ordering is `derived`, and that criterion CONSUMES this number -- so an invented value was being laundered through a derived criterion, which is exactly what harness section 1 prohibits. It is not, however, an empirical estimate that could be fitted: halving the amplitude is a convention chosen for being a substantial but not absurd attenuation. `chosen` is what it always was. The discriminative power of the second null clause is set entirely by this value -- hard at -1 dB, trivial at -20 dB -- so it is declared in the gate's `criterion_inputs` and the report prints its standing."
     },
     "aperiodic_model": {
       "value": {

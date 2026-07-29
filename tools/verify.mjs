@@ -66,7 +66,7 @@ const STEPS = [
     // --allow-partial while the gate set is being written: the ledger declares seven arms and
     // only G2 is implemented. REMOVE THIS FLAG once the ledger is fully implemented, or the
     // runner will stop noticing that a gate has gone missing.
-    args: ['-m', 'prep.runner', '--tier', 'fast', '--seeds', '5', '--allow-partial'],
+    args: ['-m', 'prep.runner', '--tier', 'fast', '--seeds', '6', '--allow-partial'],
     skipIf: () => (PY ? null : 'no .venv found — run: python -m venv .venv'),
   },
 ];

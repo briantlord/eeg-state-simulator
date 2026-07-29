@@ -18,8 +18,8 @@ import type { StateId } from '../types/state.ts';
 import type { GeneratedEvent, EventType } from '../types/event.ts';
 import { scalarValue, uncertainty, provisionalValue, bandEdges, boundValue } from '../registry.ts';
 import {
-  CHANNELS,
-  CHANNEL_POSITIONS,
+  ALL_CHANNELS,
+  ALL_POSITIONS,
   argmaxChannel,
   weightsFor,
   type GeneratorId,
@@ -194,7 +194,7 @@ export function synthesizeGraphoelements(
   fs: number,
 ): GraphoelementResult {
   const durationS = nSamples / fs;
-  const nCh = CHANNELS.length;
+  const nCh = ALL_CHANNELS.length;
   const channels: Float64Array[] = Array.from({ length: nCh }, () => new Float64Array(nSamples));
   const events: GeneratedEvent[] = [];
 
@@ -336,7 +336,7 @@ function makeEvent(
 /** Channels an event projects to with non-negligible weight, strongest first. */
 function topChannels(generator: GeneratorId): string[] {
   const w = weightsFor(generator);
-  return CHANNELS.map((label, i) => ({ label, w: w[i]! }))
+  return ALL_CHANNELS.map((label, i) => ({ label, w: w[i]! }))
     .filter((c) => c.w > 0.25)
     .sort((a, b) => b.w - a.w)
     .map((c) => c.label);
@@ -351,13 +351,13 @@ function topChannels(generator: GeneratorId): string[] {
 function travelDelaySamples(fs: number): Float64Array {
   const spanMm = scalarValue('ap_axis_span');
   const v = scalarValue('so_travel_v_used');
-  const ys = CHANNEL_POSITIONS.map((c) => c.y);
+  const ys = ALL_POSITIONS.map((c) => c.y);
   const yMax = Math.max(...ys);
   const yMin = Math.min(...ys);
-  const out = new Float64Array(CHANNELS.length);
-  for (let c = 0; c < CHANNELS.length; c++) {
+  const out = new Float64Array(ALL_CHANNELS.length);
+  for (let c = 0; c < ALL_CHANNELS.length; c++) {
     // Anterior first: distance travelled is measured from the frontal end.
-    const fracFromFront = (yMax - CHANNEL_POSITIONS[c]!.y) / (yMax - yMin);
+    const fracFromFront = (yMax - ALL_POSITIONS[c]!.y) / (yMax - yMin);
     const metres = (fracFromFront * spanMm) / 1000;
     out[c] = (metres / v) * fs;
   }

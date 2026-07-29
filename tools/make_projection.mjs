@@ -40,7 +40,11 @@ const GENERATORS = [
   'kc',
 ];
 
-const channels = montage.channels;
+// Scalp electrodes AND the mastoid references. gate_aasm_n3 is referenced to contralateral
+// mastoid and anchors snr_nominal, hence every absolute uV amplitude in the registry -- so
+// without A1/A2 the project's one definitional threshold cannot be computed at all.
+// n_channels stays 19: the mastoids are additional to the 10-20 montage, not part of it.
+const channels = [...montage.channels, ...montage.reference];
 
 const projections = {};
 
@@ -98,6 +102,8 @@ const out = {
     'TODO(T1-M1): replace `weights` with LPsi^T columns or a SEREEGA lead field; the loader ' +
     'and this schema do not change.',
   channels: channels.map((c) => c.label),
+  scalp: montage.channels.map((c) => c.label),
+  reference: montage.reference.map((c) => c.label),
   generators: projections,
 };
 
