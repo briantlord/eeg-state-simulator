@@ -26,7 +26,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import numpy as np
 
 from prep import registry as R
-from prep.gates.g4_offfreq import depths, sign_test
+from prep.gates.g4_offfreq import depths, paired_sign_test, sign_test
 
 ROOT = Path(__file__).resolve().parents[2]
 WORK = ROOT / 'prep' / 'out' / 'g4_falsify'
@@ -131,95 +131,115 @@ print(f"""
 
 
 # --------------------------------------------------------------------------------------
-# BREAKAGE 4 -- can the NULL arm still fail after gaining an effect-size floor?
+# BREAKAGE 4 -- the null arm's SENSITIVITY, by sweeping a monotone leakage source.
 #
-# Finding 16's estimator lowered the variance enough that a 0.1% paired difference cleared
-# p < 0.05, so the null arm gained a second clause: leakage must also exceed
-# `chi_est_mdd_resp`, the estimator's own detection floor. A floor added to a criterion can
-# silently neuter it, so this checks the arm still catches leakage it should.
+# Finding 16 amended the null arm: leakage must be both statistically consistent AND exceed
+# `chi_est_mdd_resp`, the estimator's detection floor, because a paired sign test detects
+# direction rather than magnitude. A floor added to a criterion can silently neuter it, so the
+# arm has to be shown able to fail.
 #
-# THE INJECTED LEAKAGE IS ONE ALREADY MEASURED AS REAL. Mechanism (c)-amplitude modulates
-# 0.5-4 Hz power at the respiratory rate, and chi_est_band starts at 2 Hz -- the bands overlap,
-# so it produces a genuine f2 line. probe_g4_decompose.py measured it at 3.30x the empty floor.
-# G4's fixture keeps it OFF for exactly that reason (Finding 13); switching it on in the
-# observed arm alone is therefore a leakage the arm MUST report.
+# The first attempt at this was INCONCLUSIVE and is worth recording. It enabled mechanism
+# (c)-amplitude at its registered depth in the observed arm only, which leaks 0.033 against a
+# 0.048 floor -- and got 6/12, p = 1. The sign test never fired, so the floor never bound and
+# nothing was demonstrated either way. The reason is instructive: a leakage of amplitude ~= the
+# floor, added at random relative phase, raises the resulting magnitude only slightly more than
+# half the time, so the per-seed sign carries almost no information at n = 12.
+#
+# SWEEPING THE DEPTH FIXES THAT AND MEASURES MORE. `resp_amp_mod_depth` now has a CLI override,
+# so the leakage can be driven from below the floor to well above it. That gives the arm's
+# detection threshold as a number rather than a yes/no, which is the honest form of "it can fail".
+#
+# (c)-amplitude is the right source: it moves 0.5-4 Hz power, overlapping the low edge of
+# chi_est_band, and G4's fixture keeps it OFF precisely because it leaks (Finding 13). Mechanism
+# (a) cannot serve -- it is sub-1 Hz and measures 0.0000 in quadrature, correctly.
 print("\n" + "=" * 78)
-print("Breakage 4: enable mechanism (c)-amplitude in the observed arm only...", flush=True)
+print("Breakage 4: sweep mechanism (c)-amplitude depth to find the null arm's threshold")
+print("=" * 78, flush=True)
 
+import json
+import subprocess
 import numpy as np
+from prep.runner import rmtree_robust
+
+DEPTHS = [0.0, 0.35, 0.7, 1.2, 2.0]
+FLOOR = R.scalar_value('chi_est_mdd_resp')
+N_EPOCHS = int(round(R.scalar_value('g4_record_length') / R.scalar_value('epoch_display')))
 
 
-def _measure_amp(seed: int, tag: str, amp_mod: bool) -> dict:
-    import json
-    import subprocess
-    from prep.runner import rmtree_robust
+def _leak_run(seed: int, tag: str, amp_depth: float | None) -> dict:
+    """One export/estimate pair. `amp_depth` None disables mechanism (c)-amplitude entirely."""
     out = WORK / f'{tag}{seed}'
     rmtree_robust(out)
-    n_epochs = int(round(R.scalar_value('g4_record_length') / R.scalar_value('epoch_display')))
-    subprocess.run([
+    cmd = [
         'node', '--experimental-strip-types', '--no-warnings',
         str(ROOT / 'bin' / 'eegsim-export.mts'),
-        '--seed', str(seed), '--state', 'n3', '--epochs', str(n_epochs), '--out', str(out),
+        '--seed', str(seed), '--state', 'n3', '--epochs', str(N_EPOCHS), '--out', str(out),
         '--movement-artifact', 'true',
-        '--amplitude-modulation', 'true' if amp_mod else 'false',
+        '--amplitude-modulation', 'false' if amp_depth is None else 'true',
         '--chi-modulation', 'true',
         '--chi-mod-depth', str(R.scalar_value('g4_fixture_chi_mod_depth')),
         '--resp-rate', str(F2 * 60.0), '--independent-chi-mod-freq', str(F1),
-    ], cwd=ROOT, capture_output=True, check=True)
-    p = subprocess.run([
+    ]
+    if amp_depth is not None:
+        cmd += ['--resp-amp-mod-depth', str(amp_depth)]
+    subprocess.run(cmd, cwd=ROOT, capture_output=True, check=True)
+    r = subprocess.run([
         'node', '--experimental-strip-types', '--no-warnings',
         str(ROOT / 'bin' / 'eegsim-chi.mts'), '--run', str(out),
         '--channel', 'Fz', '--reference', 'linked-mastoid',
         '--freqs', ','.join(str(f) for f in FREQS),
     ], cwd=ROOT, capture_output=True, text=True, check=True)
-    return json.loads(p.stdout)['depths']
+    return json.loads(r.stdout)['depths']
 
 
-leak_obs = [_measure_amp(s, 'la', True) for s in SEEDS]
-leak_nul = [_measure_amp(s, 'ln', False) for s in SEEDS]
+print("\n  Building the null arm (mechanism (c)-amplitude off)...", flush=True)
+arm_null = [_leak_run(sd, 'k0', None) for sd in SEEDS]
+u = np.array([r[str(F2)] for r in arm_null])
 
-floor = R.scalar_value('chi_est_mdd_resp')
-o = np.array([r[str(F2)] for r in leak_obs])
-u = np.array([r[str(F2)] for r in leak_nul])
-k4 = int((o > u).sum())
-p4 = sign_test(k4, N, two_sided=True)
-# In quadrature, not by subtraction: both are magnitudes of a line at the same frequency, so an
-# added component of unknown relative phase combines as |o|^2 ~ |u|^2 + |leak|^2. Subtraction
-# understates it -- 0.017 linear against 0.046 in quadrature on this very case.
-leak = np.sqrt(np.maximum(o**2 - u**2, 0.0))
-eff4 = float(np.median(leak))
-eff_linear = float(abs(np.median(o - u)))
-caught = (p4 < 0.05) and (eff4 > floor)
+print(f"\n  {'amp depth':>10} {'f2 obs':>9} {'f2 null':>9} {'leak (quad)':>12} "
+      f"{'k/n':>7} {'p':>9} {'reports leakage':>17}")
+print("  " + "-" * 80)
 
-print(f"\n  f2 line with (c)-amplitude on : {np.median(o):.4f}")
-print(f"  f2 line with it off           : {np.median(u):.4f}")
-print(f"  leakage amplitude (quadrature): {eff4:.4f}   (linear subtraction would say "
-      f"{eff_linear:.4f})")
-print(f"  paired {k4}/{N}, p = {p4:.2g};  detection floor {floor:.3f}")
-print(f"  -> null arm reports leakage: {'YES' if caught else 'NO'}")
+rows4 = []
+for d in DEPTHS:
+    obs = [_leak_run(sd, f'k{d}', d if d > 0 else None) for sd in SEEDS]
+    o = np.array([r[str(F2)] for r in obs])
+    leak = float(np.median(np.sqrt(np.maximum(o**2 - u**2, 0.0))))
+    # Tie-aware: at depth 0 the two arms are bit-identical, and counting 12 ties as 0/12 read
+    # as "highly significant" (p = 0.000488) before this was fixed.
+    k, n_eff, pv = paired_sign_test(o, u, two_sided=True)
+    caught = (pv < 0.05) and (leak > FLOOR)
+    rows4.append((d, leak, k, pv, caught))
+    print(f"  {d:10.2f} {np.median(o):9.4f} {np.median(u):9.4f} {leak:12.4f} "
+          f"{k:4d}/{n_eff:<2d} {pv:9.3g} {'YES' if caught else 'no':>17}")
 
-if caught:
+registered = R.provisional_value('resp_amp_mod_depth')
+caught_any = [r for r in rows4 if r[4]]
+
+print(f"""
+  Detection floor chi_est_mdd_resp = {FLOOR:.3f}. Registered resp_amp_mod_depth = {registered}.
+  Depth 0.00 is the null arm against itself: it must NOT report leakage, and a nonzero reading
+  there would mean the pairing is broken rather than that leakage exists.""")
+
+if rows4[0][4]:
+    print("""
+  BROKEN PAIRING. Depth 0 reports leakage, which is impossible if the two arms differ only in
+  mechanism (c)-amplitude. Everything below is uninterpretable until that is fixed.""")
+elif caught_any:
+    thr = caught_any[0]
     print(f"""
-  THE FLOOR DID NOT NEUTER THE ARM. A leakage of {eff4:.4f} -- {eff4 / floor:.1f}x the detection
-  floor -- is caught, while the 0.0000 effect that the sign test alone called significant is
-  not. The arm discriminates on magnitude as well as consistency, as intended.""")
-elif p4 >= 0.05:
-    print(f"""
-  INCONCLUSIVE, AND NOT A DEMONSTRATION EITHER WAY. The floor never bound: the SIGN TEST
-  returned p = {p4:.2g} at {k4}/{N}, so this leakage would not have been flagged before the
-  effect-size clause existed either. What the numbers do establish is a measurement rather than
-  a verdict -- the leakage amplitude is {eff4:.4f} against a detection floor of {floor:.3f}, i.e.
-  mechanism (c)-amplitude reaches chi-hat at essentially exactly the limit of what this estimator
-  can resolve in one record.
+  THE ARM CAN FAIL, AND ITS THRESHOLD IS MEASURED. Leakage is first reported at amplitude
+  depth {thr[0]:.2f}, where the leaked line is {thr[1]:.4f} -- {thr[1] / FLOOR:.1f}x the detection
+  floor. Below that the arm stays silent, including at the registered depth {registered}, where
+  the leakage genuinely sits at the limit of what this estimator can resolve in one record.
 
-  WHY THE SIGN TEST CANNOT SEE IT: when a leakage of amplitude ~|floor| is added at random
-  relative phase, the resulting magnitude exceeds the original only a little more than half the
-  time, so the per-seed sign carries almost no information at n = {N}. A cleanly monotone
-  leakage source is needed to falsify this arm -- raising resp_artifact_amp far above its
-  registered range would do it, and that requires a CLI override the exporter does not yet
-  expose. RECORDED AS THE ARM'S OPEN FALSIFICATION, not as a pass.""")
+  So the effect-size floor did NOT neuter the arm: it moved the arm's verdict from "any
+  consistently-signed difference, however microscopic" to "a difference large enough to be
+  mistaken for coupling". The 0.999x ratio that failed the gate before Finding 16 would still
+  be silent here, and correctly.""")
 else:
     print(f"""
-  THE FLOOR HAS NEUTERED THE ARM. The sign test DID fire (p = {p4:.2g}) and the effect-size
-  clause suppressed it at {eff4:.4f} against a floor of {floor:.3f}. That is the failure mode a
-  floor risks, and chi_est_mdd_resp must be re-derived before this arm is trusted.""")
+  STILL NOT FALSIFIED. Even at amplitude depth {DEPTHS[-1]:.2f} -- {DEPTHS[-1] / registered:.1f}x the
+  registered value -- the arm reports nothing. Either the leakage does not grow with depth as
+  expected, or the two clauses are jointly too strict. The arm must not be trusted as a check
+  until this is resolved, and STATUS should keep it listed as open.""")

@@ -34,7 +34,7 @@ import numpy as np
 
 from ..spec import GateSpec, ScalarMetric
 from .. import registry as R
-from ..gates.g4_offfreq import measure, sign_test
+from ..gates.g4_offfreq import measure, paired_sign_test
 
 SPEC = GateSpec(
     id="G4",
@@ -81,8 +81,9 @@ def run(seeds: list[int], params: dict[str, Any]) -> tuple[ScalarMetric, bool, s
     for name, f in (("f2", f2), ("f2-f1", f2 - f1), ("f2+f1", f2 + f1)):
         o = np.array([r[str(f)] for r in obs])
         u = np.array([r[str(f)] for r in nol])
-        k = int((o > u).sum())
-        p = sign_test(k, n, two_sided=True)
+        # Ties discarded -- see `paired_sign_test`. A tied pair is no evidence in either
+        # direction, and counting it as one made two identical records look significant.
+        k, n_eff, p = paired_sign_test(o, u, two_sided=True)
         ratio = float(np.median(o) / max(np.median(u), 1e-12))
         # THE LEAKAGE AMPLITUDE, EXTRACTED INCOHERENTLY. `o` and `u` are magnitudes of a line at
         # the same frequency, and an added component of unknown relative phase combines in
@@ -92,7 +93,7 @@ def run(seeds: list[int], params: dict[str, Any]) -> tuple[ScalarMetric, bool, s
         leak = np.sqrt(np.maximum(o**2 - u**2, 0.0))
         effect = float(np.median(leak))
         material = effect > floor
-        checks[name] = {"freq": f, "k": k, "n": n, "p": p, "ratio": ratio,
+        checks[name] = {"freq": f, "k": k, "n": n_eff, "p": p, "ratio": ratio,
                         "effect": effect, "material": material,
                         "median_obs": float(np.median(o)), "median_null": float(np.median(u))}
         if p < 0.05 and material:
@@ -102,7 +103,7 @@ def run(seeds: list[int], params: dict[str, Any]) -> tuple[ScalarMetric, bool, s
     lo_uv, hi_uv = R.uncertainty("resp_artifact_amp")
     detail = (
         "; ".join(
-            f"{name} {c['k']}/{n} (p={c['p']:.2g}, {c['ratio']:.3f}x, "
+            f"{name} {c['k']}/{c['n']} (p={c['p']:.2g}, {c['ratio']:.3f}x, "
             f"effect {c['effect']:.4f}{'' if c['material'] else ' < floor'})"
             for name, c in checks.items()
         )

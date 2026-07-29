@@ -45,7 +45,7 @@ from ..runner import rmtree_robust
 from ..spec import GateSpec, ScalarMetric
 from .. import registry as R
 from ..gates.g3_spindles import CHANNEL, EPOCHS, detect, injected_spindles
-from ..gates.g4_offfreq import sign_test
+from ..gates.g4_offfreq import paired_sign_test
 
 SPEC = GateSpec(
     id="G3",
@@ -83,9 +83,11 @@ def run(seeds: list[int], params: dict[str, Any]) -> tuple[ScalarMetric, bool, s
         without.append(len(detect(sig_b[ch_b.index(CHANNEL)], fs)))
         injected.append(len(injected_spindles(a)))
 
-    n = len(seeds)
-    k = sum(1 for lo, hi in zip(without, with_ev) if lo < hi)
-    p = sign_test(k, n)
+    # Ties discarded, and here that matters more than anywhere: these are INTEGER detection
+    # counts, so two seeds landing on the same count is common rather than a measure-zero
+    # coincidence. Counting a tie as a failure would make this arm harder to pass for a reason
+    # that has nothing to do with the detector.
+    k, n, p = paired_sign_test(np.asarray(with_ev) , np.asarray(without))
     paired_ok = p < 0.05
 
     frac = float(np.median(without)) / max(float(np.median(injected)), 1e-9)

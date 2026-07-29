@@ -128,7 +128,7 @@ characterization).
 | `PARAMETERS.md` | **generated** from `registry/parameters.yaml`; never edit |
 | `DECISIONS.md` | D1–D17 and pending P1–P12, append-only |
 | `Execution-Scheme.md` | the plan: gate ledger, work packages, build order |
-| `Tier0-Estimator-Probe.md` | Findings 1–16, every one reproducible from `prep/reference/` |
+| `Tier0-Estimator-Probe.md` | Findings 1–16 (16 with a resolution block), every one reproducible from `prep/reference/` |
 | `STATUS.md` | this file |
 
 Corrections are marked in place rather than rewritten: Finding 2 carries a correction block
@@ -150,10 +150,11 @@ Tier 0 is closed. Everything below is Tier 1.
    - ~~Replace the two-band χ proxy with specparam-per-window~~ — **done, against the plan**
      (D17). specparam measured 2× *worse* and cannot run in a browser; a least-squares slope over
      2–40 Hz ships instead, and it also made the readout dimensionally honest.
-   - **Demonstrate G4's null arm can fail.** Its falsification is **open** (D17): the effect-size
-     floor is right in principle but untested against a monotone leakage source, which needs a
-     `resp_artifact_amp` override the exporter does not expose. A gate arm not shown falsifiable
-     is the state D12 spent two decisions objecting to, so this ranks above new characterization.
+   - ~~Demonstrate G4's null arm can fail~~ — **done** (D17). Swept a monotone leakage source:
+     the arm first reports at 2.0× its detection floor and is silent below, so the effect-size
+     floor did not neuter it. The sweep also caught two defects — **ties counted as evidence** in
+     the sign test (two identical records scored p = 0.000488; it affected G3's null too, where
+     integer counts tie often), and `resp_amp_mod_depth` being non-monotone above ~1.2.
    - **P12** — characterize `filterbank`'s over-response, then settle the default tilt scheme.
    - **PAC precision versus event count.** Circular SE ≈ √((1−R̄²)/(nR̄²)); the spec already
      shows ±15° is unreachable at 2–5 spindles/min, so this determines segment length or forces

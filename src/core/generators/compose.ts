@@ -72,6 +72,19 @@ export interface ComposeOptions {
   readonly chiModulation?: boolean;
   /** Override chi_mod_depth. */
   readonly chiModDepth?: number;
+  /**
+   * Override `resp_amp_mod_depth`, mechanism (c)'s amplitude half.
+   *
+   * Exists to FALSIFY G4's null arm. That arm must detect anything respiratory reaching chi-hat
+   * at f2, and (c)-amplitude is the mechanism measured to do so -- it moves 0.5-4 Hz power, which
+   * overlaps the low edge of `chi_est_band`. At the registered depth the leakage sits at roughly
+   * the estimator's detection floor, which is too small to give a paired sign test any power
+   * (Finding 16: 6/12, p = 1). Sweeping the depth upward produces a monotone leakage source and
+   * so measures the arm's SENSITIVITY rather than merely asserting it has some.
+   *
+   * Not a tuning knob: raising it makes the generator less realistic, not more.
+   */
+  readonly respAmpModDepth?: number;
   /** Pin the respiration rate, in breaths per minute. Used by the G4 fixture to fix f2. */
   readonly respRatePerMin?: number;
   /**
@@ -217,7 +230,7 @@ export function composeState(
   let respAmpModDepth = 0;
   let ampMod: Float64Array | null = null;
   if (opts.amplitudeModulation) {
-    respAmpModDepth = provisionalValue('resp_amp_mod_depth');
+    respAmpModDepth = opts.respAmpModDepth ?? provisionalValue('resp_amp_mod_depth');
     const wakeLikeAmp = state === 'wake_eo' || state === 'wake_ec' || state === 'n1';
     ampMod = amplitudeModulation(
       resp.phase,

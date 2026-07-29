@@ -129,6 +129,11 @@ function main(): void {
     amplitudeModulation: args['amplitude-modulation'] === 'true',
     chiModulation: args['chi-modulation'] === 'true',
     ...(args['chi-mod-depth'] !== undefined ? { chiModDepth: Number(args['chi-mod-depth']) } : {}),
+    // Exists to falsify G4's null arm by injecting a leakage large enough for a paired sign test
+    // to resolve; see ComposeOptions.respAmpModDepth.
+    ...(args['resp-amp-mod-depth'] !== undefined
+      ? { respAmpModDepth: Number(args['resp-amp-mod-depth']) }
+      : {}),
     ...(args['resp-rate'] !== undefined ? { respRatePerMin: Number(args['resp-rate']) } : {}),
     ...(args['independent-chi-mod-freq'] !== undefined
       ? { independentChiModFreq: Number(args['independent-chi-mod-freq']) }

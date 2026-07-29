@@ -1274,3 +1274,51 @@ falsification, not as a pass.** By contrast mechanism (a), the arm's actual targ
 the metric is now correct.
 
 Reproduce: `t1m2_chi_estimators.py`, `probe_g4_falsify.py` (breakage 4).
+
+## Finding 16, resolved — the null arm can fail, and two more defects surfaced getting there
+
+Finding 16 left G4's amended null arm **not demonstrated falsifiable**, which is the state D12
+spent two decisions objecting to. Closing it needed a monotone leakage source, so
+`resp_amp_mod_depth` gained a CLI override and the leakage was swept rather than asserted.
+
+| amp depth | f₂ observed | f₂ null | leak (quadrature) | k/n | p | reports leakage |
+|---|---|---|---|---|---|---|
+| 0.00 | 0.0484 | 0.0484 | 0.0000 | 0/0 | 1 | no |
+| **0.35** *(registered)* | 0.0669 | 0.0484 | 0.0332 | 6/12 | 1 | no |
+| **0.70** | 0.1089 | 0.0484 | **0.0963** | 10/12 | 0.039 | **YES** |
+| 1.20 | 0.1446 | 0.0484 | 0.1353 | 10/12 | 0.039 | YES |
+| 2.00 | 0.1282 | 0.0484 | 0.1175 | 10/12 | 0.039 | YES |
+
+**The arm can fail, and its threshold is a measured number rather than a claim:** leakage is first
+reported at a leaked line of **0.096 — 2.0× the detection floor**. Below that it stays silent,
+including at the registered depth, where the leakage genuinely sits at the limit of what this
+estimator resolves in one record.
+
+So the effect-size floor did not neuter the arm. It moved the verdict from *"any consistently
+signed difference, however microscopic"* to *"a difference large enough to be mistaken for
+coupling"*. The 0.999× ratio that failed the gate before Finding 16 is still silent, correctly.
+
+### Defect: ties were counted as evidence
+
+The depth-0 row is the two arms compared **against themselves** — bit-identical records. Before
+this was fixed it read `0/12, p = 0.000488`: **highly significant, for two copies of the same
+array.** A bare `a > b` makes every tie a failure, so 12 ties give k = 0, which is exactly as
+extreme as k = 12.
+
+The textbook sign test discards ties; `paired_sign_test` now does, and depth 0 reads `0/0, p = 1`
+— no evidence in either direction, which is the truth.
+
+**This was not confined to G4.** G3's null compares *integer detection counts*, where two seeds
+landing on the same count is ordinary rather than a measure-zero coincidence — so ties were being
+charged against that arm too. Both now use the tie-aware test. In the current G4 run no pairs tie
+(12/12 non-tied), so no published number changes; the defect was latent, and only a deliberately
+degenerate comparison exposed it.
+
+### Defect: `resp_amp_mod_depth` above ~1.2 is not monotone
+
+Leakage rises 0.033 → 0.096 → 0.135 and then **falls** to 0.118 at depth 2.0. A modulation depth
+approaching and exceeding 1 drives the multiplier `1 + d·cos(φ)` through zero and negative, which
+rectifies rather than scales — so the fundamental at f₂ stops growing. Harmless here, because the
+sweep only needed to bracket the threshold and the registered value is 0.35, but it means **depths
+near or above 1 are not a valid way to scale this mechanism** and the row's usable range should be
+capped when it is fitted at T1-M1.

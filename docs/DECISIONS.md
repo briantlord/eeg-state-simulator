@@ -438,14 +438,29 @@ floor. A difference below what the estimator can detect cannot support or refute
 frequency, so an added component of unknown relative phase combines in **quadrature**. On a real
 leakage source subtraction says 0.017 where quadrature says 0.033.
 
-**The amended arm's falsification is OPEN and recorded as such.** Enabling mechanism
-(c)-amplitude in the observed arm gives leakage 0.033 against the 0.048 floor at `6/12, p = 1` —
-inconclusive, because the sign test never fired, so the floor never bound. A leakage of amplitude
-≈ the floor added at random phase exceeds the original only slightly more than half the time, so
-the per-seed sign carries almost no information at n = 12. Falsifying the arm needs a monotone
-leakage source, which needs a `resp_artifact_amp` override the exporter does not expose. Until
-then the arm is **not** demonstrated falsifiable, and that is stated in the gate rather than
-assumed. Mechanism (a), its actual target, measures 0.0000 in quadrature.
+**The amended arm's falsification is now CLOSED, and it took a depth sweep.** A single point was
+inconclusive: (c)-amplitude at its registered depth leaks 0.033 against the 0.048 floor at
+`6/12, p = 1`, so the sign test never fired and the floor never bound. A leakage of amplitude ≈ the
+floor added at random phase raises the magnitude only slightly more than half the time, so the
+per-seed sign carries almost no information at n = 12.
+
+`resp_amp_mod_depth` therefore gained a CLI override and the leakage was **swept**. The arm first
+reports at a leaked line of **0.096, 2.0× the detection floor**, and stays silent below — so the
+effect-size floor did not neuter it, and the arm's sensitivity is now a measured number rather
+than an assertion. Mechanism (a), its actual target, measures 0.0000 in quadrature.
+
+**Two further defects surfaced in the sweep, both fixed.**
+
+*Ties were counted as evidence.* The depth-0 row compares the arm against itself — bit-identical
+records — and read `0/12, p = 0.000488`: highly significant, for two copies of one array. A bare
+`a > b` makes every tie a failure, so 12 ties give k = 0, as extreme as k = 12. `paired_sign_test`
+now discards ties, and that row reads `0/0, p = 1`. **This was not confined to G4:** G3's null
+compares integer detection counts, where ties are ordinary, so it was affected too. Both arms now
+use the tie-aware test; no published number changes, because no pair in the current runs ties.
+
+*`resp_amp_mod_depth` is not monotone above ~1.2.* Leakage rises 0.033 → 0.096 → 0.135 then falls
+to 0.118, because `1 + d·cos(φ)` passes through zero and rectifies. Harmless for the sweep, but the
+row needs a usable-range cap when it is fitted at T1-M1.
 
 ---
 

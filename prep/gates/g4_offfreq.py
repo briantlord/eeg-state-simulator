@@ -142,11 +142,34 @@ def depths(work: Path, seed: int, *, chi_mod: bool, movement: bool, freqs: list[
 def sign_test(k: int, n: int, two_sided: bool = False) -> float:
     """Exact binomial tail against p = 0.5. No scipy dependency for four lines of Pascal."""
     from math import comb
+    if n <= 0:
+        return 1.0
     upper = sum(comb(n, i) for i in range(k, n + 1)) / 2**n
     if not two_sided:
         return upper
     lower = sum(comb(n, i) for i in range(0, k + 1)) / 2**n
     return min(1.0, 2 * min(upper, lower))
+
+
+def paired_sign_test(a, b, two_sided: bool = False) -> tuple[int, int, float]:
+    """Sign test on paired values, DISCARDING TIES. Returns (successes, non-tied pairs, p).
+
+    TIES MUST NOT COUNT AS EVIDENCE, and getting this wrong is not hypothetical -- it produced a
+    p of 0.000488 on two BIT-IDENTICAL records. Comparing with a bare `a > b` makes every tie a
+    failure, so 12 ties read as 0/12, which is exactly as extreme as 12/12 and duly came out
+    "highly significant" for two records that were the same array.
+
+    The textbook sign test drops ties and tests the remainder, which is what this does. With no
+    non-tied pairs there is no evidence in either direction and p = 1.
+    """
+    import numpy as _np
+    av = _np.asarray(a, dtype=float)
+    bv = _np.asarray(b, dtype=float)
+    diff = av - bv
+    nz = diff[diff != 0]
+    n_eff = int(nz.size)
+    k = int((nz > 0).sum())
+    return k, n_eff, sign_test(k, n_eff, two_sided=two_sided)
 
 
 def measure(seeds: list[int], out_root: Path) -> dict[str, Any]:
