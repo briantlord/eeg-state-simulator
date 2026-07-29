@@ -59,6 +59,16 @@ const STEPS = [
     args: ['-m', 'pytest', 'prep/', '-q'],
     skipIf: () => (PY ? null : 'no .venv found — run: python -m venv .venv'),
   },
+  {
+    name: 'gate runner (fast tier)',
+    why: 'the gates themselves, with V/C/U printing and matched nulls',
+    cmd: PY,
+    // --allow-partial while the gate set is being written: the ledger declares seven arms and
+    // only G2 is implemented. REMOVE THIS FLAG once the ledger is fully implemented, or the
+    // runner will stop noticing that a gate has gone missing.
+    args: ['-m', 'prep.runner', '--tier', 'fast', '--seeds', '5', '--allow-partial'],
+    skipIf: () => (PY ? null : 'no .venv found — run: python -m venv .venv'),
+  },
 ];
 
 let failed = 0;
