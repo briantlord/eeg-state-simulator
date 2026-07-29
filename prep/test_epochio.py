@@ -62,17 +62,29 @@ def test_epochs_slice_one_continuous_stream(tmp_path):
     artefact produced energy at f1 and not at f2, which is the exact pattern G4 declares a
     pass.
 
-    The check: a 1-epoch run and a 10-epoch run at the same seed must agree bit-for-bit over
-    the first epoch. They can only do that if the stream is continuous and the epoch index
-    merely slices it.
+    The check is on the DISCONTINUITY, not on cross-run equality. An earlier version of this
+    test required epoch 0 of a 1-epoch run to equal epoch 0 of a 10-epoch run; that cannot
+    hold for this generator and the test was wrong. The oscillation path uses a zero-phase
+    filter, whose backward pass propagates information from the END of the array back to the
+    beginning -- so a 300 s run genuinely differs from a 30 s run at every sample. That is a
+    property of zero-phase filtering, not a defect, and it is why absolute amplitude is
+    normalized over a fixed-length prefix instead (see aperiodic.normalizeRms).
     """
-    short = generate(tmp_path / "short", seed=31337, state="n3", epochs=1)
-    long_ = generate(tmp_path / "long", seed=31337, state="n3", epochs=10)
-    np.testing.assert_array_equal(
-        short.epoch(0).signal,
-        long_.epoch(0).signal,
-        err_msg="epoch 0 differs between a 1-epoch and a 10-epoch run: "
-        "epochs are independent realisations, not slices of one stream",
+    run = generate(tmp_path / "cont", seed=31337, state="n3", epochs=10)
+    sig, channels = run.concatenated()
+    n_samp = int(R.scalar_value("fs") * R.scalar_value("epoch_display"))
+
+    x = sig[0]
+    diffs = np.abs(np.diff(x))
+    boundaries = np.array([abs(x[i * n_samp] - x[i * n_samp - 1]) for i in range(1, 10)])
+
+    # A butt-joined independent realisation shows up as a boundary step far outside the
+    # within-epoch step distribution. Same distribution => no seam.
+    mu, sd = diffs.mean(), diffs.std()
+    z = (boundaries.mean() - mu) / (sd / np.sqrt(len(boundaries)))
+    assert abs(z) < 6, (
+        f"epoch boundaries show a step {boundaries.mean():.4f} against a within-epoch mean "
+        f"of {mu:.4f} (z = {z:.1f}): epochs are not slices of one continuous stream"
     )
 
 

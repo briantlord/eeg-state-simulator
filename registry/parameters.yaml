@@ -346,7 +346,7 @@ params:
 
   alpha_amp:
     value: {kind: interval, lo: 20, hi: 50, meaning: uncertainty}
-    units: uV
+    units: uV_pp
     standing: invented
     source: {kind: none, rationale: "textbook range, not a measurement under a known pipeline"}
     states: [wake_ec]
@@ -372,7 +372,7 @@ params:
 
   beta_amp:
     value: {kind: interval, lo: 5, hi: 15, meaning: uncertainty}
-    units: uV
+    units: uV_pp
     standing: invented
     source: {kind: none, rationale: "textbook range"}
     states: [wake_eo]
@@ -389,7 +389,7 @@ params:
 
   theta_amp:
     value: {kind: interval, lo: 15, hi: 40, meaning: uncertainty}
-    units: uV
+    units: uV_pp
     standing: invented
     source: {kind: none, rationale: "textbook range"}
     states: [n2, rem]
@@ -439,12 +439,47 @@ params:
 
   so_amp:
     value: {kind: interval, lo: 100, hi: 200, meaning: uncertainty}
-    units: uV
+    units: uV_pp
     standing: invented
     source: {kind: none, rationale: "uncited"}
     states: [n3]
     section: "4. Oscillations"
     milestone: T1-M1
+
+  background_rms_uv:
+    value: {kind: interval, lo: 15, hi: 25, meaning: uncertainty}
+    units: uV
+    standing: invented
+    source: {kind: none, rationale: "broadband RMS of the aperiodic background"}
+    states: all
+    section: "4. Oscillations"
+    milestone: T1-M1
+    note: >-
+      Added on measurement. It had been a bare literal (20) inside compose.ts — exactly the
+      hidden constant the acceptance check exists to forbid, in the file that sets the
+      denominator of every SNR in the project. It is also the scale `snr_nominal` is solved
+      against, so it belongs beside the amplitudes rather than in code.
+      NOTE this row is in RMS while every oscillation amplitude is peak-to-peak; the
+      conversion is amp_pp_to_rms.
+
+  amp_pp_to_rms:
+    value: {kind: scalar, v: 2.828}
+    units: null
+    standing: invented
+    source: {kind: none, rationale: "peak-to-peak to RMS for a quasi-sinusoidal rhythm: 2*sqrt(2)"}
+    states: all
+    section: "4. Oscillations"
+    milestone: T1-M1
+    note: >-
+      Added on measurement, and the measurement is worth recording. Feeding the textbook
+      oscillation ranges to the generator AS RMS gave wake_ec an alpha source at 35 uV RMS
+      against a 20 uV background — 1.75x the entire broadband signal — and G1a's recovered chi
+      was +1.22 off the injected value, against -0.03 to +0.11 for the states with no strong
+      oscillation. The generator was correct; the number handed to it was not.
+      Textbook figures for a visible rhythm are peak-to-peak. 2*sqrt(2) is exact for a
+      sinusoid; narrowband filtered noise has a higher crest factor, so this OVERSTATES the
+      RMS somewhat and is marked invented rather than derived. T1-M1 must fit amplitude
+      distributions directly and retire this conversion instead of refining it.
 
   filter_order:
     value: {kind: scalar, v: 4}
@@ -465,6 +500,30 @@ params:
   topo_sigma_spindle_fast:  {value: {kind: pending}, provisional: {v: 0.30, basis: "hand-tuned; central-parietal centre", expires_at_milestone: T1-M1, constrained_by: "must not be derived from topo_expect_*"}, units: normalized_10_20, standing: invented, source: {kind: none, rationale: ""}, states: [n2], section: "5. Topography and geometry", milestone: T1-M1}
   topo_sigma_spindle_slow:  {value: {kind: pending}, provisional: {v: 0.30, basis: "hand-tuned; frontal centre", expires_at_milestone: T1-M1, constrained_by: "must not be derived from topo_expect_*"}, units: normalized_10_20, standing: invented, source: {kind: none, rationale: ""}, states: [n2], section: "5. Topography and geometry", milestone: T1-M1}
   topo_sigma_kc:            {value: {kind: pending}, provisional: {v: 0.35, basis: "hand-tuned; frontal centre", expires_at_milestone: T1-M1, constrained_by: "must not be derived from topo_expect_*"}, units: normalized_10_20, standing: invented, source: {kind: none, rationale: ""}, states: [n2], section: "5. Topography and geometry", milestone: T1-M1}
+
+  # Gaussian centres on the projected 10-20 coordinates, in the same unit-circle frame as
+  # data/montage_10_20.json (+x right, +y anterior). Registered rather than hard-coded in the
+  # projection-file generator, because a number in a tool is still a number the acceptance
+  # check must authorize.
+  #
+  # These are the file's TIER 0 CONTENTS, not its schema. Seam 3's upgrade path replaces the
+  # contents with eigenmode columns or a SEREEGA lead field and never touches the loader.
+  # They must NOT be derived from topo_expect_*, which is the independent expectation G6
+  # tests the resulting file against.
+  topo_centre_alpha_x:         {value: {kind: scalar, v: 0.0},   units: normalized_10_20, standing: invented, source: {kind: none, rationale: "posterior centre"}, states: [wake_ec], section: "5. Topography and geometry", milestone: T1-M1}
+  topo_centre_alpha_y:         {value: {kind: scalar, v: -0.75}, units: normalized_10_20, standing: invented, source: {kind: none, rationale: "posterior centre"}, states: [wake_ec], section: "5. Topography and geometry", milestone: T1-M1}
+  topo_centre_beta_x:          {value: {kind: scalar, v: 0.0},   units: normalized_10_20, standing: invented, source: {kind: none, rationale: "frontocentral centre"}, states: [wake_eo], section: "5. Topography and geometry", milestone: T1-M1}
+  topo_centre_beta_y:          {value: {kind: scalar, v: 0.30},  units: normalized_10_20, standing: invented, source: {kind: none, rationale: "frontocentral centre"}, states: [wake_eo], section: "5. Topography and geometry", milestone: T1-M1}
+  topo_centre_theta_x:         {value: {kind: scalar, v: 0.0},   units: normalized_10_20, standing: invented, source: {kind: none, rationale: "central/frontal centre"}, states: [n2, rem], section: "5. Topography and geometry", milestone: T1-M1}
+  topo_centre_theta_y:         {value: {kind: scalar, v: 0.25},  units: normalized_10_20, standing: invented, source: {kind: none, rationale: "central/frontal centre"}, states: [n2, rem], section: "5. Topography and geometry", milestone: T1-M1}
+  topo_centre_delta_x:         {value: {kind: scalar, v: 0.0},   units: normalized_10_20, standing: invented, source: {kind: none, rationale: "frontal centre"}, states: [n3], section: "5. Topography and geometry", milestone: T1-M1}
+  topo_centre_delta_y:         {value: {kind: scalar, v: 0.50},  units: normalized_10_20, standing: invented, source: {kind: none, rationale: "frontal centre"}, states: [n3], section: "5. Topography and geometry", milestone: T1-M1}
+  topo_centre_spindle_fast_x:  {value: {kind: scalar, v: 0.0},   units: normalized_10_20, standing: invented, source: {kind: none, rationale: "central-parietal centre"}, states: [n2], section: "5. Topography and geometry", milestone: T1-M1}
+  topo_centre_spindle_fast_y:  {value: {kind: scalar, v: -0.15}, units: normalized_10_20, standing: invented, source: {kind: none, rationale: "central-parietal centre"}, states: [n2], section: "5. Topography and geometry", milestone: T1-M1}
+  topo_centre_spindle_slow_x:  {value: {kind: scalar, v: 0.0},   units: normalized_10_20, standing: invented, source: {kind: none, rationale: "frontal centre"}, states: [n2], section: "5. Topography and geometry", milestone: T1-M1}
+  topo_centre_spindle_slow_y:  {value: {kind: scalar, v: 0.50},  units: normalized_10_20, standing: invented, source: {kind: none, rationale: "frontal centre"}, states: [n2], section: "5. Topography and geometry", milestone: T1-M1}
+  topo_centre_kc_x:            {value: {kind: scalar, v: 0.0},   units: normalized_10_20, standing: invented, source: {kind: none, rationale: "frontal centre"}, states: [n2], section: "5. Topography and geometry", milestone: T1-M1}
+  topo_centre_kc_y:            {value: {kind: scalar, v: 0.50},  units: normalized_10_20, standing: invented, source: {kind: none, rationale: "frontal centre"}, states: [n2], section: "5. Topography and geometry", milestone: T1-M1}
 
   ap_axis_span:
     value: {kind: scalar, v: 180}
@@ -542,7 +601,7 @@ params:
     states: [n2]
     section: "6. Graphoelements"
 
-  spindle_amp:    {value: {kind: interval, lo: 20, hi: 60, meaning: uncertainty}, units: uV,   standing: invented, source: {kind: none, rationale: "textbook range"}, states: [n2], section: "6. Graphoelements", milestone: T1-M1}
+  spindle_amp:    {value: {kind: interval, lo: 20, hi: 60, meaning: uncertainty}, units: uV_pp, standing: invented, source: {kind: none, rationale: "textbook range"}, states: [n2], section: "6. Graphoelements", milestone: T1-M1}
   spindle_rate:   {value: {kind: interval, lo: 2,  hi: 5,  meaning: uncertainty}, units: "1/min", standing: invented, source: {kind: none, rationale: "uncited"}, states: [n2, n3], section: "6. Graphoelements", milestone: T1-M1, note: "States extended to N3 on import: DECISIONS/Build-Plan 4.1 parameterize SO-spindle coupling for N3 (so_spindle_pref_phase, so_spindle_strength) but spindle_rate existed only for N2, leaving the N3 spindle generator with no rate."}
   spindle_fast_freq: {value: {kind: interval, lo: 13, hi: 15, meaning: uncertainty}, units: Hz, standing: invented, source: {kind: none, rationale: "uncited; central-parietal"}, states: [n2], section: "6. Graphoelements", milestone: T1-M1}
   spindle_slow_freq: {value: {kind: interval, lo: 11, hi: 13, meaning: uncertainty}, units: Hz, standing: invented, source: {kind: none, rationale: "uncited; frontal"}, states: [n2], section: "6. Graphoelements", milestone: T1-M1}

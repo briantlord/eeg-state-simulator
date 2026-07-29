@@ -904,7 +904,7 @@
         "hi": 50,
         "meaning": "uncertainty"
       },
-      "units": "uV",
+      "units": "uV_pp",
       "standing": "invented",
       "source": {
         "kind": "none",
@@ -960,7 +960,7 @@
         "hi": 15,
         "meaning": "uncertainty"
       },
-      "units": "uV",
+      "units": "uV_pp",
       "standing": "invented",
       "source": {
         "kind": "none",
@@ -998,7 +998,7 @@
         "hi": 40,
         "meaning": "uncertainty"
       },
-      "units": "uV",
+      "units": "uV_pp",
       "standing": "invented",
       "source": {
         "kind": "none",
@@ -1075,7 +1075,7 @@
         "hi": 200,
         "meaning": "uncertainty"
       },
-      "units": "uV",
+      "units": "uV_pp",
       "standing": "invented",
       "source": {
         "kind": "none",
@@ -1086,6 +1086,40 @@
       ],
       "section": "4. Oscillations",
       "milestone": "T1-M1"
+    },
+    "background_rms_uv": {
+      "value": {
+        "kind": "interval",
+        "lo": 15,
+        "hi": 25,
+        "meaning": "uncertainty"
+      },
+      "units": "uV",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "broadband RMS of the aperiodic background"
+      },
+      "states": "all",
+      "section": "4. Oscillations",
+      "milestone": "T1-M1",
+      "note": "Added on measurement. It had been a bare literal (20) inside compose.ts — exactly the hidden constant the acceptance check exists to forbid, in the file that sets the denominator of every SNR in the project. It is also the scale `snr_nominal` is solved against, so it belongs beside the amplitudes rather than in code. NOTE this row is in RMS while every oscillation amplitude is peak-to-peak; the conversion is amp_pp_to_rms."
+    },
+    "amp_pp_to_rms": {
+      "value": {
+        "kind": "scalar",
+        "v": 2.828
+      },
+      "units": null,
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "peak-to-peak to RMS for a quasi-sinusoidal rhythm: 2*sqrt(2)"
+      },
+      "states": "all",
+      "section": "4. Oscillations",
+      "milestone": "T1-M1",
+      "note": "Added on measurement, and the measurement is worth recording. Feeding the textbook oscillation ranges to the generator AS RMS gave wake_ec an alpha source at 35 uV RMS against a 20 uV background — 1.75x the entire broadband signal — and G1a's recovered chi was +1.22 off the injected value, against -0.03 to +0.11 for the states with no strong oscillation. The generator was correct; the number handed to it was not. Textbook figures for a visible rhythm are peak-to-peak. 2*sqrt(2) is exact for a sinusoid; narrowband filtered noise has a higher crest factor, so this OVERSTATES the RMS somewhat and is marked invented rather than derived. T1-M1 must fit amplitude distributions directly and retire this conversion instead of refining it."
     },
     "filter_order": {
       "value": {
@@ -1249,6 +1283,246 @@
       "source": {
         "kind": "none",
         "rationale": ""
+      },
+      "states": [
+        "n2"
+      ],
+      "section": "5. Topography and geometry",
+      "milestone": "T1-M1"
+    },
+    "topo_centre_alpha_x": {
+      "value": {
+        "kind": "scalar",
+        "v": 0
+      },
+      "units": "normalized_10_20",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "posterior centre"
+      },
+      "states": [
+        "wake_ec"
+      ],
+      "section": "5. Topography and geometry",
+      "milestone": "T1-M1"
+    },
+    "topo_centre_alpha_y": {
+      "value": {
+        "kind": "scalar",
+        "v": -0.75
+      },
+      "units": "normalized_10_20",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "posterior centre"
+      },
+      "states": [
+        "wake_ec"
+      ],
+      "section": "5. Topography and geometry",
+      "milestone": "T1-M1"
+    },
+    "topo_centre_beta_x": {
+      "value": {
+        "kind": "scalar",
+        "v": 0
+      },
+      "units": "normalized_10_20",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "frontocentral centre"
+      },
+      "states": [
+        "wake_eo"
+      ],
+      "section": "5. Topography and geometry",
+      "milestone": "T1-M1"
+    },
+    "topo_centre_beta_y": {
+      "value": {
+        "kind": "scalar",
+        "v": 0.3
+      },
+      "units": "normalized_10_20",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "frontocentral centre"
+      },
+      "states": [
+        "wake_eo"
+      ],
+      "section": "5. Topography and geometry",
+      "milestone": "T1-M1"
+    },
+    "topo_centre_theta_x": {
+      "value": {
+        "kind": "scalar",
+        "v": 0
+      },
+      "units": "normalized_10_20",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "central/frontal centre"
+      },
+      "states": [
+        "n2",
+        "rem"
+      ],
+      "section": "5. Topography and geometry",
+      "milestone": "T1-M1"
+    },
+    "topo_centre_theta_y": {
+      "value": {
+        "kind": "scalar",
+        "v": 0.25
+      },
+      "units": "normalized_10_20",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "central/frontal centre"
+      },
+      "states": [
+        "n2",
+        "rem"
+      ],
+      "section": "5. Topography and geometry",
+      "milestone": "T1-M1"
+    },
+    "topo_centre_delta_x": {
+      "value": {
+        "kind": "scalar",
+        "v": 0
+      },
+      "units": "normalized_10_20",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "frontal centre"
+      },
+      "states": [
+        "n3"
+      ],
+      "section": "5. Topography and geometry",
+      "milestone": "T1-M1"
+    },
+    "topo_centre_delta_y": {
+      "value": {
+        "kind": "scalar",
+        "v": 0.5
+      },
+      "units": "normalized_10_20",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "frontal centre"
+      },
+      "states": [
+        "n3"
+      ],
+      "section": "5. Topography and geometry",
+      "milestone": "T1-M1"
+    },
+    "topo_centre_spindle_fast_x": {
+      "value": {
+        "kind": "scalar",
+        "v": 0
+      },
+      "units": "normalized_10_20",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "central-parietal centre"
+      },
+      "states": [
+        "n2"
+      ],
+      "section": "5. Topography and geometry",
+      "milestone": "T1-M1"
+    },
+    "topo_centre_spindle_fast_y": {
+      "value": {
+        "kind": "scalar",
+        "v": -0.15
+      },
+      "units": "normalized_10_20",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "central-parietal centre"
+      },
+      "states": [
+        "n2"
+      ],
+      "section": "5. Topography and geometry",
+      "milestone": "T1-M1"
+    },
+    "topo_centre_spindle_slow_x": {
+      "value": {
+        "kind": "scalar",
+        "v": 0
+      },
+      "units": "normalized_10_20",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "frontal centre"
+      },
+      "states": [
+        "n2"
+      ],
+      "section": "5. Topography and geometry",
+      "milestone": "T1-M1"
+    },
+    "topo_centre_spindle_slow_y": {
+      "value": {
+        "kind": "scalar",
+        "v": 0.5
+      },
+      "units": "normalized_10_20",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "frontal centre"
+      },
+      "states": [
+        "n2"
+      ],
+      "section": "5. Topography and geometry",
+      "milestone": "T1-M1"
+    },
+    "topo_centre_kc_x": {
+      "value": {
+        "kind": "scalar",
+        "v": 0
+      },
+      "units": "normalized_10_20",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "frontal centre"
+      },
+      "states": [
+        "n2"
+      ],
+      "section": "5. Topography and geometry",
+      "milestone": "T1-M1"
+    },
+    "topo_centre_kc_y": {
+      "value": {
+        "kind": "scalar",
+        "v": 0.5
+      },
+      "units": "normalized_10_20",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "frontal centre"
       },
       "states": [
         "n2"
@@ -1422,7 +1696,7 @@
         "hi": 60,
         "meaning": "uncertainty"
       },
-      "units": "uV",
+      "units": "uV_pp",
       "standing": "invented",
       "source": {
         "kind": "none",

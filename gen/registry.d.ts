@@ -9,10 +9,12 @@ export type ParamKey =
   | 'alpha_mod_depth'
   | 'alpha_peak'
   | 'alpha_rem_shift'
+  | 'amp_pp_to_rms'
   | 'analysis_update'
   | 'analysis_window'
   | 'ap_axis_span'
   | 'aperiodic_model'
+  | 'background_rms_uv'
   | 'beta_amp'
   | 'beta_band'
   | 'blink_amp'
@@ -131,6 +133,20 @@ export type ParamKey =
   | 'tilt_mod_settling_ratio'
   | 'tilt_n_poles'
   | 'tilt_pole_spacing'
+  | 'topo_centre_alpha_x'
+  | 'topo_centre_alpha_y'
+  | 'topo_centre_beta_x'
+  | 'topo_centre_beta_y'
+  | 'topo_centre_delta_x'
+  | 'topo_centre_delta_y'
+  | 'topo_centre_kc_x'
+  | 'topo_centre_kc_y'
+  | 'topo_centre_spindle_fast_x'
+  | 'topo_centre_spindle_fast_y'
+  | 'topo_centre_spindle_slow_x'
+  | 'topo_centre_spindle_slow_y'
+  | 'topo_centre_theta_x'
+  | 'topo_centre_theta_y'
   | 'topo_expect_alpha'
   | 'topo_expect_kc'
   | 'topo_expect_spindle_fast'
@@ -154,10 +170,12 @@ export interface ParamKindMap {
   'alpha_mod_depth': 'pending';
   'alpha_peak': 'scalar';
   'alpha_rem_shift': 'interval';
+  'amp_pp_to_rms': 'scalar';
   'analysis_update': 'scalar';
   'analysis_window': 'scalar';
   'ap_axis_span': 'scalar';
   'aperiodic_model': 'procedure';
+  'background_rms_uv': 'interval';
   'beta_amp': 'interval';
   'beta_band': 'interval';
   'blink_amp': 'interval';
@@ -276,6 +294,20 @@ export interface ParamKindMap {
   'tilt_mod_settling_ratio': 'absent';
   'tilt_n_poles': 'scalar';
   'tilt_pole_spacing': 'procedure';
+  'topo_centre_alpha_x': 'scalar';
+  'topo_centre_alpha_y': 'scalar';
+  'topo_centre_beta_x': 'scalar';
+  'topo_centre_beta_y': 'scalar';
+  'topo_centre_delta_x': 'scalar';
+  'topo_centre_delta_y': 'scalar';
+  'topo_centre_kc_x': 'scalar';
+  'topo_centre_kc_y': 'scalar';
+  'topo_centre_spindle_fast_x': 'scalar';
+  'topo_centre_spindle_fast_y': 'scalar';
+  'topo_centre_spindle_slow_x': 'scalar';
+  'topo_centre_spindle_slow_y': 'scalar';
+  'topo_centre_theta_x': 'scalar';
+  'topo_centre_theta_y': 'scalar';
   'topo_expect_alpha': 'electrodes';
   'topo_expect_kc': 'electrodes';
   'topo_expect_spindle_fast': 'electrodes';

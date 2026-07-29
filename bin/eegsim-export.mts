@@ -5,19 +5,18 @@
  *   node --experimental-strip-types bin/eegsim-export.mts \
  *        --seed 20260728 --state n3 --epochs 10 --out prep/out/run_n3
  *
- * FOUNDATION STATUS: the synthesis function is a stub. It draws white noise from the seeded
- * substream so the directory contract, the manifest, the sidecar and G2's determinism check
- * are all exercisable now. WP-D replaces `synthesizeChannel` with aperiodic-with-knee FFT
- * synthesis behind this same signature — a prefix, not a placeholder.
+ * Signal model: aperiodic-with-knee background plus the state's oscillations, projected to
+ * channels through data/projection_10_20.json, plus independent sensor noise. See
+ * src/core/generators/compose.ts.
  *
- *   TODO(WP-D): replace synthesizeChannel with the aperiodic + oscillation generators.
- *   TODO(WP-D): replace the flat projection with data/projection_10_20.json.
+ *   TODO(WP-E): graphoelements — spindles, K-complexes, slow oscillations with AP travel.
+ *   TODO(WP-F): respiration, the tilt filter, and chi(t) modulation.
+ *   TODO(WP-J): blink, EMG and line-noise artifacts.
  */
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Rng } from '../src/core/rng/xoshiro128pp.ts';
 import { FixedState, STATE_IDS, isStateId } from '../src/core/types/state.ts';
 import type { StateId } from '../src/core/types/state.ts';
 import { makeEventList } from '../src/core/types/event.ts';
@@ -30,17 +29,13 @@ import {
   type EpochSidecar,
   type InjectedTruth,
 } from '../src/io/epoch_dir.ts';
-import { scalarValue, electrodeSet, provisionalValue, STATES } from '../src/core/registry.ts';
+import { scalarValue, electrodeSet, STATES } from '../src/core/registry.ts';
+import { composeState } from '../src/core/generators/compose.ts';
+import { CHANNELS, weightsFor } from '../src/core/generators/projection.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
-// The 19-channel 10-20 montage. TODO(WP-D): move to data/montage_10_20.json.
-const MONTAGE = [
-  'Fp1', 'Fp2', 'F7', 'F3', 'Fz', 'F4', 'F8',
-  'T3', 'C3', 'Cz', 'C4', 'T4',
-  'T5', 'P3', 'Pz', 'P4', 'T6',
-  'O1', 'O2',
-] as const;
+const MONTAGE = CHANNELS;
 
 function parseArgs(argv: string[]): Record<string, string> {
   const out: Record<string, string> = {};
@@ -60,25 +55,6 @@ function parseArgs(argv: string[]): Record<string, string> {
   return out;
 }
 
-/**
- * STUB. White noise at unit variance, scaled to a plausible amplitude.
- * WP-D replaces the body; the signature is the seam.
- */
-function synthesizeChannel(rng: Rng, n: number, amplitudeUv: number): Float64Array {
-  const out = new Float64Array(n);
-  for (let i = 0; i < n; i++) out[i] = rng.normal() * amplitudeUv;
-  return out;
-}
-
-function chiForState(state: StateId): number {
-  const key = `chi_${state}` as Parameters<typeof provisionalValue>[0];
-  return provisionalValue(key);
-}
-
-function kForState(state: StateId): number {
-  const key = `k_${state}` as Parameters<typeof provisionalValue>[0];
-  return provisionalValue(key);
-}
 
 function main(): void {
   const args = parseArgs(process.argv.slice(2));
@@ -121,36 +97,36 @@ function main(): void {
     stateSourceKind: state.kind,
   });
 
+  // ONE CONTINUOUS RUN, sliced into epochs — not one independent realisation per epoch.
+  //
+  // Per-epoch streams gave the record `prep/epochio.concatenated()` stitches for G4 a hard
+  // discontinuity every 30 s, depositing a comb at k/epoch_display = k x 0.03333 Hz. `g4_f1`
+  // = 0.10 Hz is harmonic k = 3 EXACTLY while `g4_f2` = 0.25 Hz is k = 7.5 and lands on
+  // nothing — so a pure export artefact put energy at f1 and not at f2, which is precisely
+  // the pattern G4 declares a pass, on the gate the Build Plan calls the most important thing
+  // in Tier 0.
+  const totalSamples = nSamp * nEpochs;
+  const composed = composeState(seed, stateArg, totalSamples, fs);
+
   const truth: InjectedTruth = {
-    chi: chiForState(stateArg),
-    knee: kForState(stateArg),
+    chi: composed.truth.chi,
+    knee: composed.truth.knee,
     snrDb: 0,
     chiModDepth: 0,
     chiModPhi0: 0,
     respFreq: 0,
     independentChiModFreq: null,
-    // TODO(WP-D): real per-generator weights from data/projection_10_20.json.
-    projectionWeights: { stub_white_noise: MONTAGE.map(() => 1) },
+    projectionWeights: Object.fromEntries(
+      ['background', ...composed.truth.oscillations.map((o) => o.generator)].map((g) => [
+        g,
+        [...weightsFor(g as Parameters<typeof weightsFor>[0])],
+      ]),
+    ),
     respMechanisms: { movementArtifact: false, rmbo: false, chiModulation: false },
   };
 
-  // ONE CONTINUOUS RUN, sliced into epochs — not one independent realisation per epoch.
-  //
-  // The earlier `substream(seed, ...${ch}/epoch${e})` gave every epoch its own stream, so the
-  // record `prep/epochio.concatenated()` stitches for G4 had a hard discontinuity every 30 s.
-  // That deposits a comb at k/epoch_display = k x 0.03333 Hz — and `g4_f1` = 0.10 Hz is
-  // harmonic k = 3 EXACTLY, while `g4_f2` = 0.25 Hz is k = 7.5 and lands on nothing. So a pure
-  // export artefact put energy at f1 and not at f2: precisely the pattern G4 declares a pass,
-  // on the gate the Build Plan calls the most important thing in Tier 0.
-  //
-  // One substream per (generator, channel) for the whole run; the epoch index only slices it.
-  const totalSamples = nSamp * nEpochs;
-  const continuous = MONTAGE.map((ch) =>
-    synthesizeChannel(Rng.substream(seed, `stub_white_noise/${ch}`), totalSamples, 10),
-  );
-
   for (let e = 0; e < nEpochs; e++) {
-    const signal = continuous.map((full) => full.subarray(e * nSamp, (e + 1) * nSamp));
+    const signal = composed.channels.map((full) => full.subarray(e * nSamp, (e + 1) * nSamp));
 
     const sidecar: EpochSidecar = {
       schemaVersion: defaultManifestFields().schemaVersion,
@@ -177,7 +153,13 @@ function main(): void {
       `  state=${stateArg} seed=${seed} fs=${fs} channels=${MONTAGE.length} ` +
       `samples/epoch=${nSamp}\n` +
       `  registry=${registryDigest} states-known=${STATES.length}\n` +
-      `  NOTE: signal is the WP-D stub (white noise), not aperiodic-with-knee.`,
+      `  chi=${composed.truth.chi} knee=${composed.truth.knee.toFixed(3)} ` +
+      `(${Math.pow(composed.truth.knee, 1 / composed.truth.chi).toFixed(1)} Hz)\n` +
+      `  sources: background@${composed.truth.backgroundRmsUv}uV` +
+      composed.truth.oscillations
+        .map((o) => ` + ${o.generator}@${o.rmsUv}uV(${o.band[0]}-${o.band[1]}Hz)`)
+        .join('') +
+      ` + sensor@${composed.truth.sensorNoiseRmsUv}uV`,
   );
 }
 

@@ -1,0 +1,30 @@
+{
+  "schema": "montage/1",
+  "system": "10-20 (Jasper 1958)",
+  "note": "Coordinates are the conventional 2-D scalp projection, unit circle, +x right, +y anterior. The AP axis (y) drives the travelling-slow-wave delay in Build Plan 3.5.",
+  "channels": [
+    { "label": "Fp1", "x": -0.31, "y": 0.95 },
+    { "label": "Fp2", "x": 0.31, "y": 0.95 },
+    { "label": "F7", "x": -0.81, "y": 0.59 },
+    { "label": "F3", "x": -0.45, "y": 0.51 },
+    { "label": "Fz", "x": 0.0, "y": 0.5 },
+    { "label": "F4", "x": 0.45, "y": 0.51 },
+    { "label": "F8", "x": 0.81, "y": 0.59 },
+    { "label": "T3", "x": -1.0, "y": 0.0 },
+    { "label": "C3", "x": -0.5, "y": 0.0 },
+    { "label": "Cz", "x": 0.0, "y": 0.0 },
+    { "label": "C4", "x": 0.5, "y": 0.0 },
+    { "label": "T4", "x": 1.0, "y": 0.0 },
+    { "label": "T5", "x": -0.81, "y": -0.59 },
+    { "label": "P3", "x": -0.45, "y": -0.51 },
+    { "label": "Pz", "x": 0.0, "y": -0.5 },
+    { "label": "P4", "x": 0.45, "y": -0.51 },
+    { "label": "T6", "x": 0.81, "y": -0.59 },
+    { "label": "O1", "x": -0.31, "y": -0.95 },
+    { "label": "O2", "x": 0.31, "y": -0.95 }
+  ],
+  "reference": [
+    { "label": "A1", "x": -1.12, "y": 0.08 },
+    { "label": "A2", "x": 1.12, "y": 0.08 }
+  ]
+}
