@@ -6,17 +6,19 @@
  * "A pure power law is wrong here and the error is not small." `k` encodes the ~20 Hz knee
  * only; the ~45 Hz knee is documented and unmodelled at every tier (DECISIONS D3).
  *
- * Synthesis is FFT per block with an EQUAL-POWER cosine crossfade in the overlap. Two traps
- * this navigates, both listed in the risk register:
+ * TWO SYNTHESIS PATHS, and the default is the single-FFT one.
  *
- *   Streaming discontinuity. Independent blocks butt-joined leave a step at every boundary,
- *   which deposits a comb at k/T_block in the spectrum. The crossfade removes it; the test
- *   checks the PSD across a boundary, which is the mitigation the register names.
+ * The Build Plan specifies "FFT synthesis in overlapping blocks with cosine crossfade", and
+ * that path is kept for the live streaming buffer. But blocks are INDEPENDENT realizations,
+ * so overlap-add leaves a residue at the block rate no matter how good the crossfade: an
+ * equal-power sin/cos fade keeps the variance flat through the join, and the local SPECTRUM
+ * still wobbles. Measured, that residue landed exactly on a frequency G4 depends on. Whenever
+ * the run length is known — every export, every gate — one transform is used instead and
+ * there is no block rate to leak at.
  *
- *   Amplitude dip at the crossfade. Blocks are INDEPENDENT, so a linear w / (1-w) fade gives
- *   variance w^2 + (1-w)^2, which dips to 0.5 at the midpoint -- a periodic amplitude ripple
- *   at the block rate, which is a subtler version of the same artefact. sin/cos ramps give
- *   sin^2 + cos^2 = 1 exactly, so the variance is flat through the join.
+ * The crossfade in the block path is equal-power for a reason worth keeping: a linear
+ * w/(1-w) fade over independent blocks gives variance w^2 + (1-w)^2, dipping to 0.5 at the
+ * midpoint, i.e. a periodic amplitude ripple at the block rate. sin/cos gives exactly 1.
  */
 import { fft } from '../dsp/fft.ts';
 import type { Rng } from '../rng/xoshiro128pp.ts';
@@ -79,7 +81,27 @@ export function synthesizeAperiodic(
   fs = scalarValue('fs'),
   block = scalarValue('synth_block'),
   overlap = scalarValue('synth_overlap'),
+  /** Force the block path. Only the live streaming buffer should need this. */
+  forceBlocks = false,
 ): Float64Array {
+  // SINGLE-FFT PATH — the default whenever the run length is known.
+  //
+  // Overlap-added blocks leave a residue at the BLOCK RATE even with an equal-power
+  // crossfade, because consecutive blocks are independent realizations: the variance is flat
+  // through the join but the local spectrum still wobbles. With synth_block 4096 and
+  // synth_overlap 1024 the hop is 3072 samples = 12 s, depositing a comb at k/12 Hz.
+  //
+  // g4_f2 = 0.25 Hz is EXACTLY harmonic 3 of that comb. Measured, the recovered chi(t) carried
+  // a spurious 0.25 Hz line nine times larger than the 0.10 Hz baseline with no modulation
+  // injected at all — on the arm of G4 that must show NO coupling. g4_f1 = 0.10 Hz is not a
+  // harmonic (0.10 x 12 = 1.2) and was clean, which is exactly how the defect stayed hidden.
+  //
+  // Synthesizing the whole run in one transform has no block rate to leak at.
+  if (!forceBlocks) {
+    const n2 = nextPow2(nSamples);
+    return normalizeRms(synthBlock(rng, n2, fs, params).subarray(0, nSamples), params.rmsUv);
+  }
+
   if (overlap * 2 > block) throw new Error('aperiodic: overlap must not exceed half the block');
   const hop = block - overlap;
   const out = new Float64Array(nSamples);
@@ -143,6 +165,13 @@ export function normalizeRms(
   const g = targetRms / rms;
   for (let i = 0; i < x.length; i++) x[i] = x[i]! * g;
   return x;
+}
+
+/** Smallest power of two at least n. */
+function nextPow2(n: number): number {
+  let p = 1;
+  while (p < n) p *= 2;
+  return p;
 }
 
 /** Knee frequency implied by (k, chi): f_knee = k^(1/chi). */

@@ -19,6 +19,8 @@ import {
 } from './oscillations.ts';
 import { CHANNELS, projectInto, type GeneratorId } from './projection.ts';
 import { synthesizeGraphoelements } from './graphoelements.ts';
+import { synthesizeRespiration, chiModulation, phaseRamp } from './respiration.ts';
+import { applyTimeVaryingTilt } from '../filters/tilt.ts';
 import type { GeneratedEvent } from '../types/event.ts';
 
 /** Which oscillations each state carries, and which registry rows describe them. */
@@ -41,11 +43,38 @@ const STATE_OSCILLATIONS: Record<StateId, OscSpec[]> = {
 };
 
 
+/**
+ * Optional overrides. Every field is off or absent by default, so the shipped generator
+ * behaves identically whether or not a caller passes this.
+ */
+export interface ComposeOptions {
+  /** Enable respiration-phase modulation of the aperiodic exponent (Build Plan 5.1c). */
+  readonly chiModulation?: boolean;
+  /** Override chi_mod_depth. */
+  readonly chiModDepth?: number;
+  /** Pin the respiration rate, in breaths per minute. Used by the G4 fixture to fix f2. */
+  readonly respRatePerMin?: number;
+  /**
+   * Drive chi from an INDEPENDENT modulator at this frequency instead of from respiration.
+   *
+   * Exists solely for G4, which must modulate chi at f1 while respiration runs at f2. Build
+   * Plan 5.2 defines chi(t) as driven by respiration, so this capability appears nowhere in
+   * the shipped UI -- it is how the gate separates the injected effect from the confound.
+   */
+  readonly independentChiModFreq?: number;
+  /** Coefficient-update scheme for the tilt filter. See src/core/filters/tilt.ts. */
+  readonly tiltScheme?: 'blockwise' | 'filterbank';
+}
+
 export interface ComposeResult {
   /** [channel][sample], microvolts. */
   readonly channels: Float64Array[];
   /** The event list -- seam 1's primary output. The waveform above is derived from it. */
   readonly events: readonly GeneratedEvent[];
+  /** Respiration belt, an exported channel. */
+  readonly respirationBelt: Float64Array;
+  /** Respiration phase. Ground truth for every coupling measure; NOT derived by Hilbert. */
+  readonly respirationPhase: Float64Array;
   /** Ground truth actually injected, for the epoch sidecar. */
   readonly truth: {
     chi: number;
@@ -53,6 +82,10 @@ export interface ComposeResult {
     backgroundRmsUv: number;
     oscillations: { generator: string; band: [number, number]; rmsUv: number }[];
     sensorNoiseRmsUv: number;
+    chiModDepth: number;
+    chiModPhi0: number;
+    respFreqHz: number;
+    independentChiModFreq: number | null;
   };
 }
 
@@ -88,6 +121,7 @@ export function composeState(
   state: StateId,
   nSamples: number,
   fs = scalarValue('fs'),
+  opts: ComposeOptions = {},
 ): ComposeResult {
   const nCh = CHANNELS.length;
   const out: Float64Array[] = Array.from({ length: nCh }, () => new Float64Array(nSamples));
@@ -96,13 +130,48 @@ export function composeState(
   const chi = provisionalValue(`chi_${state}` as Parameters<typeof provisionalValue>[0]);
   const knee = provisionalValue(`k_${state}` as Parameters<typeof provisionalValue>[0]);
 
+  // Respiration. Generated even when the coupling is off, because the belt is an exported
+  // channel in its own right and G4 needs its phase as ground truth.
+  const resp = synthesizeRespiration(
+    Rng.substream(seed, `respiration/${state}`),
+    nSamples,
+    state,
+    fs,
+    opts.respRatePerMin,
+  );
+
   // Aperiodic background: one shared source, uniform scalp weighting.
-  const background = synthesizeAperiodic(
+  let background = synthesizeAperiodic(
     Rng.substream(seed, `background/${state}`),
     nSamples,
     { chi, k: knee, rmsUv: backgroundRms },
     fs,
   );
+
+  // Respiration-phase modulation of the aperiodic exponent (§5.2 mechanism c) — "the
+  // best-supported scalp-visible effect and the one the filter demo depends on".
+  //
+  // Generated at constant chi and then tilted, rather than by regenerating per sample: the
+  // tilt filter is the mechanism the demonstration is about, and synthesizing chi(t) directly
+  // would produce coupling that no filter could then lose.
+  let chiModDepth = 0;
+  let chiModPhi0 = 0;
+  if (opts.chiModulation) {
+    const independent =
+      opts.independentChiModFreq !== undefined
+        ? phaseRamp(nSamples, opts.independentChiModFreq, fs)
+        : undefined;
+    const chiT = chiModulation(resp.phase, chi, state, opts.chiModDepth, independent);
+    const deltaChi = new Float64Array(nSamples);
+    // The filter applies the DEVIATION from the generated exponent.
+    for (let i = 0; i < nSamples; i++) deltaChi[i] = chi - chiT[i]!;
+    background = applyTimeVaryingTilt(background, deltaChi, fs,
+      opts.tiltScheme ? { scheme: opts.tiltScheme } : {});
+    chiModDepth = opts.chiModDepth ?? provisionalValue('chi_mod_depth');
+    const wakeLike = state === 'wake_eo' || state === 'wake_ec' || state === 'n1';
+    chiModPhi0 = provisionalValue(wakeLike ? 'chi_mod_phi0_wake' : 'chi_mod_phi0_sleep');
+  }
+
   projectInto(out, background, 'background');
 
   const oscTruth: ComposeResult['truth']['oscillations'] = [];
@@ -171,12 +240,18 @@ export function composeState(
   return {
     channels: out,
     events: grapho.events,
+    respirationBelt: resp.belt,
+    respirationPhase: resp.phase,
     truth: {
       chi,
       knee,
       backgroundRmsUv: backgroundRms,
       oscillations: oscTruth,
       sensorNoiseRmsUv: sensorRms,
+      chiModDepth,
+      chiModPhi0,
+      respFreqHz: resp.meanRatePerMin / 60,
+      independentChiModFreq: opts.independentChiModFreq ?? null,
     },
   };
 }

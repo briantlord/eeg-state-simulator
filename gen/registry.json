@@ -2237,6 +2237,22 @@
       "milestone": "T1-M1",
       "note": "Source markdown wrote '1:1.5 - 1:2'. Normalized to a numeric ratio."
     },
+    "resp_pause_fraction": {
+      "value": {
+        "kind": "scalar",
+        "v": 0.15
+      },
+      "units": null,
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "fraction of the breath period spent in inhalation and exhalation pauses"
+      },
+      "states": "all",
+      "section": "7. Respiration and coupling",
+      "milestone": "T1-M1",
+      "note": "NeuroKit2's breathmetrics model interpolates inhalation and exhalation pauses, and the Build Plan says to transcribe it rather than reinvent it. NeuroKit2 is not a dependency here, so this implements the published description instead and the pause fraction is invented. TODO(T1): validate against neurokit2.rsp_simulate directly -- the risk register's mitigation for rebuilding solved generators is \"transcribe, cite, validate against the originals\", and the third step is not done."
+    },
     "resp_period_cv": {
       "value": {
         "kind": "pending"

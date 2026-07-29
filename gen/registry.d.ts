@@ -113,6 +113,7 @@ export type ParamKey =
   | 'osc_carrier_flatten'
   | 'reference_channels'
   | 'resp_ie_ratio'
+  | 'resp_pause_fraction'
   | 'resp_period_cv'
   | 'resp_rate_n2'
   | 'resp_rate_n3'
@@ -289,6 +290,7 @@ export interface ParamKindMap {
   'osc_carrier_flatten': 'scalar';
   'reference_channels': 'electrodes';
   'resp_ie_ratio': 'interval';
+  'resp_pause_fraction': 'scalar';
   'resp_period_cv': 'pending';
   'resp_rate_n2': 'interval';
   'resp_rate_n3': 'interval';

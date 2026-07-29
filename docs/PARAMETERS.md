@@ -232,6 +232,7 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 | `resp_rate_n3` | 12–15 *(uncertainty)* | 1/min | `invented` | uncited; most regular | n3 |
 | `resp_rate_rem` | 10–22 *(uncertainty)* | 1/min | `invented` | irregularity is well established; magnitude uncited | rem |
 | `resp_ie_ratio` | 1.5–2 *(uncertainty)* | — | `invented` | expiration:inspiration duration ratio; uncited | all |
+| `resp_pause_fraction` | 0.15 | — | `invented` | fraction of the breath period spent in inhalation and exhalation pauses | all |
 | `resp_period_cv` | — *(pending T1-M1; runs on 0.08)* | — | `invented` |  | all |
 | `chi_mod_depth` | — *(pending T1-M1; runs on 0.15)* | — | `invented` | Kluger et al. 2023 Fig. 2 reports this but the value has not been read out | all |
 | `chi_mod_phase_wake` | slope decreases in late inspiration, increases in late expiration | rad | `invented` | 2025 respiratory-excitability study, N=23; author not recorded | wake_eo, wake_ec, n1 |
@@ -247,6 +248,8 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 **`resp_rate_rem`.** Source markdown gave the English word 'variable', which is not machine-readable. Widened interval plus resp_period_cv carries the irregularity.
 
 **`resp_ie_ratio`.** Source markdown wrote '1:1.5 - 1:2'. Normalized to a numeric ratio.
+
+**`resp_pause_fraction`.** NeuroKit2's breathmetrics model interpolates inhalation and exhalation pauses, and the Build Plan says to transcribe it rather than reinvent it. NeuroKit2 is not a dependency here, so this implements the published description instead and the pause fraction is invented. TODO(T1): validate against neurokit2.rsp_simulate directly -- the risk register's mitigation for rebuilding solved generators is "transcribe, cite, validate against the originals", and the third step is not done.
 
 **`chi_mod_depth`.** Routed to T1-M1 but the source names a specific figure — reading it out is an afternoon, not 8 days of corpus work. Flagged for early conversion to literature.
 
@@ -393,6 +396,6 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 | `chosen` | 42 |
 | `literature` | 8 |
 | `derived` | 7 |
-| `invented` | 96 |
+| `invented` | 97 |
 | `absent` | 8 |
-| **total** | **172** |
+| **total** | **173** |
