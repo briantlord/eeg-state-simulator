@@ -686,6 +686,40 @@ params:
     section: "4. Oscillations"
     milestone: T1-M1
 
+  background_n_sources:
+    value: {kind: scalar, v: 6}
+    units: null
+    standing: invented
+    source: {kind: none, rationale: "number of spatially distinct aperiodic background sources"}
+    states: all
+    section: "4. Oscillations"
+    milestone: T1-M1
+    note: >-
+      MEASURED DEFECT THIS FIXES. With ONE background source at uniform scalp weighting the
+      generated channels had an effective rank of 1.14 -- PC1 carried 93% of all variance and
+      the median inter-channel correlation was 0.988. Every channel was the same trace scaled.
+      Build Plan 3.1 forbids per-channel independent signals because that "is instantly wrong
+      to anyone who has looked at EEG"; a single shared source is the opposite error and is
+      equally visible in a covariance matrix.
+      Several sources with distinct topographies give correlation that falls with distance,
+      which is what volume conduction produces. The COUNT is invented: it trades effective
+      rank against the risk of asserting spatial structure nobody fitted. T1-M1 should replace
+      these with fitted topographies, or with eigenmode columns through the same projection
+      file -- the schema already supports it.
+
+  topo_sigma_background:
+    value: {kind: scalar, v: 0.55}
+    units: normalized_10_20
+    standing: invented
+    source: {kind: none, rationale: "spatial extent of each background source; wide, because aperiodic activity is not focal"}
+    states: all
+    section: "5. Topography and geometry"
+    milestone: T1-M1
+    note: >-
+      Wider than any oscillation sigma on purpose. Narrow background sources would give
+      channels that are nearly independent, which is the error this project's own rule forbids;
+      wide overlapping ones give graded correlation.
+
   background_rms_uv:
     value: {kind: interval, lo: 15, hi: 25, meaning: uncertainty}
     units: uV

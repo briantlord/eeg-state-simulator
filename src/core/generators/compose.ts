@@ -153,13 +153,28 @@ export function composeState(
     opts.respRatePerMin,
   );
 
-  // Aperiodic background: one shared source, uniform scalp weighting.
-  let background = synthesizeAperiodic(
-    Rng.substream(seed, `background/${state}`),
-    nSamples,
-    { chi, k: knee, rmsUv: backgroundRms },
-    fs,
-  );
+  // Aperiodic background: SEVERAL shared sources with distinct topographies.
+  //
+  // One uniformly-weighted source gave a measured effective rank of 1.14 — PC1 carrying 93%
+  // of variance, median inter-channel correlation 0.988, every channel the same trace scaled.
+  // Build Plan 3.1 forbids per-channel independent signals; a single shared source is the
+  // opposite error and just as visible in a covariance matrix.
+  //
+  // Independent realizations at overlapping scalp locations give correlation that falls off
+  // with distance, which is what volume conduction produces. Each carries 1/sqrt(N) of the
+  // amplitude so the total background variance is unchanged.
+  const nBg = scalarValue('background_n_sources');
+  const bgSources: Float64Array[] = [];
+  for (let i = 0; i < nBg; i++) {
+    bgSources.push(
+      synthesizeAperiodic(
+        Rng.substream(seed, `background_${i}/${state}`),
+        nSamples,
+        { chi, k: knee, rmsUv: backgroundRms / Math.sqrt(nBg) },
+        fs,
+      ),
+    );
+  }
 
   // Respiration-phase modulation of the aperiodic exponent (§5.2 mechanism c) — "the
   // best-supported scalp-visible effect and the one the filter demo depends on".
@@ -178,14 +193,18 @@ export function composeState(
     const deltaChi = new Float64Array(nSamples);
     // The filter applies the DEVIATION from the generated exponent.
     for (let i = 0; i < nSamples; i++) deltaChi[i] = chi - chiT[i]!;
-    background = applyTimeVaryingTilt(background, deltaChi, fs,
-      opts.tiltScheme ? { scheme: opts.tiltScheme } : {});
+    for (let i = 0; i < bgSources.length; i++) {
+      bgSources[i] = applyTimeVaryingTilt(bgSources[i]!, deltaChi, fs,
+        opts.tiltScheme ? { scheme: opts.tiltScheme } : {});
+    }
     chiModDepth = opts.chiModDepth ?? provisionalValue('chi_mod_depth');
     const wakeLike = state === 'wake_eo' || state === 'wake_ec' || state === 'n1';
     chiModPhi0 = provisionalValue(wakeLike ? 'chi_mod_phi0_wake' : 'chi_mod_phi0_sleep');
   }
 
-  projectInto(out, background, 'background');
+  for (let i = 0; i < bgSources.length; i++) {
+    projectInto(out, bgSources[i]!, `background_${i}` as GeneratorId);
+  }
 
   // Seam 5: the mix is explicit. Background is the reference and is never scaled.
   const snrDb = opts.snrDb ?? 0;

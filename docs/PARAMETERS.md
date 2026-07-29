@@ -150,6 +150,7 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 | `delta_amp` | 100–200 *(uncertainty)* | uV_pp | `invented` | textbook range, matching neighbouring so_amp and kc_amp. Explicitly NOT derived from the 75 uV AASM criterion. | n3 |
 | `so_freq` | <1 | Hz | `invented` | distinct from the AASM delta band; uncited | n3 |
 | `so_amp` | 100–200 *(uncertainty)* | uV_pp | `invented` | uncited | n3 |
+| `background_n_sources` | 6 | — | `invented` | number of spatially distinct aperiodic background sources | all |
 | `background_rms_uv` | 15–25 *(uncertainty)* | uV | `invented` | broadband RMS of the aperiodic background | all |
 | `amp_pp_to_rms` | 2.828 | — | `invented` | peak-to-peak to RMS for a quasi-sinusoidal rhythm: 2*sqrt(2) | all |
 | `osc_carrier_flatten` | 0.75 | — | `invented` | exponent alpha in dividing the carrier by its own smoothed envelope^alpha before imposing burst structure | all |
@@ -173,6 +174,8 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 
 **`delta_amp`.** Given a Tier 0 value on import; see Execution-Scheme D10. Left blank, this row and snr_nominal are under-determined by one degree of freedom and the calibration absorbs it, setting delta amplitude from the 75 uV figure through the back door — the exact circularity D5 exists to close, re-entering through the one row D5's prose leaves empty. The AASM number appears in gate_aasm_n3 and nowhere else. UNITS CORRECTED to uV_pp on review: the textbook 100-200 figure for slow waves is peak-to-peak, and it had been placed on a row declared in plain uV. Read as peak it is 200-400 uV p-p, which at snr_null_offset = -6 dB still clears the 75 uV criterion — so G5's null could not have failed, and under D9 that null is G5's only failable arm. D10's claim that fixing this row "makes snr_nominal a genuine single-scalar solve" is FALSE and is withdrawn: so_amp (100-200 uV, so_freq < 1 Hz) also lands inside gate_aasm_n3_band, the aperiodic offset b has no registry row at all, and the interval-to-point reduction rule is unregistered with zero Dv rows in the registry. At least three further degrees of freedom remain. See Execution-Scheme section 7.
 
+**`background_n_sources`.** MEASURED DEFECT THIS FIXES. With ONE background source at uniform scalp weighting the generated channels had an effective rank of 1.14 -- PC1 carried 93% of all variance and the median inter-channel correlation was 0.988. Every channel was the same trace scaled. Build Plan 3.1 forbids per-channel independent signals because that "is instantly wrong to anyone who has looked at EEG"; a single shared source is the opposite error and is equally visible in a covariance matrix. Several sources with distinct topographies give correlation that falls with distance, which is what volume conduction produces. The COUNT is invented: it trades effective rank against the risk of asserting spatial structure nobody fitted. T1-M1 should replace these with fitted topographies, or with eigenmode columns through the same projection file -- the schema already supports it.
+
 **`background_rms_uv`.** Added on measurement. It had been a bare literal (20) inside compose.ts — exactly the hidden constant the acceptance check exists to forbid, in the file that sets the denominator of every SNR in the project. It is also the scale `snr_nominal` is solved against, so it belongs beside the amplitudes rather than in code. NOTE this row is in RMS while every oscillation amplitude is peak-to-peak; the conversion is amp_pp_to_rms.
 
 **`amp_pp_to_rms`.** Added on measurement, and the measurement is worth recording. Feeding the textbook oscillation ranges to the generator AS RMS gave wake_ec an alpha source at 35 uV RMS against a 20 uV background — 1.75x the entire broadband signal — and G1a's recovered chi was +1.22 off the injected value, against -0.03 to +0.11 for the states with no strong oscillation. The generator was correct; the number handed to it was not. Textbook figures for a visible rhythm are peak-to-peak. 2*sqrt(2) is exact for a sinusoid; narrowband filtered noise has a higher crest factor, so this OVERSTATES the RMS somewhat and is marked invented rather than derived. T1-M1 must fit amplitude distributions directly and retire this conversion instead of refining it.
@@ -183,6 +186,7 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 
 | Key | Value | Units | Standing | Source | States |
 |---|---|---|---|---|---|
+| `topo_sigma_background` | 0.55 | normalized_10_20 | `invented` | spatial extent of each background source; wide, because aperiodic activity is not focal | all |
 | `topo_sigma_alpha` | — *(pending T1-M1; runs on 0.35)* | normalized_10_20 | `invented` |  | wake_ec |
 | `topo_sigma_beta` | — *(pending T1-M1; runs on 0.4)* | normalized_10_20 | `invented` |  | wake_eo |
 | `topo_sigma_theta` | — *(pending T1-M1; runs on 0.4)* | normalized_10_20 | `invented` |  | n2, rem |
@@ -211,6 +215,8 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 | `topo_expect_kc` | Fz/F3/F4 | — | `literature` | AASM Manual for the Scoring of Sleep and Associated Events — K-complex frontal maximum | n2 |
 | `topo_expect_alpha` | O1/O2/Pz | — | `literature` | AASM Manual for the Scoring of Sleep and Associated Events — posterior dominant rhythm, occipital maximum | wake_ec |
 | `so_travel_v_used` | 3 | m/s | `chosen` | point value drawn from the so_travel_v literature interval 1-7 m/s | n3 |
+
+**`topo_sigma_background`.** Wider than any oscillation sigma on purpose. Narrow background sources would give channels that are nearly independent, which is the error this project's own rule forbids; wide overlapping ones give graded correlation.
 
 **`topo_expect_alpha`.** Re-sourced on import, not re-standed. In the source markdown this row read 'clinical convention (posterior dominant rhythm)' — naming neither author/year nor standard, which the registry's own discipline calls a contradiction on its face. It is the row G6 reads and D6 built the gate around its independence, so the violation sat on the load-bearing path. AASM does define the posterior dominant rhythm, so the standard is nameable and the literature standing survives.
 
@@ -415,6 +421,6 @@ absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
 | `chosen` | 50 |
 | `literature` | 8 |
 | `derived` | 7 |
-| `invented` | 96 |
+| `invented` | 98 |
 | `absent` | 8 |
-| **total** | **180** |
+| **total** | **182** |

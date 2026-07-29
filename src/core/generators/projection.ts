@@ -61,7 +61,7 @@ if (projection.channels.length !== ALL_CHANNELS.length ||
 }
 
 export type GeneratorId =
-  | 'background'
+  | `background_${number}`
   | 'alpha' | 'beta' | 'theta' | 'delta'
   | 'spindle_fast' | 'spindle_slow' | 'kc';
 

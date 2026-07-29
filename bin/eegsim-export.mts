@@ -130,10 +130,12 @@ function main(): void {
     respFreq: 0,
     independentChiModFreq: null,
     projectionWeights: Object.fromEntries(
-      ['background', ...composed.truth.oscillations.map((o) => o.generator)].map((g) => [
-        g,
-        [...weightsFor(g as Parameters<typeof weightsFor>[0])],
-      ]),
+      [
+        // One entry per background source, since there are now several with distinct
+        // topographies rather than one uniform one.
+        ...Array.from({ length: scalarValue('background_n_sources') }, (_, i) => `background_${i}`),
+        ...composed.truth.oscillations.map((o) => o.generator),
+      ].map((g) => [g, [...weightsFor(g as Parameters<typeof weightsFor>[0])]]),
     ),
     respMechanisms: { movementArtifact: false, rmbo: false, chiModulation: false },
   };

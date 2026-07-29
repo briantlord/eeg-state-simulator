@@ -48,24 +48,40 @@ const channels = [...montage.channels, ...montage.reference];
 
 const projections = {};
 
-// The aperiodic background is a SHARED source with uniform scalp weighting, not a per-channel
-// signal. Build Plan 3.1: "Do not generate independent signals per channel — it is instantly
-// wrong to anyone who has looked at EEG and it breaks every downstream measure." The
-// independent part of the model is eta_c, the small sensor-noise term, and that is all.
+// The aperiodic background is SEVERAL shared sources with distinct topographies.
 //
-// TODO(T1-M1): uniform weighting makes every channel's background perfectly correlated, which
-// is the opposite error from per-channel independence and equally visible in a covariance
-// matrix. Real scalp aperiodic activity is spatially structured. The fix is several background
-// sources with distinct topographies, which this schema already supports — it needs fitted
-// topographies, not new code.
-projections['background'] = {
-  weights: channels.map(() => 1),
-  provenance: {
-    method: 'uniform',
-    note: 'shared source, uniform scalp weighting; see TODO above',
-    registry_keys: [],
-  },
-};
+// Build Plan 3.1 forbids per-channel independent signals: "instantly wrong to anyone who has
+// looked at EEG". A SINGLE uniformly-weighted source is the opposite error and just as
+// visible — measured, it gave an effective rank of 1.14, PC1 carrying 93% of variance and a
+// median inter-channel correlation of 0.988. Every channel was the same trace scaled.
+//
+// Overlapping wide sources give correlation that falls off with distance, which is what
+// volume conduction produces. Positions are left/right x frontal/central/posterior — a coarse
+// spatial basis, not a claim about where cortical aperiodic activity lives.
+// TODO(T1-M1): replace with fitted topographies or eigenmode columns; the schema is unchanged.
+const bgN = num('background_n_sources');
+const bgSigma = num('topo_sigma_background');
+const BG_CENTRES = [
+  [-0.5, 0.5], [0.5, 0.5],
+  [-0.6, 0.0], [0.6, 0.0],
+  [-0.45, -0.55], [0.45, -0.55],
+];
+for (let i = 0; i < bgN; i++) {
+  const [cx, cy] = BG_CENTRES[i % BG_CENTRES.length];
+  const weights = channels.map((ch) =>
+    Math.exp(-(((ch.x - cx) ** 2 + (ch.y - cy) ** 2)) / (2 * bgSigma * bgSigma)),
+  );
+  const peak = Math.max(...weights);
+  projections[`background_${i}`] = {
+    weights: weights.map((w) => Number((w / peak).toFixed(6))),
+    provenance: {
+      method: 'gaussian_on_projected_10_20',
+      centre: [cx, cy],
+      sigma: bgSigma,
+      registry_keys: ['background_n_sources', 'topo_sigma_background'],
+    },
+  };
+}
 
 for (const g of GENERATORS) {
   const cx = num(`topo_centre_${g}_x`);

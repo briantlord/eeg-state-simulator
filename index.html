@@ -94,6 +94,19 @@
           </div>
 
           <div class="panel">
+            <h2>Reference montage</h2>
+            <div class="control">
+              <select id="reference"></select>
+              <p class="note" id="ref-note"></p>
+            </div>
+            <p class="note">
+              Referencing is a linear operator on the data, not a display preference — average
+              reference removes exactly one dimension by construction, and a Laplacian is a
+              spatial high-pass. Watch the effective rank below change as you switch.
+            </p>
+          </div>
+
+          <div class="panel">
             <h2>Filter panel</h2>
             <div class="control">
               <label for="hpf">High-pass cutoff (Hz)</label>
@@ -145,8 +158,16 @@
               <tr><th>χ 1–45 Hz knee</th><td id="o-broad">—</td></tr>
               <tr><th>χ 30–45 Hz fixed</th><td id="o-narrow">—</td></tr>
               <tr><th>LZc normalized</th><td id="o-lz">—</td></tr>
+              <tr><th>effective rank</th><td id="o-rank">—</td></tr>
             </table>
             <p class="note" id="lz-null"></p>
+            <p class="note">
+              <strong>Effective rank</strong> is the participation ratio of the channel
+              covariance — a threshold-free count of how many independent things 19 electrodes
+              are actually carrying. It is far below 19, and it should be: volume conduction
+              guarantees that. But a value near 1 would mean every channel is the same trace
+              scaled, which no recording looks like.
+            </p>
             <p class="note">
               The two exponents are <em>different quantities</em>, not two estimates of one.
               Comparing them is a type error in the source.

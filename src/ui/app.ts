@@ -23,6 +23,13 @@ import { formatExponent } from '../core/types/exponent.ts';
 import { Rng } from '../core/rng/xoshiro128pp.ts';
 import { drawTrace } from '../render/trace.ts';
 import { SignalStream } from './stream.ts';
+import {
+  applyReference,
+  effectiveRank,
+  REFERENCE_LABEL,
+  REFERENCE_NOTE,
+  type ReferenceMode,
+} from '../analysis/referencing.ts';
 import { scalarValue, enumValue, inventedKeys, GENERATOR_VERSION } from '../core/registry.ts';
 
 const FS = scalarValue('fs');
@@ -40,39 +47,53 @@ const ui = {
   running: true,
   /** Scalp only, or scalp plus the mastoid references the AASM criterion needs. */
   showReference: false,
+  reference: 'linked-mastoid' as ReferenceMode,
 };
 
 let stream = new SignalStream({ seed: ui.seed, state: ui.state, chiModulation: true });
 
-/** Filtered copy of the current segment, rebuilt only when the filter or segment changes. */
-let filtered: Float64Array[] = [];
-let filteredKey = '';
+/**
+ * The processed view of the current segment: high-pass, then reference.
+ *
+ * IN THAT ORDER, because that is the order a real pipeline applies them, and the order
+ * matters — referencing mixes channels, so filtering afterwards would filter the mixture.
+ * Cached, so moving the playhead does not redo it every frame.
+ */
+interface Processed {
+  channels: Float64Array[];
+  labels: string[];
+  rank: number;
+}
+let processed: Processed | null = null;
+let processedKey = '';
 
-function ensureFiltered(): Float64Array[] {
-  const key = `${ui.hpf}|${ui.ftype}|${stream.elapsedS - stream.positionS}`;
-  if (key !== filteredKey) {
-    filtered = stream.channels.map((c) => applyHighpass(c, ui.hpf, ui.ftype, FS));
-    filteredKey = key;
+function ensureProcessed(): Processed {
+  const key = `${ui.hpf}|${ui.ftype}|${ui.reference}|${stream.elapsedS - stream.positionS}`;
+  if (key !== processedKey || processed === null) {
+    const hp = stream.channels.map((c) => applyHighpass(c, ui.hpf, ui.ftype, FS));
+    const ref = applyReference(hp, ui.reference);
+    processed = {
+      channels: ref.channels,
+      labels: ref.labels,
+      rank: effectiveRank(ref.channels),
+    };
+    processedKey = key;
   }
-  return filtered;
+  return processed;
 }
 
-function visibleChannels(all: readonly Float64Array[]): {
-  data: Float64Array[];
-  labels: string[];
-} {
-  const n = ui.showReference ? ALL_CHANNELS.length : ALL_CHANNELS.length - 2;
-  return {
-    data: all.slice(0, n) as Float64Array[],
-    labels: ALL_CHANNELS.slice(0, n) as string[],
-  };
+/** Look up a scalp channel in the referenced set. */
+function chan(p: Processed, label: string): Float64Array {
+  const i = p.labels.indexOf(label);
+  return p.channels[i >= 0 ? i : 0]!;
 }
 
 // --------------------------------------------------------------------- trace
 
 function drawFrame(): void {
-  const all = ensureFiltered();
-  const { data, labels } = visibleChannels(all);
+  const p = ensureProcessed();
+  const data = p.channels;
+  const labels = p.labels;
 
   // The playhead sits at the RIGHT edge, as on a paper chart: new signal arrives at the pen
   // and older signal scrolls left out of view.
@@ -120,7 +141,7 @@ function loop(now: number): void {
 // -------------------------------------------------------------- observables
 
 function updateObservables(): void {
-  const all = ensureFiltered();
+  const p = ensureProcessed();
   // Analyse the window on screen, not the whole buffer: the readout should describe what the
   // reader is looking at.
   const tEnd = stream.positionS;
@@ -129,7 +150,7 @@ function updateObservables(): void {
   const b = Math.round(tEnd * FS);
   if (b - a < FS * 2) return;
 
-  const pz = all[ALL_CHANNELS.indexOf('Pz')]!.subarray(a, b);
+  const pz = chan(p, 'Pz').subarray(a, b);
 
   // COUPLING IS MEASURED OVER THE WHOLE BUFFER, NOT THE VISIBLE WINDOW.
   //
@@ -139,7 +160,7 @@ function updateObservables(): void {
   // live 30 s window", because 1/T there is too coarse to separate f1 from the sidebands.
   // The live readout inherits that limit, so it uses the whole buffer and STATES how long
   // that is rather than presenting a swinging number as a reading.
-  const buffer = all[ALL_CHANNELS.indexOf('Cz')]!;
+  const buffer = chan(p, 'Cz');
   const c = couplingReadout(buffer, stream.truth.chiModDepth, stream.truth.respFreqHz, FS);
   const breaths = stream.segmentSeconds * stream.truth.respFreqHz;
   $('c-inj').textContent = c.injectedDepth.toFixed(4);
@@ -155,12 +176,15 @@ function updateObservables(): void {
   $('o-broad').textContent = formatExponent(broadbandExponent(pz, FS));
   $('o-narrow').textContent = formatExponent(narrowbandExponent(pz, FS));
 
-  const subset = ['Fz', 'Cz', 'Pz', 'O1'].map((l) =>
-    all[ALL_CHANNELS.indexOf(l)]!.subarray(a, b),
-  );
+  const subset = ['Fz', 'Cz', 'Pz', 'O1'].map((l) => chan(p, l).subarray(a, b));
   const lz = lempelZiv(subset, Rng.substream(ui.seed, 'lz-ui'), 'lzw');
   $('o-lz').textContent = lz.normalized.toFixed(4);
   $('lz-null').textContent = `Normalized against: ${lz.nullDescription}. Parse: ${lz.parse}.`;
+
+  // Effective dimensionality, and the reference that produced it. Referencing is a rank
+  // operation, so the two belong on screen together.
+  $('o-rank').textContent = p.rank.toFixed(2);
+  $('ref-note').textContent = REFERENCE_NOTE[ui.reference];
 
   renderDemo3();
 }
@@ -267,7 +291,7 @@ function restart(): void {
   // Prime the playhead by one window, so the chart opens full rather than filling in over the
   // first 30 seconds. A paper chart is already written on when you walk up to it.
   stream.advance(ui.windowS);
-  filteredKey = '';
+  processedKey = '';
   updateObservables();
 }
 
@@ -305,9 +329,23 @@ function mount(): void {
     },
   );
 
+  const refSel = select(
+    'reference',
+    ['as-generated', 'linked-mastoid', 'contralateral', 'average', 'laplacian'],
+    ui.reference,
+  );
+  for (const opt of Array.from(refSel.options)) {
+    opt.textContent = REFERENCE_LABEL[opt.value as ReferenceMode];
+  }
+  refSel.addEventListener('change', (e) => {
+    ui.reference = (e.target as HTMLSelectElement).value as ReferenceMode;
+    processedKey = '';
+    updateObservables();
+  });
+
   select('hpf', enumValue('hpf_options'), ui.hpf).addEventListener('change', (e) => {
     ui.hpf = Number((e.target as HTMLSelectElement).value);
-    filteredKey = '';
+    processedKey = '';
     updateObservables();
   });
 
@@ -317,7 +355,7 @@ function mount(): void {
       for (const b of Array.from($('ftype').querySelectorAll('button'))) {
         b.setAttribute('aria-pressed', String(b === btn));
       }
-      filteredKey = '';
+      processedKey = '';
       updateObservables();
     });
   }

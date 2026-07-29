@@ -573,6 +573,67 @@ are — which no real recording can.
 
 ---
 
+# Finding 11 — the channels were effectively rank 1, and N3 still is
+
+Prompted by an observation that the traces looked "extremely synchronized". They were.
+
+| | effective rank | PC1 variance | median \|corr\| |
+|---|---|---|---|
+| **before**, one uniform background source | **1.14** | 93% | **0.988** |
+| **after**, six spatially distinct sources | **2.99** | 55% | 0.37 |
+
+Effective rank is the participation ratio (Σλ)²/Σλ², which needs no threshold. Nominal rank
+was always 19; that is not the question. **One background source with uniform scalp weighting
+at 20 µV against 1.5 µV of independent sensor noise is a 180:1 variance ratio, so every channel
+was the same trace scaled.**
+
+Build Plan §3.1 forbids per-channel independent signals — *"instantly wrong to anyone who has
+looked at EEG"* — and a single shared source is the opposite error, equally visible in a
+covariance matrix and equally wrong. The rule guards one ditch and says nothing about the other.
+
+Six overlapping wide Gaussian sources give correlation that falls off with distance, which is
+what volume conduction produces. The count and width are `invented` and marked.
+
+### N3 is still effectively rank 1.2, and that is only half excusable
+
+| state | linked mastoid | average | Laplacian |
+|---|---|---|---|
+| wake EC | 2.99 | 3.04 | **4.83** |
+| N2 | 3.81 | 3.73 | 4.60 |
+| **N3** | **1.17** | 1.23 | 1.23 |
+
+N3's variance is dominated by the delta generator, which is still a *single* shared source at
+53 µV RMS. Widespread synchronous slow-wave activity is the defining feature of N3, so a low
+rank there is partly correct — but 1.17 means one component, and real N3 is not one component.
+**The same fix applies: several delta sources rather than one.** Not done, because it is a
+modelling decision about whether slow-wave activity is one distributed source or several, and
+that should be answered by T1-M1 fitting rather than by picking a number that improves a
+statistic.
+
+### Referencing is a rank operation, and now a control
+
+Reference montages are exposed in the artifact: as-generated, linked mastoid, contralateral
+mastoid (the AASM derivation), average, and a nearest-neighbour Laplacian. The Laplacian nearly
+doubles the effective rank in wake — not by adding information, but by removing the common
+component that was dominating it.
+
+**And the reference changes every downstream number**, which is the reason it belongs in an
+artifact about what analysis choices do to data. On the same 90 s of N3:
+
+| reference | χ (1–45 Hz, knee) | LZc |
+|---|---|---|
+| as generated | 1.650 | 0.510 |
+| linked mastoid | 1.550 | 0.574 |
+| average | **1.950** | **0.366** |
+| Laplacian | **1.250** | **0.609** |
+
+χ spans 1.25–1.95 and LZc 0.37–0.61 on identical data. Harness §5 warns about exactly this for
+the one criterion the project calls definitional — *"evaluating it under average reference
+gives a different number and would silently miscalibrate everything downstream"* — and here it
+is, on both observable axes at once.
+
+---
+
 ## Reproduce
 
 ```bash
