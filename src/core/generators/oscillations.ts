@@ -44,8 +44,8 @@ export interface OscillationParams {
   };
 }
 
-export const DEFAULT_ENVELOPE_DEPTH = 0.6;
-export const DEFAULT_ENVELOPE_RATE_HZ = 0.3;
+export const DEFAULT_ENVELOPE_DEPTH = 0.6; // @lit-ok invented alpha burst-envelope depth default; TODO(T1-M1) register+fit
+export const DEFAULT_ENVELOPE_RATE_HZ = 0.3; // @lit-ok invented alpha burst-envelope rate default (Hz); TODO(T1-M1) register+fit
 
 export interface DampedOscillatorParams {
   /** Resonant frequency in Hz. */
@@ -174,7 +174,7 @@ export function applyWaveformShape(x: Float64Array, s: WaveformShape): void {
   const { envelope, phase } = envelopeAndPhase(x.subarray(0, n));
 
   // Clamp away from the degenerate ends, where the warp would divide by zero.
-  const r = Math.max(0.05, Math.min(0.95, s.riseDecaySymmetry));
+  const r = Math.max(0.05, Math.min(0.95, s.riseDecaySymmetry)); // @lit-ok clamp keeping the rise-decay symmetry off its degenerate endpoints
 
   for (let i = 0; i < n; i++) {
     // Cycle position, 0 at the trough, rising through the peak, back to 1 at the next trough.
@@ -265,7 +265,7 @@ function flattenCarrier(x: Float64Array, bandwidthHz: number, fs: number): void 
   if (mean === 0) return;
 
   // Floor at a fraction of the mean so a near-zero envelope cannot blow the division up.
-  const floor = 0.1 * mean;
+  const floor = 0.1 * mean; // @lit-ok numerical floor at 10% of mean, guarding the envelope division
   for (let i = 0; i < x.length; i++) {
     const e = Math.max(env[i]!, floor);
     x[i] = x[i]! / Math.pow(e / mean, alpha);
@@ -287,9 +287,9 @@ function synthesizeBurstEnvelope(
   fs: number,
 ): Float64Array {
   const env = new Float64Array(nSamples).fill(b.interburstLevel);
-  const meanGapS = 60 / b.ratePerMin;
+  const meanGapS = 60 / b.ratePerMin; // @lit-ok seconds per minute
   // Lognormal sigma giving a spread roughly matching a 0.5-2 s range about the mean.
-  const sigma = 0.4;
+  const sigma = 0.4; // @lit-ok invented lognormal sigma for burst-duration spread; TODO(T1-M1) register+fit
 
   let t = rng.exponential(1 / meanGapS);
   while (t < nSamples / fs) {
@@ -321,7 +321,7 @@ function synthesizeEnvelope(
   for (let i = 0; i < nSamples; i++) env[i] = rng.normal();
   // Two cascaded first-order-ish sections give a gentle roll-off; a sharp envelope filter
   // would ring and put a periodicity back into the modulation.
-  filtfilt(env, [lowpass(p.envelopeRateHz, fs, 0.707), lowpass(p.envelopeRateHz, fs, 0.707)]);
+  filtfilt(env, [lowpass(p.envelopeRateHz, fs, 0.707), lowpass(p.envelopeRateHz, fs, 0.707)]); // @lit-ok Butterworth Q = 1/sqrt(2)
 
   let mean = 0;
   for (let i = 0; i < nSamples; i++) mean += env[i]!;

@@ -22,7 +22,7 @@ import { scalarValue } from '../registry.ts';
 
 export type FilterType = 'zeroPhase' | 'causal';
 
-export function highpassSections(cutoffHz: number, fs: number, order = 4): Biquad[] {
+export function highpassSections(cutoffHz: number, fs: number, order = 4): Biquad[] { // @lit-ok default Butterworth order; callers pass the cutoff from the registry
   return butterworthQs(order).map((q) => highpass(cutoffHz, fs, q));
 }
 

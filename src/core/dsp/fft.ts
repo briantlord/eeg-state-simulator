@@ -5,6 +5,9 @@
  * as a constraint, so this is written rather than imported. `synth_block` = 4096 = 2^12, so
  * radix-2 suffices; the length check is an assertion rather than a padding step, because a
  * silently padded block would change the PSD the aperiodic generator is trying to hit.
+ *
+ * @lit-ok-file: a radix-2 FFT. Every literal is the algorithm — the radix, bit widths, the 31
+ * in the clz32 power-of-two check. No signal parameter lives here.
  */
 
 /** Bit-reversal permutation, computed once per length and cached. */

@@ -13,13 +13,16 @@ implemented with their matched nulls and `--allow-partial` is gone**, so the run
 to start if a gate goes missing. All three demonstrations work: Demo 1 moves 100% → 1% across
 the clinical cutoff range against a measured noise floor.
 
-**Tier 0 is functionally complete.** One item remains — the literal linter.
+**Tier 0 is complete.** The literal acceptance check — the last outstanding item — now runs in
+`npm run verify` (D15), which closes the register's top-rated risk: no scientific constant ships
+outside the registry unnoticed.
 
-The last three work packages each ended by correcting a claim rather than confirming one, and
-the two most important results in this document came out of gates *while they were being built*:
-the shipped χ modulation is invisible to the estimator that reads it, and narrowband χ cannot
-resolve the spacing between adjacent states. Both say the same thing about what to do next — the
-estimators need characterizing before the parameters are worth fitting.
+The work packages kept ending by correcting a claim rather than confirming one, and the most
+important results came out of the checks *while they were being built*: the shipped χ modulation
+is invisible to the estimator that reads it, narrowband χ cannot resolve the spacing between
+adjacent states, and the generator held two dead copies of registry values in its HTML. All
+point the same way — the estimators need characterizing (T1-M2) before the parameters are worth
+fitting (T1-M1).
 
 ---
 
@@ -40,6 +43,7 @@ estimators need characterizing before the parameters are worth fitting.
 | Gate runner | **done** | class/status separation, matched-null refusal, per-arm thresholds |
 | **All seven ledger arms** | **done** | G1a, G1b, G2, G3, G4, G5, G6, each with its matched null |
 | ``--allow-partial`` | **removed** | the runner now refuses to start if a gate goes missing |
+| Literal acceptance check | **done** | ``tools/lint/literals.mjs`` in ``verify``; self-tested (D15) |
 
 `npm run verify` — 5 checks, 40 TS tests, 36 harness tests, all 14 gate arms, green.
 
@@ -84,10 +88,8 @@ not help if the estimator used to *check* the ordering cannot resolve it. It is 
 record artifact — 30–45 Hz is 0.176 decades of leverage, and a slope over that span scatters
 however long the record.
 
-### 3. The literal linter does not exist
-
-`tools/lint/literals.mjs` is the sole mitigation for the register's top-rated risk. The claim
-that it is enforced was removed from the registry and `PARAMETERS.md` rather than left standing.
+Both are estimator-characterization problems (T1-M2), not generator defects. Nothing in the
+Tier 0 build list remains open.
 
 ---
 
@@ -116,7 +118,7 @@ characterization).
 |---|---|
 | `Build-Plan.md`, `Validation-Harness_Spec.md` | the original specification, unmodified |
 | `PARAMETERS.md` | **generated** from `registry/parameters.yaml`; never edit |
-| `DECISIONS.md` | D1–D14 and pending P1–P10, append-only |
+| `DECISIONS.md` | D1–D15 and pending P1–P10, append-only |
 | `Execution-Scheme.md` | the plan: gate ledger, work packages, build order |
 | `Tier0-Estimator-Probe.md` | Findings 1–14, every one reproducible from `prep/reference/` |
 | `STATUS.md` | this file |
@@ -129,11 +131,14 @@ records what the adversarial review withdrew from D8 and D9.
 
 ## Next, in the order that unblocks the most
 
-1. **Write `tools/lint/literals.mjs`**, then restore the claim it enforces. It is the sole
-   mitigation for the register's top-rated risk and the only Tier 0 item still outstanding.
-2. **T1-M2, estimator characterization — promoted above T1-M1.** The milestone ordering puts
+Tier 0 is closed. Everything below is Tier 1.
+
+1. **T1-M2, estimator characterization — promoted above T1-M1.** The milestone ordering puts
    corpus fitting first, and both problems above say that is backwards. A χ proxy whose floor
    exceeds the injected modulation (§1) and a narrowband fit whose noise exceeds the state
    spacing (§2) mean that fitting parameters more carefully cannot be verified with the
    estimators we would verify them with. Characterize the estimators, then fit.
-3. Then T1-M1 proper: corpus fitting (P10 jointly, P8, P9).
+2. **Then T1-M1 proper:** corpus fitting (P10 jointly, P8, P9). The `@lit-ok invented …` waivers
+   are the call-site half of that backlog — every hardcoded morphology constant the linter now
+   marks (KC peak positions, spindle jitter, envelope depth/rate, SO scheduling) needs a registry
+   row fitted against the corpus.

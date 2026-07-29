@@ -52,7 +52,7 @@ const N_SCALP = ALL_CHANNELS.length - REFERENCE_LABELS.length;
 
 /** Indices of the k nearest scalp neighbours of each scalp channel, by montage distance. */
 const NEIGHBOURS: number[][] = (() => {
-  const k = 4;
+  const k = 4; // @lit-ok Laplacian nearest-neighbour count (montage definition)
   const out: number[][] = [];
   for (let i = 0; i < N_SCALP; i++) {
     const here = CHANNEL_POSITIONS[i]!;
@@ -117,7 +117,7 @@ export function applyReference(
       // Odd-numbered electrodes are left-hemisphere and pair with the right mastoid (A2).
       // Midline (z) electrodes have no contralateral side; linked mastoid is the convention.
       const label = labels[c]!;
-      const isLeft = /[13579]$/.test(label);
+      const isLeft = /[13579]$/.test(label); // @lit-ok 10-20 odd-numbered electrodes are left-hemisphere (regex character class)
       const isMid = /z$/i.test(label);
       for (let i = 0; i < n; i++) {
         const ref = isMid ? 0.5 * (a1[i]! + a2[i]!) : isLeft ? a2[i]! : a1[i]!;
@@ -170,7 +170,7 @@ export function referencedGain(
  * drawn. Computed from the channel covariance eigenvalues via the power-free route: for a
  * covariance matrix, Σλ = trace and Σλ² = ‖C‖_F², both available without a decomposition.
  */
-export function effectiveRank(channels: readonly Float64Array[], stride = 4): number {
+export function effectiveRank(channels: readonly Float64Array[], stride = 4): number { // @lit-ok effective-rank covariance subsample stride
   const m = channels.length;
   const n = channels[0]!.length;
   // Rank is a statistical property of the covariance, so it does not need every sample.

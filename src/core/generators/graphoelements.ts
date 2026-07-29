@@ -53,7 +53,7 @@ export interface ScheduledEvent {
  * looks at.
  */
 function scheduleOnsets(rng: Rng, durationS: number, ratePerMin: number): number[] {
-  const meanGap = 60 / ratePerMin;
+  const meanGap = 60 / ratePerMin; // @lit-ok seconds per minute
   const out: number[] = [];
   let t = rng.exponential(1 / meanGap);
   while (t < durationS) {
@@ -107,7 +107,7 @@ function spindleWaveform(
   const dPhase = (2 * Math.PI * freqHz) / fs;
   // Small per-sample frequency jitter, integrated: gives cycle-to-cycle irregularity without
   // letting the frequency wander out of band over the event.
-  const jitter = 0.004;
+  const jitter = 0.004; // @lit-ok invented spindle cycle-to-cycle frequency jitter; TODO(T1-M1) register+fit
   for (let i = 0; i < n; i++) {
     phase += dPhase * (1 + jitter * rng.normal());
     // Symmetric waxing/waning: a raised cosine over the whole event.
@@ -135,8 +135,8 @@ function kComplexWaveform(
   slowRatio: number,
 ): Float64Array {
   const out = new Float64Array(n);
-  const tSharp = 0.3 * (n / fs);
-  const tSlow = 0.55 * (n / fs);
+  const tSharp = 0.3 * (n / fs); // @lit-ok invented KC sharp-peak position (fraction of window); TODO(T1-M1) register+fit
+  const tSlow = 0.55 * (n / fs); // @lit-ok invented KC slow-peak position (fraction of window); TODO(T1-M1) register+fit
   for (let i = 0; i < n; i++) {
     const t = i / fs;
     const neg = -Math.exp(-(((t - tSharp) / sharpWidthS) ** 2));
@@ -162,7 +162,7 @@ function slowOscWaveform(
   riseDecaySymmetry: number,
 ): Float64Array {
   const out = new Float64Array(n);
-  const r = Math.max(0.05, Math.min(0.95, riseDecaySymmetry));
+  const r = Math.max(0.05, Math.min(0.95, riseDecaySymmetry)); // @lit-ok clamp keeping the rise-decay symmetry off its degenerate endpoints
   for (let i = 0; i < n; i++) {
     const u = (i + 0.5) / n;
     const w = u <= r ? u / (2 * r) : 0.5 + (u - r) / (2 * (1 - r));
@@ -235,8 +235,8 @@ export function synthesizeGraphoelements(
     const rng = Rng.substream(seed, `slow_osc/${state}`);
     const soFreq = boundOf('so_freq');
     const travel = travelDelaySamples(fs);
-    for (const onset of scheduleOnsets(rng, durationS, 60 * soFreq * 0.55)) {
-      const period = 1 / rng.uniform(soFreq * 0.6, soFreq);
+    for (const onset of scheduleOnsets(rng, durationS, 60 * soFreq * 0.55)) { // @lit-ok seconds per minute; 0.55 = invented SO occurrence-rate factor, TODO(T1-M1)
+      const period = 1 / rng.uniform(soFreq * 0.6, soFreq); // @lit-ok invented SO period lower-draw factor; TODO(T1-M1) register+fit
       const nEv = Math.round(period * fs);
       const amp = draw(rng, 'so_amp') / 2; // p-p to peak
       const wave = slowOscWaveform(nEv, amp, scalarValue('so_rdsym'));
@@ -259,7 +259,7 @@ export function synthesizeGraphoelements(
     const slowW = scalarValue('kc_slow_width');
     const ratio = scalarValue('kc_slow_ratio');
     for (const onset of scheduleOnsets(rng, durationS, draw(rng, 'kc_rate'))) {
-      const dur = Math.max(scalarValue('kc_dur_min'), rng.uniform(0.5, 0.9));
+      const dur = Math.max(scalarValue('kc_dur_min'), rng.uniform(0.5, 0.9)); // @lit-ok invented KC duration draw upper bound (s); kc_dur_min sets the floor; TODO(T1) fold into a kc_dur interval
       const nEv = Math.round(dur * fs);
       const amp = draw(rng, 'kc_amp') / 2;
       const wave = kComplexWaveform(nEv, fs, amp, sharpW, slowW, ratio);
@@ -298,7 +298,7 @@ export function synthesizeGraphoelements(
       const gen: GeneratorId = fast ? 'spindle_fast' : 'spindle_slow';
       const fRange = fast ? 'spindle_fast_freq' : 'spindle_slow_freq';
       const freq = Math.max(bandLo, Math.min(bandHi, draw(rng, fRange)));
-      const dur = Math.max(scalarValue('spindle_dur_min'), rng.uniform(0.5, 1.5));
+      const dur = Math.max(scalarValue('spindle_dur_min'), rng.uniform(0.5, 1.5)); // @lit-ok invented spindle duration draw upper bound (s); spindle_dur_min sets the floor; TODO(T1)
       const nEv = Math.round(dur * fs);
       const amp = draw(rng, 'spindle_amp') / 2;
       const wave = spindleWaveform(rng, nEv, fs, freq, amp);
@@ -349,7 +349,7 @@ function makeEvent(
 function topChannels(generator: GeneratorId): string[] {
   const w = weightsFor(generator);
   return ALL_CHANNELS.map((label, i) => ({ label, w: w[i]! }))
-    .filter((c) => c.w > 0.25)
+    .filter((c) => c.w > 0.25) // @lit-ok event channel-membership threshold: lists channels carrying >25% of peak weight -- a reporting cutoff, not a signal parameter
     .sort((a, b) => b.w - a.w)
     .map((c) => c.label);
 }
@@ -370,7 +370,7 @@ function travelDelaySamples(fs: number): Float64Array {
   for (let c = 0; c < ALL_CHANNELS.length; c++) {
     // Anterior first: distance travelled is measured from the frontal end.
     const fracFromFront = (yMax - ALL_POSITIONS[c]!.y) / (yMax - yMin);
-    const metres = (fracFromFront * spanMm) / 1000;
+    const metres = (fracFromFront * spanMm) / 1000; // @lit-ok millimetres per metre
     out[c] = (metres / v) * fs;
   }
   return out;

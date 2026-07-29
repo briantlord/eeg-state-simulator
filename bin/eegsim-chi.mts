@@ -53,7 +53,7 @@ if (epochs.length === 0) throw new Error(`no epochs in ${runDir}`);
 const nCh = manifest.channels.length;
 const perEpoch: Float64Array[][] = epochs.map((e) => {
   const buf = readFileSync(join(runDir, e, 'signal.f64'));
-  const all = new Float64Array(buf.buffer, buf.byteOffset, buf.byteLength / 8);
+  const all = new Float64Array(buf.buffer, buf.byteOffset, buf.byteLength / 8); // @lit-ok 8 bytes per float64 (binary format)
   const n = all.length / nCh;
   return Array.from({ length: nCh }, (_, c) => all.subarray(c * n, (c + 1) * n));
 });

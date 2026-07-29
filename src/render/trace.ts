@@ -12,6 +12,11 @@
  * pixel columns is the only way to draw that at frame rate. Decimation preserves the
  * ENVELOPE — a spike narrower than one pixel column still reaches the top of that column —
  * where naive subsampling would drop it entirely.
+ *
+ * @lit-ok-file: canvas layout geometry — margins, gutter widths, tick lengths, label offsets,
+ * a grid-line stride, a hairline alpha. Pixels, not signal. The one number that IS a signal
+ * scale, µV/mm, arrives as `sensitivityUvPerMm` and is sourced by the caller; `display_px_per_mm`
+ * is read via scalarValue.
  */
 import { scalarValue } from '../core/registry.ts';
 

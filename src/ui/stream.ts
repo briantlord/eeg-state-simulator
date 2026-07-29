@@ -31,7 +31,7 @@ export interface StreamOptions extends ComposeOptions {
 export class SignalStream {
   private readonly fs = scalarValue('fs');
   private readonly segmentS = scalarValue('display_buffer_s');
-  private readonly crossfadeS = 0.25;
+  private readonly crossfadeS = 0.25; // @lit-ok display crossfade duration (s); continuity only, nothing scientific measured across it (see file header)
 
   private segIndex = 0;
   private current: ComposeResult;
@@ -48,7 +48,7 @@ export class SignalStream {
     // Segment index enters the seed so consecutive segments are different signal rather than
     // a visible loop, while the whole stream stays a pure function of (seed, state, index).
     const n = Math.round(this.segmentS * this.fs);
-    return composeState(this.opts.seed + index * 7919, this.opts.state, n, this.fs, this.opts);
+    return composeState(this.opts.seed + index * 7919, this.opts.state, n, this.fs, this.opts); // @lit-ok a prime decorrelating consecutive segment seeds; any large prime serves
   }
 
   get channels(): readonly Float64Array[] {
@@ -95,7 +95,7 @@ export class SignalStream {
     const after = Math.floor(this.elapsed / this.segmentS);
 
     // Prepare the next segment a little before it is needed, so the roll never blocks a frame.
-    if (this.next === null && this.positionS > this.segmentS * 0.75) {
+    if (this.next === null && this.positionS > this.segmentS * 0.75) { // @lit-ok prefetch trigger: prepare the next segment at 75% through the current one
       this.next = this.generate(after + 1);
     }
     if (after !== before) {

@@ -43,7 +43,7 @@ const ui = {
   seed: scalarValue('snr_calibration_seed'),
   hpf: enumValue('hpf_options')[0] as number,
   ftype: 'zeroPhase' as FilterType,
-  windowS: 30,
+  windowS: 30, // @lit-ok initial display window (s); user-selectable, 30 s = the AASM scoring epoch
   sensitivity: scalarValue('display_sensitivity'),
   running: true,
   /** Scalp only, or scalp plus the mastoid references the AASM criterion needs. */
@@ -139,7 +139,7 @@ function drawFrame(): void {
 
 let last = performance.now();
 function loop(now: number): void {
-  const dt = Math.min(0.25, (now - last) / 1000);
+  const dt = Math.min(0.25, (now - last) / 1000); // @lit-ok frame dt clamp (0.25 s) and milliseconds per second
   last = now;
   if (ui.running) stream.advance(dt);
   drawFrame();
@@ -196,7 +196,7 @@ function updateObservables(): void {
   // rotation by half a cycle anti-aligns, and this estimator takes a magnitude, so an
   // anti-aligned surrogate returns the SIGNAL back rather than a null.
   const nullPhase = new Float64Array(buffer.length);
-  const wNull = (2 * Math.PI * 1.7 * stream.truth.respFreqHz) / FS;
+  const wNull = (2 * Math.PI * 1.7 * stream.truth.respFreqHz) / FS; // @lit-ok off-resonance factor for the noise-floor probe; any value clearly off the respiratory rate serves (see coupling.ts, test/coupling.test.ts)
   for (let i = 0; i < nullPhase.length; i++) nullPhase[i] = i * wNull;
   $('c-floor').textContent = `${respiratoryCoupling(buffer, nullPhase).toFixed(2)} µV`;
 
@@ -211,7 +211,7 @@ function updateObservables(): void {
   // an honest control -- it genuinely does not move with the filter -- but calling it the
   // exponent modulation would be a claim the generator does not support. See G4, Finding 13.
   const c = couplingReadout(buffer, stream.truth.chiModDepth, stream.truth.respFreqHz, FS);
-  $('c-chi').textContent = Number.isFinite(c.recoveredDepth) ? c.recoveredDepth.toFixed(3) : '—';
+  $('c-chi').textContent = Number.isFinite(c.recoveredDepth) ? c.recoveredDepth.toFixed(3) : '—'; // @lit-ok display precision (3 decimals)
   $('c-window').textContent =
     `Measured over ${stream.segmentSeconds} s (~${breaths.toFixed(0)} breaths).`;
 
@@ -220,7 +220,7 @@ function updateObservables(): void {
 
   const subset = ['Fz', 'Cz', 'Pz', 'O1'].map((l) => chan(p, l).subarray(a, b));
   const lz = lempelZiv(subset, Rng.substream(ui.seed, 'lz-ui'), 'lzw');
-  $('o-lz').textContent = lz.normalized.toFixed(4);
+  $('o-lz').textContent = lz.normalized.toFixed(4); // @lit-ok display precision (4 decimals)
   $('lz-null').textContent = `Normalized against: ${lz.nullDescription}. Parse: ${lz.parse}.`;
 
   // Effective dimensionality, and the reference that produced it. Referencing is a rank
@@ -253,7 +253,7 @@ function renderDemo3(): void {
     .filter((e) => e.type === 'kcomplex' || e.type === 'slow_oscillation')
     .sort((p, q) => Math.abs(p.onset - here) - Math.abs(q.onset - here))[0];
   const centre = kc ? kc.onset + kc.duration / 2 : here;
-  const spanS = 3;
+  const spanS = 3; // @lit-ok Demo 3 display span (s)
   const total = stream.channels[0]!.length;
   const a = Math.max(0, Math.min(total - Math.round(spanS * FS), Math.round((centre - spanS / 2) * FS)));
   const b = a + Math.round(spanS * FS);
@@ -277,7 +277,7 @@ function renderDemo3(): void {
   };
   draw(fz, css('--ink-faint'), 1);
   draw(filt, css('--pen-trace'), 1);
-  draw(invented, css('--pen-event'), 1.2);
+  draw(invented, css('--pen-event'), 1.2); // @lit-ok Demo 3 canvas line width (px)
 
   let ss = 0;
   for (let i = 0; i < invented.length; i++) ss += invented[i]! * invented[i]!;
@@ -286,11 +286,11 @@ function renderDemo3(): void {
   ctx.font = '10px ui-sans-serif, system-ui, sans-serif';
   ctx.textAlign = 'left';
   ctx.fillStyle = css('--ink-faint');
-  ctx.fillText('unfiltered', 8, 14);
+  ctx.fillText('unfiltered', 8, 14); // @lit-ok Demo 3 canvas label coordinates (px)
   ctx.fillStyle = css('--pen-trace');
-  ctx.fillText(`high-passed at ${ui.hpf} Hz (${ui.ftype})`, 8, 26);
+  ctx.fillText(`high-passed at ${ui.hpf} Hz (${ui.ftype})`, 8, 26); // @lit-ok Demo 3 canvas label coordinates (px)
   ctx.fillStyle = css('--pen-event');
-  ctx.fillText(`invented by the filter — ${rms.toFixed(2)} µV RMS`, 8, 38);
+  ctx.fillText(`invented by the filter — ${rms.toFixed(2)} µV RMS`, 8, 38); // @lit-ok Demo 3 canvas label coordinates (px)
 }
 
 // -------------------------------------------------------------------- mount
@@ -433,7 +433,7 @@ function mount(): void {
   setInterval(() => {
     updateObservables();
     if (ui.running) scrub.value = String(stream.positionS);
-  }, 1000 / ANALYSIS_HZ);
+  }, 1000 / ANALYSIS_HZ); // @lit-ok milliseconds per second
   requestAnimationFrame(loop);
 }
 

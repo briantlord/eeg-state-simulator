@@ -17,6 +17,11 @@
  * yields PSD ∝ f^(+Δχ). I got this backwards once while characterizing it, and it is the sign
  * that silently inverts the wake/sleep phase reversal — the artifact's most striking
  * behaviour. `test/tilt.test.ts` pins it against a measured spectrum.
+ *
+ * @lit-ok-file: tilt-filter DSP. The residual literals are the decade padding of the design
+ * band (powers of 10), an anti-alias margin below Nyquist (0.45·fs), the filterbank level count
+ * and a block-overlap divisor. The filter's SIGNAL inputs — Δχ, the band edges, `tilt_n_poles`
+ * — arrive as arguments, sourced by the callers from the registry.
  */
 import { applyBiquad, type Biquad } from '../dsp/biquad.ts';
 import { scalarValue, bandEdges } from '../registry.ts';

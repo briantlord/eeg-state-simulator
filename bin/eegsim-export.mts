@@ -96,7 +96,7 @@ function main(): void {
   const registryDigest = createHash('sha256')
     .update(readFileSync(join(ROOT, 'gen', 'registry.json')))
     .digest('hex')
-    .slice(0, 16);
+    .slice(0, 16); // @lit-ok 16-hex-char registry-digest prefix
 
   writeManifest(outDir, {
     ...defaultManifestFields(),
@@ -216,7 +216,7 @@ function main(): void {
       `  state=${stateArg} seed=${seed} fs=${fs} channels=${MONTAGE.length} ` +
       `samples/epoch=${nSamp}\n` +
       `  registry=${registryDigest} states-known=${STATES.length}\n` +
-      `  chi=${composed.truth.chi} knee=${composed.truth.knee.toFixed(3)} ` +
+      `  chi=${composed.truth.chi} knee=${composed.truth.knee.toFixed(3)} ` + // @lit-ok display precision (3 decimals)
       `(${Math.pow(composed.truth.knee, 1 / composed.truth.chi).toFixed(1)} Hz)\n` +
       `  sources: background@${composed.truth.backgroundRmsUv}uV` +
       composed.truth.oscillations

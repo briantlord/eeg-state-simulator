@@ -6,6 +6,10 @@
  * `zpk2tf` + direct-form recursion overflows to non-finite values within a 120 s impulse
  * response. That is a property of the realization, not of the mathematics, and it applies
  * to every cascade in this project. See docs/Tier0-Estimator-Probe.md Finding 3.
+ *
+ * @lit-ok-file: the RBJ biquad cookbook and Butterworth pole formulas. Every literal is the
+ * DSP mathematics — the 2s and halves of the bilinear transform, cascade indexing. Cutoff
+ * frequencies and orders arrive as arguments, sourced by the callers from the registry.
  */
 
 export interface Biquad {

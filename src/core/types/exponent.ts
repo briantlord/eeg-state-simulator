@@ -107,7 +107,7 @@ export function kneeFrequency(e: BroadKneeExponent): number {
 /** Human-readable, and never a bare number — the UI and every report line use this. */
 export function formatExponent(e: AnyExponent): string {
   const band = e.band === 'broad_1_45' ? '1–45 Hz' : '30–45 Hz';
-  const base = `χ = ${e.value.toFixed(3)} (${band}, ${e.mode} mode)`;
+  const base = `χ = ${e.value.toFixed(3)} (${band}, ${e.mode} mode)`; // @lit-ok display precision (3 decimals)
   return e.mode === 'knee' && e.knee !== undefined
     ? `${base}, knee ${kneeFrequency(e as BroadKneeExponent).toFixed(1)} Hz`
     : base;
@@ -123,13 +123,13 @@ export function formatExponent(e: AnyExponent): string {
  * reporting the slope of a curve that is not a straight line over that band. The runner prints
  * both, so the two are never conflated. See docs/Tier0-Estimator-Probe.md Finding 2.
  */
-export function analyticSlope(chi: number, k: number, lo: number, hi: number, n = 400): number {
+export function analyticSlope(chi: number, k: number, lo: number, hi: number, n = 400): number { // @lit-ok analytic-slope sample count over the fit band
   let sx = 0, sy = 0, sxx = 0, sxy = 0;
   const logLo = Math.log10(lo);
   const step = (Math.log10(hi) - logLo) / (n - 1);
   for (let i = 0; i < n; i++) {
     const x = logLo + i * step;
-    const f = Math.pow(10, x);
+    const f = Math.pow(10, x); // @lit-ok log-frequency base
     const y = -Math.log10(k + Math.pow(f, chi));
     sx += x; sy += y; sxx += x * x; sxy += x * y;
   }

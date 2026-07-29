@@ -133,10 +133,10 @@ export function fitKnee(
   }
 
   let best = { exponent: 1, knee: 0, offset: 0, rSquared: -Infinity };
-  for (let chi = 0.1; chi <= 4.0; chi += 0.05) {
+  for (let chi = 0.1; chi <= 4.0; chi += 0.05) { // @lit-ok chi-knee bias lookup-table: chi sweep bounds and step; estimator-internal
     // Knee frequencies from below the band to above it, log-spaced.
-    for (let e = -1; e <= 2.0; e += 0.1) {
-      const kneeHz = Math.pow(10, e);
+    for (let e = -1; e <= 2.0; e += 0.1) { // @lit-ok chi-knee bias lookup-table: exponent sweep bounds and step; estimator-internal
+      const kneeHz = Math.pow(10, e); // @lit-ok log-frequency base
       const k = Math.pow(kneeHz, chi);
       let sum = 0;
       for (let i = 0; i < fs.length; i++) {

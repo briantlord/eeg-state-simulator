@@ -18,6 +18,10 @@
  * Calibration fixes a scalar. It does not guarantee the criterion survives across seeds,
  * across epochs, or after any later change to amplitudes or the variability contract — and
  * that residue is all G5's positive arm actually tests.
+ *
+ * @lit-ok-file: a bisection procedure. Its literals are the dB search bracket (the registry's
+ * own UI sweep range, widened), the halving-iteration count, and percent for display. The value
+ * it SOLVES is `snr_nominal`, written to the fixture artifact — not a constant hardcoded here.
  */
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';

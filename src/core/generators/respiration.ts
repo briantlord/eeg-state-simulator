@@ -82,7 +82,7 @@ export function synthesizeRespiration(
   const durationS = nSamples / fs;
   while (t < durationS) {
     const period =
-      (60 / meanRate) * (cv > 0 ? Math.exp(rng.gaussian(0, cv) - (cv * cv) / 2) : 1);
+      (60 / meanRate) * (cv > 0 ? Math.exp(rng.gaussian(0, cv) - (cv * cv) / 2) : 1); // @lit-ok seconds per minute
     onsets.push(t);
 
     // inhale : inhale-pause : exhale : exhale-pause
@@ -120,7 +120,7 @@ export function synthesizeRespiration(
     belt,
     phase,
     onsets,
-    meanRatePerMin: onsets.length > 1 ? (60 * (onsets.length - 1)) / (onsets[onsets.length - 1]! - onsets[0]!) : meanRate,
+    meanRatePerMin: onsets.length > 1 ? (60 * (onsets.length - 1)) / (onsets[onsets.length - 1]! - onsets[0]!) : meanRate, // @lit-ok seconds per minute
   };
 }
 

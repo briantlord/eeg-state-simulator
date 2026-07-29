@@ -35,6 +35,12 @@ const STEPS = [
     args: [join(ROOT, 'tools', 'registry', 'emit.mjs'), '--check'],
   },
   {
+    name: 'literal acceptance check',
+    why: 'the register\'s top-rated risk: no signal constant may ship outside the registry',
+    cmd: process.execPath,
+    args: [join(ROOT, 'tools', 'lint', 'literals.mjs')],
+  },
+  {
     name: 'typecheck',
     why: 'seam 7 is enforced by the type system, so a type error can be a science error',
     // The compiler's JS entry point directly, rather than npx: npx resolves to a .cmd shim on

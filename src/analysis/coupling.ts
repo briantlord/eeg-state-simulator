@@ -32,22 +32,22 @@ export function chiOverTime(
   x: Float64Array,
   fs = scalarValue('fs'),
   windowS = 2,
-  hopS = 0.25,
+  hopS = 0.25, // @lit-ok chi-proxy sliding-window hop (s); estimator-internal, provisional -- Finding 13/14, replaced at T1-M2
 ): { chi: Float64Array; fsEst: number } {
   const win = Math.round(windowS * fs);
   const hop = Math.round(hopS * fs);
   const nEst = Math.max(0, Math.floor((x.length - win) / hop));
   const out = new Float64Array(nEst);
 
-  const loBand = [2, 8] as const;
-  const hiBand = [16, 40] as const;
+  const loBand = [2, 8] as const; // @lit-ok chi-proxy low band edges (Hz); estimator-internal, provisional (Finding 13/14)
+  const hiBand = [16, 40] as const; // @lit-ok chi-proxy high band edges (Hz); estimator-internal, provisional (Finding 13/14)
   const fcLo = Math.sqrt(loBand[0] * loBand[1]);
   const fcHi = Math.sqrt(hiBand[0] * hiBand[1]);
   const span = Math.log10(fcHi) - Math.log10(fcLo);
 
   for (let k = 0; k < nEst; k++) {
     const seg = x.subarray(k * hop, k * hop + win);
-    const psd = welch(seg, fs, Math.min(win, 512), Math.min(win, 512) / 2);
+    const psd = welch(seg, fs, Math.min(win, 512), Math.min(win, 512) / 2); // @lit-ok Welch segment cap (samples); estimator-internal
     let lo = 0;
     let hi = 0;
     for (let i = 0; i < psd.freqs.length; i++) {
@@ -69,7 +69,7 @@ export function chiOverTime(
  */
 export function modulationDepth(chi: Float64Array, fsEst: number, freqHz: number): number {
   const n = chi.length;
-  if (n < 8) return Number.NaN;
+  if (n < 8) return Number.NaN; // @lit-ok minimum-sample guard
   let mean = 0;
   let valid = 0;
   for (let i = 0; i < n; i++) {
@@ -78,7 +78,7 @@ export function modulationDepth(chi: Float64Array, fsEst: number, freqHz: number
       valid++;
     }
   }
-  if (valid < 8) return Number.NaN;
+  if (valid < 8) return Number.NaN; // @lit-ok minimum-sample guard
   mean /= valid;
 
   let re = 0;

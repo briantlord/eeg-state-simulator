@@ -13,6 +13,10 @@
  *     the harness would have to reimplement generator internals to reconstruct truth, and at
  *     Tier 2 that means the Python package and the harness must agree on the reconstruction —
  *     reintroducing the parity requirement the plan strikes.
+ *
+ * @lit-ok-file: the binary float64 epoch-directory format — 8 bytes per sample, the 0x3f
+ * high-byte little-endian probe, CSV precision of 9 significant figures, a 5-digit zero-padded
+ * epoch index. Serialization layout, no signal parameter.
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';

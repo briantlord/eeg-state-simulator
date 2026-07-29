@@ -131,7 +131,7 @@ export function surrogateComplexity(
   s: Uint8Array,
   parse: LzParse,
   rng: Rng,
-  nSurrogates = 5,
+  nSurrogates = 5, // @lit-ok surrogate count for the LZ null; a statistical default, not a signal parameter
 ): number {
   const ones = Math.round(symbolDensity(s) * s.length);
   const key = `${s.length}|${ones}|${parse}|${nSurrogates}`;

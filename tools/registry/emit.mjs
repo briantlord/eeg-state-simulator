@@ -235,9 +235,11 @@ function emitMarkdown(reg) {
   out.push('');
   out.push(`Generator version \`${reg.generator_version}\` · schema \`${reg.schema_version}\``);
   out.push('');
-  out.push('**Code reads the registry. No numeric constant may appear in source or UI copy that is');
-  out.push('absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**');
-  out.push('`tools/lint/literals.mjs` does not exist. This document previously asserted that it did.');
+  out.push('**Code reads the registry. No scientific constant may appear in source or UI copy that');
+  out.push('is absent from it** — a Tier 0 acceptance check, **enforced by `tools/lint/literals.mjs`**');
+  out.push('in `npm run verify`. A sourced constant is a string key, not a number, so any numeric');
+  out.push('literal is unsourced by construction; the linter allowlists arithmetic furniture and');
+  out.push('requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for the rest.');
   out.push('');
   out.push(`**States.** \`${reg.states.join('` · `')}\``);
   out.push('');

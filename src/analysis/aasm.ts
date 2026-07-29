@@ -39,7 +39,7 @@ export function contralateralDerivation(
 ): { signal: Float64Array; name: string } {
   const refs = electrodeSet('reference_channels'); // [A1, A2]
   // Contralateral: a left-hemisphere electrode pairs with the right mastoid.
-  const ref = scalp.match(/[13579]$/) ? refs[1]! : refs[0]!;
+  const ref = scalp.match(/[13579]$/) ? refs[1]! : refs[0]!; // @lit-ok 10-20 odd-numbered electrodes are left-hemisphere (regex character class, not a number)
   const si = labels.indexOf(scalp);
   const ri = labels.indexOf(ref);
   if (si < 0) throw new Error(`aasm: no channel '${scalp}'`);

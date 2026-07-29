@@ -6,9 +6,11 @@
 
 Generator version `0.1.0` · schema `1`
 
-**Code reads the registry. No numeric constant may appear in source or UI copy that is
-absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
-`tools/lint/literals.mjs` does not exist. This document previously asserted that it did.
+**Code reads the registry. No scientific constant may appear in source or UI copy that
+is absent from it** — a Tier 0 acceptance check, **enforced by `tools/lint/literals.mjs`**
+in `npm run verify`. A sourced constant is a string key, not a number, so any numeric
+literal is unsourced by construction; the linter allowlists arithmetic furniture and
+requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for the rest.
 
 **States.** `wake_eo` · `wake_ec` · `n1` · `n2` · `n3` · `rem`
 

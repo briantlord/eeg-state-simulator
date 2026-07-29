@@ -396,6 +396,53 @@ shaping, and it must be characterized before any PAC recovery gate is trusted.
 
 ---
 
+## D15 — the literal acceptance check exists, and the claim is restored with accurate scope
+
+**Built, enforced, and self-tested.** `tools/lint/literals.mjs` runs in `npm run verify` (6th
+check). D12 had removed the claim that it existed, because a stated check that does not run is
+worse than none; the claim is restored only now that the check runs.
+
+**The claim is narrowed to what is true, which is a change from the literal wording.** The
+registry header said *"no numeric constant may appear in source or UI copy absent from this
+registry."* Taken literally that is impossible — you cannot register the 2 in `2·π` — so it was
+always implicitly about *model* constants. The linter makes that precise: a sourced constant is
+read through a typed accessor and so appears as a **string key, not a number**, therefore any
+numeric literal is unsourced by construction, and the check is to decide which literals are
+model constants in disguise. It cannot decide that by inspection, so it does not pretend to:
+
+- A tiny allowlist of arithmetic furniture — `0, 1, -1, 2, 0.5, 100` — passes silently. The
+  self-test pins that set so widening it is a decision, not a drift.
+- Every other literal must carry an inline `@lit-ok <reason>` waiver, or its whole file a
+  `@lit-ok-file` waiver, naming why the number is structural. The waivers are grep-able: the
+  `@lit-ok invented …` ones mark **model constants not yet in the registry** — an auditable
+  T1-M1 fit backlog — and every other names an algorithm, unit, layout or format constant.
+
+**Scope is the shipped generator and UI** (`src/**/*.ts`, `bin/*.mts`, `index.html` attributes),
+not the Python harness, tests, tooling or generated output. HTML is scanned at its **attributes
+only**: a hidden parameter default lives in a control's `value`/`max`, while a note reading
+"1.02× its own null" is documentation, the same category as a code comment, which the linter
+already skips.
+
+**What the first run found, which is the point of building it.** The audit surfaced 849 literals
+across 65 values; after the allowlist and waivers, three real findings:
+
+- **Two dead defaults in `index.html`.** `value="20260728"` (the calibration seed) and `max="90"`
+  (the buffer length) were hardcoded in the HTML *and* overwritten by `app.ts` from the registry
+  on mount — a second, silent copy of two registry values. Removed; `app.ts` is the only source.
+- **Range-maxes hardcoded while their mins are sourced.** `kc_dur` and `spindle_dur` read their
+  floor from the registry (`kc_dur_min`, `spindle_dur_min`) but drew the upper bound from a bare
+  literal. Waived as `invented … TODO(T1)`; the asymmetry is now visible rather than buried.
+- **A masker blind spot, made honest.** The tokenizer does not parse regex literals, so the
+  10-20 odd-electrode class `/[13579]$/` surfaces `13579` as a "literal". Rather than special-
+  case it, the two such lines carry waivers and `test/literals-lint.test.ts` asserts the
+  surfacing — so the waiver stays necessary rather than papering over a silent miss.
+
+The self-test pins the masker against the cases a regex gets wrong — numbers inside strings,
+comments and template *text* are not seen; a number inside a `${…}` expression is; identifier
+digits (`Float64Array`, `background_0`) are not literals.
+
+---
+
 ## D14 — G4's criterion is a paired sign test; both of D8's nulls are withdrawn
 
 **Decided, implemented, and falsified against.** D12 left G4 with no pass criterion and four

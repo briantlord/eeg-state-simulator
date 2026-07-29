@@ -272,7 +272,7 @@ export function composeState(
 
   // Seam 5: the mix is explicit. Background is the reference and is never scaled.
   const snrDb = opts.snrDb ?? 0;
-  const sourceGain = Math.pow(10, snrDb / 20);
+  const sourceGain = Math.pow(10, snrDb / 20); // @lit-ok dB-to-linear: 10^(dB/20) is the definition of decibels
 
   const oscTruth: ComposeResult['truth']['oscillations'] = [];
   for (const spec of STATE_OSCILLATIONS[state]) {
@@ -321,7 +321,7 @@ export function composeState(
     // Applied only to bands the high-pass can reach. Modulating alpha's envelope would
     // put sidebands at 10 +/- 0.25 Hz, which no clinical high-pass removes -- so it would
     // reproduce exactly the flatness Finding 10 diagnosed.
-    if (ampMod && hi <= 8) {
+    if (ampMod && hi <= 8) { // @lit-ok 8 Hz = alpha floor; amplitude modulation applies only to sub-alpha bands a clinical high-pass reaches (Finding 10)
       for (let i = 0; i < nSamples; i++) s[i] = s[i]! * ampMod[i]!;
     }
     projectInto(out, s, spec.generator);
@@ -368,7 +368,7 @@ export function composeState(
       chiModPhi0,
       respArtifactAmpUv,
       respAmpModDepth,
-      respFreqHz: resp.meanRatePerMin / 60,
+      respFreqHz: resp.meanRatePerMin / 60, // @lit-ok seconds per minute
       independentChiModFreq: opts.independentChiModFreq ?? null,
       graphoelementGenerators: grapho.generators,
     },

@@ -7,12 +7,23 @@
 # Grammar: tools/registry/GRAMMAR.md
 # Rationale for the inversion: docs/Execution-Scheme.md D11
 #
-# No numeric constant may appear in source or UI copy that is absent from this registry.
+# No scientific constant may appear in source or UI copy that is absent from this registry.
 #
-# That is a Tier 0 acceptance check and IT IS NOT YET ENFORCED. tools/lint/literals.mjs does
-# not exist. This file and the generated PARAMETERS.md both previously asserted that it did --
-# a stated check that does not exist is worse than none, for the same reason the harness spec
-# gives about gates. TODO(WP-A): write the linter, then restore the claim.
+# ENFORCED by tools/lint/literals.mjs, run in `npm run verify`. A properly sourced constant is
+# read through a typed accessor (scalarValue, uncertainty, ...) and so appears as a STRING KEY,
+# not a number; any numeric literal is therefore unsourced by construction. The linter allows a
+# tiny allowlist of arithmetic furniture (0, 1, -1, 2, 0.5, 100) and requires every other
+# literal to carry an inline `@lit-ok <reason>` waiver, or the whole file a `@lit-ok-file`
+# waiver, naming why the number is structural rather than a model parameter. The waivers are
+# grep-able: `@lit-ok invented` marks a model constant not yet migrated into this registry --
+# the T1-M1 fit backlog -- while every other waiver names an algorithm, unit, or layout constant.
+#
+# Scope: the shipped generator and UI (src/**/*.ts, bin/*.mts, index.html attributes). NOT the
+# Python harness, tests, tooling, or generated output -- see the linter's header for why.
+#
+# The claim above was once asserted while the linter did not exist; that was removed (D12),
+# because a stated check that does not run is worse than none, and is restored only now that it
+# does. See docs/DECISIONS.md D15.
 
 schema_version: 1
 
