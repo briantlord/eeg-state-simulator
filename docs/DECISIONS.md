@@ -404,7 +404,34 @@ shaping, and it must be characterized before any PAC recovery gate is trusted.
 | ~~P2~~ | ~~`tilt_n_poles` and spacing~~ | — | **Closed.** `tilt_n_poles` = 12, standing `derived`; see `Tier0-Estimator-Probe.md` Finding 4 |
 | ~~P3~~ | ~~`tilt_mod_settling_ratio`~~ | — | **Closed as not answerable as posed.** Settling has 61× margin and is not the binding constraint; the residual risk is the coefficient-interpolation scheme, and measuring it *is* G4. Registered `absent` with a procedure. Finding 5 |
 | P4 | Corpus selection for T1-M1 fitting | every `invented` row | T1-M1 |
-| P7 | Non-sinusoidal waveform shape for alpha (and the SO) | any PAC recovery gate | T1-M2 |
+| ~~P7~~ | ~~Non-sinusoidal waveform shape for alpha and the SO~~ | — | **Implemented, not fitted.** See below |
+| P8 | Fit `alpha_shape_rdsym` / `alpha_shape_triangularity` / `so_rdsym` against a corpus | any PAC recovery gate | T1-M2 |
+| P9 | Replace Gaussian projection weights with LΨᵀ columns or a SEREEGA lead field | far-field correlation structure | T1-M1 |
+| P10 | Fit χ and `knee_freq_*` **jointly** per state | state orderings; any comparability claim | T1-M1 |
+| P11 | Respiratory mechanism (a), and the amplitude half of (c) | Demo 1; G4's negative arm | T0 |
+
+**P7 is implemented and deliberately left unfitted.** Alpha and the slow oscillation are now
+non-sinusoidal: triangularity plus a rise-decay asymmetry applied to the instantaneous phase,
+so the envelope and the bistable burst structure survive untouched. Measured harmonic content
+in the composed signal is 2.9% at 2f₀ and 1.8% at 3f₀ — the mechanism by which waveform shape
+manufactures spurious phase-amplitude coupling now exists rather than being absent. **P8
+replaces it**: no source consulted gives an rdsym for posterior alpha specifically, so both
+magnitude and direction are unfitted and a PAC recovery gate still must not be trusted until
+they are.
+
+**P9, P10 and P11 are new**, and each is a concrete blocker rather than a worry:
+
+- **P9** — measured against real EEG, far-field inter-channel correlation is 0.29 against a
+  real 0.44, and a handful of Gaussian sources cannot fix it: more global component raises
+  far-field correlation and *lowers* effective rank, while real EEG has both at once. Build
+  Plan §3.4 already names the fix and the projection-file schema already supports it.
+- **P10** — the recovered state ordering is a joint function of χ and the knee, so fitting
+  either alone cannot reproduce the documented orderings (Finding 9), and our χ over 1–20 Hz
+  is 0.32 against a real 0.99 because the knee sits inside the band (Finding 12).
+- **P11** — **the artifact's thesis does not currently work.** Only respiratory mechanism (c)'s
+  exponent half is implemented, and that is the one component a clinical high-pass cannot
+  remove, so Demo 1 shows 93% → 91% across the whole cutoff range. The same omission makes
+  G4's negative arm vacuous. One missing mechanism, two blocked deliverables (Finding 10).
 | ~~P5~~ | ~~Re-measure G1a vs G1b error under the full generator~~ | — | **Closed: D3 stands.** See below |
 | P6 | Re-derive G1b's bias magnitude at the repaired `k_*` values | any comparability claim | T1-M1 |
 

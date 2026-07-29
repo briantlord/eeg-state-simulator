@@ -392,6 +392,42 @@ duration distribution alongside F1, or the curve will be uninterpretable.
 
 ---
 
+# Finding 8 — a synthesis comb landed exactly on `g4_f2`
+
+Found while building the coupling probe, and it sat on the arm of G4 that must show **no**
+coupling.
+
+With no modulation injected at all, the recovered χ(t) carried a spurious line at 0.25 Hz
+**nine times** the size of the 0.10 Hz baseline — and injecting genuine coupling at 0.25 Hz
+partially *cancelled* against it.
+
+**Cause.** `synth_block` (4096) − `synth_overlap` (1024) = a hop of 3072 samples = **12 s**, so
+overlap-add deposits a comb at k/12 Hz. And:
+
+| | harmonic of 1/12 Hz | on the comb? |
+|---|---|---|
+| `g4_f1` = 0.10 Hz | 1.2 | no |
+| `g4_f2` = 0.25 Hz | **3.0** | **exactly** |
+
+The arm that looked healthy was the one that happened to sit *off* the comb. A gate built on
+this would have reported leakage the generator never produced, or masked leakage it did.
+
+**An equal-power crossfade does not prevent it.** Consecutive blocks are independent
+realizations, so the variance is flat through the join while the local *spectrum* still
+wobbles. The fix is to stop having a block rate: whenever the run length is known — every
+export, every gate — synthesis uses a single transform. The block path remains for the live
+streaming buffer, where nothing scientific is measured across a boundary.
+
+**Two wrong diagnoses on the way**, both recorded rather than deleted: estimator window
+smoothing (shortening the window did not help) and the tilt coefficient scheme (both schemes
+failed identically). What isolated it was driving the *independent* modulator **at** the
+respiration frequency — it failed the same way, proving the driver innocent and the frequency
+guilty.
+
+This is the same bug shape as the epoch-boundary comb fixed earlier, one level down.
+
+---
+
 # Finding 9 — the state ordering cannot be set from `chi_*`, and three symptoms share one cause
 
 Build Plan §7 sets a trap deliberately: *"Do not assume monotonic orderings … **Treat a clean
