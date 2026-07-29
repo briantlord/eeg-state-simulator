@@ -157,6 +157,15 @@ class GateSpec:
     #: Registry key holding this gate's criterion. The runner prints its STANDING on every
     #: line, and refuses to start if a failable gate's criterion standing is `invented`.
     criterion_key: str | None = None
+    #: Registry keys the CRITERION ITSELF consumes.
+    #:
+    #: Checking only `criterion_key`'s own standing is not enough. G5's null criterion
+    #: `gate_g5_null_ordering` is standing `derived`, and passes that check -- while consuming
+    #: `snr_null_offset` = -6 dB, standing `invented`, which sets the entire discriminative
+    #: power of the test. At -1 dB the null is hard, at -20 dB trivial. The runner refuses a
+    #: failable gate whose criterion consumes an invented number, which is what harness
+    #: section 1 actually prohibits.
+    criterion_inputs: tuple[str, ...] = ()
     #: Third-party tools required. Absent => status UNAVAILABLE, never a silent skip.
     requires_tools: tuple[str, ...] = ()
     #: Registry keys this gate's result depends on. If any is pending/invented the runner

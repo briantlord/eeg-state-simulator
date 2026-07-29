@@ -3,14 +3,38 @@
  * number, in code, exports, UI or any gate.
  *
  * "The two bands the artifact exposes require different aperiodic modes and recover different
- * quantities; make it a type error to compare them." This file is that type error.
+ * quantities; make it a type error to compare them."
  *
  * The brand is declared as a FUNCTION taking B and M and returning them. A function type is
  * contravariant in its parameters and covariant in its return, so the pair is invariant in
  * both B and M. That is what makes `difference(broad, narrow)` fail to compile: TypeScript
  * cannot widen both arguments to a common union, because an invariant brand refuses the
- * widening. A plain `readonly band: B` property would be covariant and would widen happily,
- * silently permitting exactly the comparison seam 7 exists to forbid.
+ * widening. A plain `readonly band: B` property would be covariant and would widen happily.
+ *
+ * ============================ KNOWN GAP — READ THIS ============================
+ *
+ * The brand guards FUNCTIONS THAT MENTION IT. It does not guard `.value`, which is a public
+ * `readonly value: number`. All of the following compile clean under this project's own
+ * strict config, and all produce numbers at runtime:
+ *
+ *     broad.value - narrow.value
+ *     [broad, narrow].map(e => e.value).sort((p, q) => p - q)
+ *     Math.abs(broad.value - narrow.value)
+ *
+ * The second is exactly what a state-ordering gate (harness section 6, "State orderings
+ * (chi, LZc)") would write. So seam 7 is enforced at `difference()` and NOWHERE ELSE, and an
+ * earlier version of this comment claimed otherwise ("This file is that type error") — it was
+ * wrong, and the type-level tests in test/exponent.test.ts only ever exercised `difference`.
+ *
+ * TODO(WP-G, before the state-ordering gate is written): make `value` opaque —
+ * `readonly value: Chi<B, M>` where `Chi` is a nominal object-like type, with an explicit
+ * `chiNumber<B, M>(v: Chi<B, M>, band: B, mode: M): number` unwrap, so extracting a number
+ * has to name the band and mode. Branding as `number & {...}` will NOT work: arithmetic on a
+ * number subtype is still legal.
+ *
+ * Until then, treat the tuple discipline here as a convention with one enforced choke point,
+ * not as a guarantee.
+ * ==============================================================================
  */
 
 declare const EXPONENT_BRAND: unique symbol;

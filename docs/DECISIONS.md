@@ -222,6 +222,111 @@ otherwise represent.
 
 ---
 
+## D12 — Amendments from adversarial review (2026-07-29)
+
+*An independent review attacked D7–D11 and the measurements behind them. Every finding below
+was re-verified here before being recorded. Two decisions do not survive intact.*
+
+### D8 is **partly withdrawn.** The supersession of D4 stands; the replacement does not.
+
+D4's f₁ mechanism is genuinely broken and D8 is right to kill it. Three defects in the
+replacement, all measured:
+
+1. **The f₁ spectral-neighbourhood null is not implementable at its registered parameters.**
+   At `g4_record_length` 300 s and `analysis_update` 1 Hz, χ̂(t) has 300 samples and
+   1/T = 0.00333 Hz, so f₁ → bin 30. `g4_f1_neighbourhood_halfwidth` = 60 gives bins
+   **[−30, 90] — the lower half is below DC.** After the guard bands only **38 bins** survive,
+   of which **39% sit below 0.05 Hz**, in the drift band of any sliding-window χ̂ estimator
+   where the local spectrum is emphatically not flat. A local-noise-floor null presumes local
+   stationarity; this neighbourhood does not have it. A 95th percentile over 38 samples is
+   near enough `max()`.
+2. **The "5% per-seed false-exceedance rate by design" is false, and not measured.** It is a
+   function of respiration regularity, not of the percentile. Measured over independent
+   respiration realisations, 60 trials each:
+
+   | `resp_period_cv` | measured rate | expected exceedances at `n_seeds` = 20 |
+   |---|---|---|
+   | **0.02** (N3-like, "most regular") | **0.317** | **6.3** |
+   | 0.05 | 0.083 | 1.7 |
+   | 0.08 (the registry's provisional) | 0.067 | 1.3 |
+   | 0.10 | 0.100 | 2.0 |
+   | 0.25 (REM-like) | 0.050 | 1.0 |
+
+   `resp_period_cv` is a single row for **all** states even though §5.2 and `resp_rate_n3`
+   both say N3 is the most regular. The moment a state-specific cv near 0.02 is fitted at
+   T1-M1, D8's exact-binomial test rejects a working generator at p ≈ 3×10⁻⁴ — which is the
+   defect D8 exists to remove, reintroduced by its own fix.
+3. **"Could never have passed" is an interpretation stated as a measurement.** `obs == p95` is
+   a *tie*; a `>=` comparison passes trivially. The real defect is that the null carries
+   **zero information in either direction.** The exactness also depends on `f₁·T` being an
+   integer (30 cycles exactly at the registered values); at f₁ = 0.1017 the same test gives
+   obs/p95 = 1.039 and passes.
+
+**The cleanest statement of why D4 had to go** is not the one D8 gives: **D4's own
+`g4_min_bin_separation` ≥ 10-bin requirement forces the χ modulator to be a clean spectral
+line, and a clean line is exactly what makes its own circular-shift null degenerate.** D4 is
+internally inconsistent. That argument does not depend on which reading of D4 you take, and
+D8's does.
+
+**Status: G4 has no agreed pass criterion.** It must not be implemented until one exists.
+Options on the table: shrink the halfwidth and correct for one-sidedness; lengthen
+`g4_record_length` so a symmetric neighbourhood exists; fit a parametric local noise floor
+instead of an order statistic; and for the f₂ arm, estimate the exceedance rate per run from
+the shift-null's own rank rather than hard-coding 0.05.
+
+### D9 is **withdrawn.** Its load-bearing premise is false.
+
+D9 claimed *"an ordering needs no invented number."* It does: the ordering consumes
+`snr_null_offset` = −6 dB, standing **`invented`**, which sets the entire discriminative power
+of the second clause. Two further defects: `pass_fraction(N2)` is **0 by construction** — no
+0.5–2 Hz generator is assigned to N2, so half the verdict tests the registry's state
+assignment rather than the generator — and a raw `0.55 > 0.50` point comparison has no error
+control, which harness §3 forbids.
+
+**And D9's premise that no criterion exists is wrong.** A definitional one does: an epoch our
+generator *labels* N3 must satisfy the AASM rule that *defines* N3, so the criterion is
+`pass_fraction = 1.0`, from the same definitional source as `gate_aasm_n3_min_amp`. That is
+neither invented nor read from our own spread. **Adopt that instead**, with a proportion test
+carrying a CI on the difference for the null.
+
+### D10 stands; one claim in it is **withdrawn**, and a units error is fixed.
+
+The degrees-of-freedom argument is correct and the decision is right. But *"makes
+`snr_nominal` a genuine single-scalar solve"* is false — `so_amp` (100–200 µV at
+`so_freq` < 1 Hz) also lands inside `gate_aasm_n3_band`, the aperiodic offset `b` has **no
+registry row at all** despite `aperiodic_model` naming it, and the interval→point reduction
+rule is unregistered with **zero `Dv` rows** in the registry. At least three degrees of
+freedom remain.
+
+**Units error, now fixed:** `delta_amp` carried `units: uV` while the textbook 100–200 figure
+is peak-to-peak. Read as peak it is 200–400 µV p-p, which at −6 dB still clears 75 µV — so
+**G5's null could not have failed**, and under D9 that null was G5's only failable arm.
+
+### D11 stands, with three corrections applied
+
+- **Every `k_*` row contradicted its own stated `basis` by 16× to 3783×.** I wrote basis
+  strings reading `k = knee_freq_low ^ chi` and stored values computed some other way. Nothing
+  could catch it: per-row validation cannot see one row contradicting another. `emit.mjs` now
+  **cross-checks `k = knee_freq_state ^ chi_state`**, `knee_freq_*` is registered per state,
+  and the check caught two further arithmetic errors in the repair itself.
+- **A tension this exposed, recorded not resolved:** D3 says `k` encodes *the ~20 Hz knee*, a
+  single location, while `knee_present` requires prominent-in-REM / attenuated / absent-in-N3.
+  With one `k` per state the only way to express "absent" is to *move* the knee below the fit
+  band, not to weaken it. T1-M1 must settle whether the single-knee form can carry
+  `knee_present` at all.
+- **`gate_determinism` was re-sourced by guess** to "IEEE 754 binary64", which defines float64
+  representation but says nothing about one seed producing identical output — that is a
+  property of our implementation and its draw ordering. Re-standed `definitional` → `chosen`.
+
+### Known-false claim removed
+
+`registry/parameters.yaml` and the generated `PARAMETERS.md` both asserted that the numeric-
+literal acceptance check was *"enforced by `tools/lint/literals.mjs`."* **That file does not
+exist.** The claim is removed from both and carries a TODO. A stated check that does not exist
+is worse than none, for the reason the harness spec gives about gates.
+
+---
+
 ## Pending decisions
 
 | ID | Question | Blocks | Due |
@@ -230,13 +335,26 @@ otherwise represent.
 | ~~P2~~ | ~~`tilt_n_poles` and spacing~~ | — | **Closed.** `tilt_n_poles` = 12, standing `derived`; see `Tier0-Estimator-Probe.md` Finding 4 |
 | ~~P3~~ | ~~`tilt_mod_settling_ratio`~~ | — | **Closed as not answerable as posed.** Settling has 61× margin and is not the binding constraint; the residual risk is the coefficient-interpolation scheme, and measuring it *is* G4. Registered `absent` with a procedure. Finding 5 |
 | P4 | Corpus selection for T1-M1 fitting | every `invented` row | T1-M1 |
-| P5 | Re-measure G1a vs G1b error under the **full** generator | amending D3 | T0-M5 |
+| ~~P5~~ | ~~Re-measure G1a vs G1b error under the full generator~~ | — | **Closed: D3 stands.** See below |
+| P6 | Re-derive G1b's bias magnitude at the repaired `k_*` values | any comparability claim | T1-M1 |
 
-**P5 is new.** D3 states *"G1a will show larger recovery error than G1b."* Measured on clean
-aperiodic signal the ordering is reversed by two orders of magnitude (median |error| 0.005 vs
-0.417), and G1b's error matches the analytic slope of the generative form to 3% — so it is
-structural, and it originates in our **modelled 20 Hz knee**, not the literature's unmodelled
-45 Hz one. That makes D3's comparability argument weaker than stated: the bias magnitude is a
-function of the `invented` `k_*` rows rather than something inherited from published
-measurement conditions. The clean-signal regime flatters G1a, so this justifies re-opening D3,
-not amending it. Finding 2.
+**P5 is closed, against the position that opened it.** D3 states *"G1a will show larger
+recovery error than G1b."* I measured the ordering reversed by two orders of magnitude and
+flagged, correctly, that the clean-signal regime flatters G1a and must be re-measured. An
+adversarial review ran that measurement rather than deferring it: **once oscillatory peaks are
+present inside 1–45 Hz, G1a's error rises to 0.82–1.11 against G1b's 0.37–0.44 and D3's
+ordering holds** — at both 300 s and 30 s, with and without sensor noise.
+
+The reason is sharper than "clean signal": my probe was **model-exact.** The synthesis and the
+`specparam` knee model are the same equation, so G1a's estimator was fitting the form that
+generated the data, with no peaks to remove first. Under those conditions G1a cannot lose.
+**D3 is upheld and needs no amendment.**
+
+**P6 is what actually remains.** D3's *comparability* argument is still weaker than stated —
+G1b's bias comes from our modelled 20 Hz knee, not the literature's unmodelled 45 Hz one, so
+its magnitude is a function of the `k_*` rows rather than inherited from published measurement
+conditions. But the −0.42 figure I recorded was computed at `k = 20^χ`, **which the registry
+did not hold**: every `k_*` row contradicted its own stated basis by 16× to 3783×. At the
+registry's values the bias is −0.0002 to −0.031. The rows are repaired and `emit.mjs` now
+cross-checks `k = knee_freq^χ`, but the magnitude must be re-derived at T1-M1 before any
+comparability claim is made. See `Tier0-Estimator-Probe.md`, correction block.

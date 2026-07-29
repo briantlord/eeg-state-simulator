@@ -53,6 +53,42 @@ def test_epochs_are_contiguous(run):
     assert sig.shape == (len(channels), n_samp * 3)
 
 
+def test_epochs_slice_one_continuous_stream(tmp_path):
+    """Regression: epochs must be slices of a single run, not independent realisations.
+
+    Per-epoch substreams gave the stitched record a hard discontinuity every
+    `epoch_display` seconds, depositing a comb at k/30 Hz. `g4_f1` = 0.10 Hz is harmonic
+    k = 3 EXACTLY while `g4_f2` = 0.25 Hz is k = 7.5 and lands on nothing -- so a pure export
+    artefact produced energy at f1 and not at f2, which is the exact pattern G4 declares a
+    pass.
+
+    The check: a 1-epoch run and a 10-epoch run at the same seed must agree bit-for-bit over
+    the first epoch. They can only do that if the stream is continuous and the epoch index
+    merely slices it.
+    """
+    short = generate(tmp_path / "short", seed=31337, state="n3", epochs=1)
+    long_ = generate(tmp_path / "long", seed=31337, state="n3", epochs=10)
+    np.testing.assert_array_equal(
+        short.epoch(0).signal,
+        long_.epoch(0).signal,
+        err_msg="epoch 0 differs between a 1-epoch and a 10-epoch run: "
+        "epochs are independent realisations, not slices of one stream",
+    )
+
+
+def test_g4_f1_would_land_on_the_epoch_boundary_comb(tmp_path):
+    """Guards the reason the test above matters, so it is not deleted as redundant.
+
+    If this ever stops holding, the continuity requirement is less load-bearing -- but while
+    it holds, any per-epoch discontinuity feeds G4's positive arm directly.
+    """
+    f1 = R.scalar_value("g4_f1")
+    f2 = R.scalar_value("g4_f2")
+    epoch = R.scalar_value("epoch_display")
+    assert (f1 * epoch) % 1 == 0, "g4_f1 is no longer an exact harmonic of 1/epoch_display"
+    assert (f2 * epoch) % 1 != 0, "g4_f2 has become a harmonic; the asymmetry is gone"
+
+
 def test_sidecar_carries_injected_ground_truth(run):
     """Without this the harness would have to reimplement generator internals."""
     truth = run.epoch(0).truth

@@ -134,12 +134,23 @@ function main(): void {
     respMechanisms: { movementArtifact: false, rmbo: false, chiModulation: false },
   };
 
+  // ONE CONTINUOUS RUN, sliced into epochs — not one independent realisation per epoch.
+  //
+  // The earlier `substream(seed, ...${ch}/epoch${e})` gave every epoch its own stream, so the
+  // record `prep/epochio.concatenated()` stitches for G4 had a hard discontinuity every 30 s.
+  // That deposits a comb at k/epoch_display = k x 0.03333 Hz — and `g4_f1` = 0.10 Hz is
+  // harmonic k = 3 EXACTLY, while `g4_f2` = 0.25 Hz is k = 7.5 and lands on nothing. So a pure
+  // export artefact put energy at f1 and not at f2: precisely the pattern G4 declares a pass,
+  // on the gate the Build Plan calls the most important thing in Tier 0.
+  //
+  // One substream per (generator, channel) for the whole run; the epoch index only slices it.
+  const totalSamples = nSamp * nEpochs;
+  const continuous = MONTAGE.map((ch) =>
+    synthesizeChannel(Rng.substream(seed, `stub_white_noise/${ch}`), totalSamples, 10),
+  );
+
   for (let e = 0; e < nEpochs; e++) {
-    // One substream per (generator, channel). Derived from names, so adding a generator
-    // later cannot perturb these draws — seam 4.
-    const signal = MONTAGE.map((ch) =>
-      synthesizeChannel(Rng.substream(seed, `stub_white_noise/${ch}/epoch${e}`), nSamp, 10),
-    );
+    const signal = continuous.map((full) => full.subarray(e * nSamp, (e + 1) * nSamp));
 
     const sidecar: EpochSidecar = {
       schemaVersion: defaultManifestFields().schemaVersion,

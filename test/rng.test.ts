@@ -106,6 +106,47 @@ test('state save/restore reproduces the stream', () => {
   assert.deepEqual(draws(r, 20), expected);
 });
 
+test('save/restore round-trips through normal(), including the Box-Muller spare', () => {
+  // Regression: saveState() previously returned only the four state words, so a snapshot
+  // taken after an ODD number of normal() calls dropped the cached spare and the restored
+  // stream was shifted by one draw. The test above missed it because nextUint32() has no
+  // spare -- and the exporter's synthesizeChannel uses normal() exclusively.
+  for (const priorDraws of [0, 1, 2, 3]) {
+    const r = Rng.fromSeed(99);
+    for (let i = 0; i < priorDraws; i++) r.normal();
+    const snap = r.saveState();
+    const expected = [r.normal(), r.normal(), r.normal()];
+    r.restoreState(snap);
+    assert.deepEqual(
+      [r.normal(), r.normal(), r.normal()],
+      expected,
+      `stream diverged after ${priorDraws} prior normal() call(s)`,
+    );
+  }
+});
+
+test('substreams do not collide at full-night scale', () => {
+  // The 32-bit derivation this replaced had ~3.8% collision probability over an 8 h night
+  // (19 channels x 960 epochs) and ~98% with ten generators. A collision means two channels
+  // carrying bit-identical noise.
+  const seed = 20260728;
+  const names: string[] = [];
+  for (const gen of ['aperiodic', 'alpha', 'spindle_fast', 'kcomplex', 'slow_osc']) {
+    for (let ch = 0; ch < 19; ch++) {
+      for (let ep = 0; ep < 240; ep++) names.push(`${gen}/ch${ch}/epoch${ep}`);
+    }
+  }
+  const firsts = new Set(names.map((n) => Rng.substream(seed, n).nextUint32()));
+  // 22,800 names into 2^32: a handful of coincidental first-draw ties is expected and
+  // harmless; what matters is that it is not the systematic collapse the old scheme had.
+  const collisionRate = 1 - firsts.size / names.length;
+  assert.ok(
+    collisionRate < 0.001,
+    `${names.length} substreams gave ${firsts.size} distinct first draws ` +
+      `(collision rate ${(collisionRate * 100).toFixed(2)}%)`,
+  );
+});
+
 test('a zero seed does not produce the degenerate all-zero state', () => {
   // Zero state is a fixed point of xoshiro; fromSeed must re-mix past it.
   const r = Rng.fromSeed(0);

@@ -77,6 +77,12 @@ export type ParamKey =
   | 'kc_rate'
   | 'knee_freq_high_unmodelled'
   | 'knee_freq_low'
+  | 'knee_freq_n1'
+  | 'knee_freq_n2'
+  | 'knee_freq_n3'
+  | 'knee_freq_rem'
+  | 'knee_freq_wake_ec'
+  | 'knee_freq_wake_eo'
   | 'knee_modelled'
   | 'knee_present'
   | 'line_amp'
@@ -216,6 +222,12 @@ export interface ParamKindMap {
   'kc_rate': 'interval';
   'knee_freq_high_unmodelled': 'scalar';
   'knee_freq_low': 'scalar';
+  'knee_freq_n1': 'pending';
+  'knee_freq_n2': 'pending';
+  'knee_freq_n3': 'pending';
+  'knee_freq_rem': 'pending';
+  'knee_freq_wake_ec': 'pending';
+  'knee_freq_wake_eo': 'pending';
   'knee_modelled': 'procedure';
   'knee_present': 'ordering';
   'line_amp': 'interval';

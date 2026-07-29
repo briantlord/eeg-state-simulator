@@ -62,24 +62,23 @@ print("=" * 68)
 
 
 def resp_phase(f_mean, cv, n, fs, rng):
-    """Phase of a breath series with lognormal period jitter (cv = resp_period_cv)."""
-    ph = [0.0]
-    tt = 0.0
-    while tt < n / fs + 20:
-        per = f_mean ** -1 * np.exp(rng.normal(0, cv) - cv ** 2 / 2)
-        tt += per
-        ph.append(ph[-1] + 2 * np.pi)
-    ph = np.array(ph)
-    times = np.concatenate([[0.0], np.cumsum(np.diff(ph) / (2 * np.pi) / f_mean)])
-    # rebuild actual breath onset times consistent with drawn periods
-    tt, onsets = 0.0, [0.0]
-    rng2 = np.random.default_rng(99)
-    while tt < n / fs + 20:
-        tt += (1.0 / f_mean) * np.exp(rng2.normal(0, cv) - cv ** 2 / 2)
-        onsets.append(tt)
+    """Phase of a breath series with lognormal period jitter (cv = resp_period_cv).
+
+    FIXED after review. The earlier version built the onset times twice: once from the `rng`
+    argument (computed, then discarded) and once from a hardcoded `default_rng(99)`, whose
+    output it actually returned. The result was DETERMINISTIC given (f_mean, cv) -- there was
+    exactly one respiration realisation per condition, and the `rng` argument was consumed
+    only as a side effect, silently shifting the surrogate draws.
+
+    That defect is why the original Finding 6 could not support a per-seed rate claim: every
+    "seed" saw the same respiration.
+    """
+    onsets = [0.0]
+    while onsets[-1] < n / fs + 20:
+        onsets.append(onsets[-1] + (1.0 / f_mean) * np.exp(rng.normal(0, cv) - cv ** 2 / 2))
     onsets = np.array(onsets)
-    k = np.arange(len(onsets)) * 2 * np.pi
-    return np.interp(np.arange(n) / fs, onsets, k)
+    cycles = np.arange(len(onsets)) * 2 * np.pi
+    return np.interp(np.arange(n) / fs, onsets, cycles)
 
 
 for cv, label in [(0.02, "very regular  (cv=0.02, N3-like)"),

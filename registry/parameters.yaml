@@ -8,7 +8,11 @@
 # Rationale for the inversion: docs/Execution-Scheme.md D11
 #
 # No numeric constant may appear in source or UI copy that is absent from this registry.
-# That is a Tier 0 acceptance check, enforced by tools/lint/literals.mjs.
+#
+# That is a Tier 0 acceptance check and IT IS NOT YET ENFORCED. tools/lint/literals.mjs does
+# not exist. This file and the generated PARAMETERS.md both previously asserted that it did --
+# a stated check that does not exist is worse than none, for the same reason the harness spec
+# gives about gates. TODO(WP-A): write the linter, then restore the claim.
 
 schema_version: 1
 
@@ -276,12 +280,31 @@ params:
     section: "3. Aperiodic background"
     milestone: T1-M1
 
-  k_wake_eo: {value: {kind: pending}, provisional: {v: 0.9,  basis: "knee frequency ~20 Hz => k = knee_freq_low ^ chi", expires_at_milestone: T1-M1, constrained_by: "sets G1b's structural bias; see Tier0-Estimator-Probe Finding 2"}, units: Hz, standing: invented, source: {kind: none, rationale: ""}, states: [wake_eo], section: "3. Aperiodic background", milestone: T1-M1}
-  k_wake_ec: {value: {kind: pending}, provisional: {v: 1.0,  basis: "as above", expires_at_milestone: T1-M1, constrained_by: "sets G1b's structural bias"}, units: Hz, standing: invented, source: {kind: none, rationale: ""}, states: [wake_ec], section: "3. Aperiodic background", milestone: T1-M1}
-  k_n1:      {value: {kind: pending}, provisional: {v: 1.0,  basis: "attenuated", expires_at_milestone: T1-M1, constrained_by: "sets G1b's structural bias"}, units: Hz, standing: invented, source: {kind: none, rationale: ""}, states: [n1], section: "3. Aperiodic background", milestone: T1-M1}
-  k_n2:      {value: {kind: pending}, provisional: {v: 0.8,  basis: "attenuated", expires_at_milestone: T1-M1, constrained_by: "sets G1b's structural bias"}, units: Hz, standing: invented, source: {kind: none, rationale: ""}, states: [n2], section: "3. Aperiodic background", milestone: T1-M1}
-  k_n3:      {value: {kind: pending}, provisional: {v: 0.05, basis: "knee effectively absent in N3", expires_at_milestone: T1-M1, constrained_by: "sets G1b's structural bias"}, units: Hz, standing: invented, source: {kind: none, rationale: ""}, states: [n3], section: "3. Aperiodic background", milestone: T1-M1}
-  k_rem:     {value: {kind: pending}, provisional: {v: 1.6,  basis: "knee most prominent in REM", expires_at_milestone: T1-M1, constrained_by: "sets G1b's structural bias"}, units: Hz, standing: invented, source: {kind: none, rationale: ""}, states: [rem], section: "3. Aperiodic background", milestone: T1-M1}
+  # The knee FREQUENCY per state, in Hz. Registered explicitly because `k` alone is not
+  # interpretable: k = f_knee ^ chi, so the same k means a different knee at every chi, and a
+  # basis string asserting "knee ~20 Hz" cannot be checked against a stored k by eye.
+  # emit.mjs now cross-checks k_<state> == knee_freq_<state> ** chi_<state>.
+  #
+  # TENSION, recorded rather than resolved: DECISIONS D3 says "`k` encodes the ~20 Hz knee",
+  # a single location, while `knee_present` requires the knee to be prominent in REM,
+  # attenuated in wake/N1/N2 and absent in N3. With one k per state the only way to express
+  # "attenuated" and "absent" is to MOVE the knee, not to weaken it -- so these values place
+  # the knee near 20 Hz only in REM and slide it below the fit band for N3. That is a
+  # different claim from D3's, and T1-M1 must settle whether the single-knee form can carry
+  # `knee_present` at all.
+  knee_freq_wake_eo: {value: {kind: pending}, provisional: {v: 12.0, basis: "attenuated per knee_present; below the ~20 Hz literature location", expires_at_milestone: T1-M1, constrained_by: "must not be tuned to hit a target G1b bias"}, units: Hz, standing: invented, source: {kind: none, rationale: ""}, states: [wake_eo], section: "3. Aperiodic background", milestone: T1-M1}
+  knee_freq_wake_ec: {value: {kind: pending}, provisional: {v: 12.0, basis: "attenuated per knee_present", expires_at_milestone: T1-M1, constrained_by: "must not be tuned to hit a target G1b bias"}, units: Hz, standing: invented, source: {kind: none, rationale: ""}, states: [wake_ec], section: "3. Aperiodic background", milestone: T1-M1}
+  knee_freq_n1:      {value: {kind: pending}, provisional: {v: 12.0, basis: "attenuated per knee_present", expires_at_milestone: T1-M1, constrained_by: "must not be tuned to hit a target G1b bias"}, units: Hz, standing: invented, source: {kind: none, rationale: ""}, states: [n1], section: "3. Aperiodic background", milestone: T1-M1}
+  knee_freq_n2:      {value: {kind: pending}, provisional: {v: 10.0, basis: "attenuated per knee_present", expires_at_milestone: T1-M1, constrained_by: "must not be tuned to hit a target G1b bias"}, units: Hz, standing: invented, source: {kind: none, rationale: ""}, states: [n2], section: "3. Aperiodic background", milestone: T1-M1}
+  knee_freq_n3:      {value: {kind: pending}, provisional: {v: 0.5,  basis: "knee effectively ABSENT in N3, i.e. below fit_band_broad's lower edge", expires_at_milestone: T1-M1, constrained_by: "must not be tuned to hit a target G1b bias"}, units: Hz, standing: invented, source: {kind: none, rationale: ""}, states: [n3], section: "3. Aperiodic background", milestone: T1-M1}
+  knee_freq_rem:     {value: {kind: pending}, provisional: {v: 20.0, basis: "knee most prominent in REM; the ~20 Hz location D3 names", expires_at_milestone: T1-M1, constrained_by: "must not be tuned to hit a target G1b bias"}, units: Hz, standing: invented, source: {kind: none, rationale: ""}, states: [rem], section: "3. Aperiodic background", milestone: T1-M1}
+
+  k_wake_eo: {value: {kind: pending}, provisional: {v: 9.3597, basis: "k = knee_freq_wake_eo ** chi_wake_eo = 12.0 ** 0.90; cross-checked by emit.mjs", expires_at_milestone: T1-M1, constrained_by: "sets G1b's structural bias; must follow from the knee frequency, never be chosen directly"}, units: null, standing: invented, source: {kind: none, rationale: ""}, states: [wake_eo], section: "3. Aperiodic background", milestone: T1-M1}
+  k_wake_ec: {value: {kind: pending}, provisional: {v: 15.3851, basis: "k = knee_freq_wake_ec ** chi_wake_ec = 12.0 ** 1.10", expires_at_milestone: T1-M1, constrained_by: "must follow from the knee frequency"}, units: null, standing: invented, source: {kind: none, rationale: ""}, states: [wake_ec], section: "3. Aperiodic background", milestone: T1-M1}
+  k_n1:      {value: {kind: pending}, provisional: {v: 32.4230, basis: "k = knee_freq_n1 ** chi_n1 = 12.0 ** 1.40", expires_at_milestone: T1-M1, constrained_by: "must follow from the knee frequency"}, units: null, standing: invented, source: {kind: none, rationale: ""}, states: [n1], section: "3. Aperiodic background", milestone: T1-M1}
+  k_n2:      {value: {kind: pending}, provisional: {v: 50.1187, basis: "k = knee_freq_n2 ** chi_n2 = 10.0 ** 1.70", expires_at_milestone: T1-M1, constrained_by: "must follow from the knee frequency"}, units: null, standing: invented, source: {kind: none, rationale: ""}, states: [n2], section: "3. Aperiodic background", milestone: T1-M1}
+  k_n3:      {value: {kind: pending}, provisional: {v: 0.2973, basis: "k = knee_freq_n3 ** chi_n3 = 0.5 ** 1.75; knee below the fit band, i.e. absent", expires_at_milestone: T1-M1, constrained_by: "must follow from the knee frequency"}, units: null, standing: invented, source: {kind: none, rationale: ""}, states: [n3], section: "3. Aperiodic background", milestone: T1-M1}
+  k_rem:     {value: {kind: pending}, provisional: {v: 539.7131, basis: "k = knee_freq_rem ** chi_rem = 20.0 ** 2.10", expires_at_milestone: T1-M1, constrained_by: "must follow from the knee frequency"}, units: null, standing: invented, source: {kind: none, rationale: ""}, states: [rem], section: "3. Aperiodic background", milestone: T1-M1}
 
   fit_band_broad:
     value: {kind: interval, lo: 1, hi: 45, meaning: band_edges}
@@ -383,7 +406,7 @@ params:
 
   delta_amp:
     value: {kind: interval, lo: 100, hi: 200, meaning: uncertainty}
-    units: uV
+    units: uV_pp
     standing: invented
     source: {kind: none, rationale: "textbook range, matching neighbouring so_amp and kc_amp. Explicitly NOT derived from the 75 uV AASM criterion."}
     states: [n3]
@@ -395,6 +418,15 @@ params:
       setting delta amplitude from the 75 uV figure through the back door — the exact
       circularity D5 exists to close, re-entering through the one row D5's prose leaves empty.
       The AASM number appears in gate_aasm_n3 and nowhere else.
+      UNITS CORRECTED to uV_pp on review: the textbook 100-200 figure for slow waves is
+      peak-to-peak, and it had been placed on a row declared in plain uV. Read as peak it is
+      200-400 uV p-p, which at snr_null_offset = -6 dB still clears the 75 uV criterion — so
+      G5's null could not have failed, and under D9 that null is G5's only failable arm.
+      D10's claim that fixing this row "makes snr_nominal a genuine single-scalar solve" is
+      FALSE and is withdrawn: so_amp (100-200 uV, so_freq < 1 Hz) also lands inside
+      gate_aasm_n3_band, the aperiodic offset b has no registry row at all, and the
+      interval-to-point reduction rule is unregistered with zero Dv rows in the registry.
+      At least three further degrees of freedom remain. See Execution-Scheme section 7.
 
   so_freq:
     value: {kind: bound, op: lt, v: 1}
@@ -845,8 +877,8 @@ params:
   gate_determinism:
     value: {kind: procedure, text: "bit-identical, within-platform and within-version only"}
     units: null
-    standing: definitional
-    source: {kind: standard, name: "IEEE 754 binary64", clause: "bit-identity of float64 representations"}
+    standing: chosen
+    source: {kind: none, rationale: "This project's definition of determinism. No external standard fixes it."}
     states: all
     section: "12. Gate criteria"
     gate: {id: G2, arm: positive, failable: true}
@@ -854,6 +886,13 @@ params:
       Build Plan 9 groups G2 with the record-only gates, but bit-identity has no distribution to
       record and a determinism gate that cannot fail is worthless. It is also the root of the
       dependency graph. Canonically PASS/FAIL; see Execution-Scheme section 1.
+      RE-STANDED definitional -> chosen on review. It had been sourced to "IEEE 754 binary64",
+      which defines float64 representation and arithmetic but says nothing about one seed
+      producing identical output -- that is a property of OUR implementation and its draw
+      ordering, which is exactly why the Build Plan strikes any cross-implementation clause.
+      That was a re-sourcing by guess, the remedy this registry's own discipline forbids, and
+      it sat on the criterion of a failable gate. No numeric tolerance is invented here, so
+      `chosen` is adequate for a structural criterion -- as it is for gate_topography.
 
   gate_chi_tol_knee:
     value: {kind: absent, reason: "record-only at Tier 0; tolerance derived at T1-M2 from specparam bias/variance at our SNR and window"}

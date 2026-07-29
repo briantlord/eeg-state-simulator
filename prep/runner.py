@@ -137,15 +137,39 @@ def preflight(strict_ledger: bool = True) -> tuple[dict[str, Any], dict[str, Any
                 f"(module: class={spec.gate_class} failable={spec.failable} tier={spec.runtime_tier}; "
                 f"ledger: class={ledger.gate_class} failable={ledger.failable} tier={ledger.runtime_tier})"
             )
-        # The circularity rule, mechanically.
-        if spec.failable and spec.criterion_key:
-            standing = R.standing(spec.criterion_key)
-            if standing == "invented":
+
+    # The circularity rule, mechanically -- over BOTH arms.
+    #
+    # Null modules were previously never checked at all, which under D9 means G5's only
+    # failable arm escaped the check entirely. And checking a criterion's own standing is not
+    # enough: `gate_g5_null_ordering` is `derived` yet consumes an `invented` -6 dB that sets
+    # the whole discriminative power of the test.
+    for kind, table in (("gate", gates), ("null", nulls)):
+        for gid, mod in table.items():
+            sp: GateSpec = mod.SPEC
+            if not sp.failable or not sp.criterion_key:
+                continue
+            key = sp.criterion_key
+            if R.is_absent(key):
                 problems.append(
-                    f"gate {gid} is failable but its criterion {spec.criterion_key!r} has "
-                    f"standing 'invented' -- harness section 1 prohibits a pass criterion that "
-                    f"is not derived, definitional, or from published inter-rater ranges"
+                    f"{kind} {gid} is failable but its criterion {key!r} has no value at all "
+                    f"(absent: {R.absent_reason(key)[:80]}...) -- a failable gate with no "
+                    f"criterion cannot fail for a stated reason"
                 )
+                continue
+            if R.standing(key) == "invented":
+                problems.append(
+                    f"{kind} {gid} is failable but its criterion {key!r} has standing "
+                    f"'invented' -- harness section 1 prohibits a pass criterion that is not "
+                    f"derived, definitional, or from published inter-rater ranges"
+                )
+            for dep in sp.criterion_inputs:
+                if R.standing(dep) == "invented" or R.record(dep)["value"]["kind"] == "pending":
+                    problems.append(
+                        f"{kind} {gid}'s criterion {key!r} consumes {dep!r}, standing "
+                        f"'{R.standing(dep)}' -- the criterion's own standing does not "
+                        f"launder an invented number it depends on"
+                    )
 
     if strict_ledger:
         missing = set(GATE_LEDGER) - set(gates)
@@ -171,6 +195,10 @@ def _topological(ids: Iterable[str]) -> list[str]:
     ordered = [g for g in LEDGER_ORDER if g in want]
     leftover = sorted(want - set(ordered))
     return ordered + leftover
+
+
+def _criterion_inputs(sp: GateSpec) -> tuple[str, ...]:
+    return tuple(sp.criterion_inputs)
 
 
 def _blocked_by(gid: str, results: dict[str, GateResult]) -> str | None:
@@ -221,21 +249,30 @@ def run_gate(
     results: dict[str, GateResult],
 ) -> tuple[GateResult, GateResult]:
     spec: GateSpec = GATE_LEDGER[gid]
-    threshold, standing = _threshold_for(spec)
-    provisional = R.provenance_is_provisional(spec.provenance_keys)
+    null_spec: GateSpec = null_mod.SPEC
+
+    # Each ARM's own criterion, not the positive arm's stamped onto both. Under D9 the two
+    # differ in standing as well as value: G5's positive criterion is definitional while its
+    # null rests on an invented -6 dB -- and the null is the only arm carrying a verdict. One
+    # shared lookup printed `definitional` on the line the whole gate hangs on.
+    def meta(sp: GateSpec) -> tuple[str | None, str | None, bool]:
+        thr, std = _threshold_for(sp)
+        prov = R.provenance_is_provisional(
+            tuple(sp.provenance_keys) + _criterion_inputs(sp)
+        )
+        return thr, std, prov
 
     def shell(sp: GateSpec, arm: str, status: Status, detail: str) -> GateResult:
+        thr, std, prov = meta(sp)
         return GateResult(
             spec=sp,
             arm=arm,  # type: ignore[arg-type]
             status=status,
             detail=detail,
-            threshold=threshold,
-            threshold_standing=standing,
-            provenance_provisional=provisional,
+            threshold=thr,
+            threshold_standing=std,
+            provenance_provisional=prov,
         )
-
-    null_spec: GateSpec = null_mod.SPEC
 
     blocker = _blocked_by(gid, results)
     if blocker:
@@ -276,16 +313,17 @@ def run_gate(
         else:
             status = Status.PASS if passed else Status.FAIL
 
+        thr, std, prov = meta(sp)
         r = GateResult(
             spec=sp,
             arm=arm,  # type: ignore[arg-type]
             status=status,
             metric=metric,
-            threshold=threshold,
-            threshold_standing=standing,
+            threshold=thr,
+            threshold_standing=std,
             detail=detail,
             duration_s=time.perf_counter() - t0,
-            provenance_provisional=provisional,
+            provenance_provisional=prov,
             extras=extras or {},
         )
         out.append(r)

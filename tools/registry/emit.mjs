@@ -106,6 +106,38 @@ function validateSource(key, p) {
   }
 }
 
+/**
+ * Cross-row consistency.
+ *
+ * Added after review found `k_wake_eo` carrying the value 0.9 under a `basis` string reading
+ * "k = knee_freq_low ^ chi" -- which at chi = 0.9 is 14.8, a factor of 16 out. Every k_* row
+ * disagreed with its own stated basis, by up to 3783x for N3, and nothing could catch it:
+ * per-row validation cannot see that one row contradicts another, and a prose `basis` is not
+ * executable. The consequence was not cosmetic -- the analytic 30-45 Hz bias at the registered
+ * k is -0.0002 to -0.031, not the -0.42 quoted in three notes and a unit test.
+ *
+ * Any relationship a `basis` string asserts between rows belongs here, or it is decoration.
+ */
+function crossCheck(reg) {
+  const prov = (key) => reg.params[key]?.provisional?.v;
+
+  for (const state of reg.states) {
+    const k = prov(`k_${state}`);
+    const fk = prov(`knee_freq_${state}`);
+    const chi = prov(`chi_${state}`);
+    if (k === undefined || fk === undefined || chi === undefined) continue;
+    const expected = Math.pow(fk, chi);
+    // 0.1% tolerance: the stored value is rounded for legibility.
+    if (Math.abs(k - expected) / expected > 1e-3) {
+      fail(
+        `k_${state}`,
+        `= ${k}, but knee_freq_${state}^chi_${state} = ${fk}^${chi} = ${expected.toFixed(4)}. ` +
+          'k is not interpretable without its knee frequency; it must follow from it.',
+      );
+    }
+  }
+}
+
 function validate(reg) {
   const states = new Set(reg.states);
   if (!reg.states?.length) errors.push('top level: `states` must enumerate the canonical state set');
@@ -204,7 +236,8 @@ function emitMarkdown(reg) {
   out.push(`Generator version \`${reg.generator_version}\` · schema \`${reg.schema_version}\``);
   out.push('');
   out.push('**Code reads the registry. No numeric constant may appear in source or UI copy that is');
-  out.push('absent from it** — a Tier 0 acceptance check, enforced by `tools/lint/literals.mjs`.');
+  out.push('absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**');
+  out.push('`tools/lint/literals.mjs` does not exist. This document previously asserted that it did.');
   out.push('');
   out.push(`**States.** \`${reg.states.join('` · `')}\``);
   out.push('');
@@ -264,6 +297,7 @@ function emitMarkdown(reg) {
 
 const reg = parse(readFileSync(SRC, 'utf8'));
 validate(reg);
+crossCheck(reg);
 
 if (errors.length) {
   console.error(`\nRegistry validation FAILED — ${errors.length} error(s):\n`);

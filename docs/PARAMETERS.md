@@ -7,7 +7,8 @@
 Generator version `0.1.0` · schema `1`
 
 **Code reads the registry. No numeric constant may appear in source or UI copy that is
-absent from it** — a Tier 0 acceptance check, enforced by `tools/lint/literals.mjs`.
+absent from it** — a Tier 0 acceptance check. **It is not yet enforced:**
+`tools/lint/literals.mjs` does not exist. This document previously asserted that it did.
 
 **States.** `wake_eo` · `wake_ec` · `n1` · `n2` · `n3` · `rem`
 
@@ -82,12 +83,18 @@ absent from it** — a Tier 0 acceptance check, enforced by `tools/lint/literals
 | `knee_freq_low` | 20 | Hz | `invented` | approximate location reported in a 2024 J Neurosci intrinsic-timescales paper; author not recorded, value not read out under a known pipeline | all |
 | `knee_freq_high_unmodelled` | 45 | Hz | `invented` | ibid.; documented, NOT generated at any tier | all |
 | `knee_present` | REM prominent; wake/N1/N2 attenuated; N3 absent | — | `invented` | ibid.; direction reported, magnitudes not read out | all |
-| `k_wake_eo` | — *(pending T1-M1; runs on 0.9)* | Hz | `invented` |  | wake_eo |
-| `k_wake_ec` | — *(pending T1-M1; runs on 1)* | Hz | `invented` |  | wake_ec |
-| `k_n1` | — *(pending T1-M1; runs on 1)* | Hz | `invented` |  | n1 |
-| `k_n2` | — *(pending T1-M1; runs on 0.8)* | Hz | `invented` |  | n2 |
-| `k_n3` | — *(pending T1-M1; runs on 0.05)* | Hz | `invented` |  | n3 |
-| `k_rem` | — *(pending T1-M1; runs on 1.6)* | Hz | `invented` |  | rem |
+| `knee_freq_wake_eo` | — *(pending T1-M1; runs on 12)* | Hz | `invented` |  | wake_eo |
+| `knee_freq_wake_ec` | — *(pending T1-M1; runs on 12)* | Hz | `invented` |  | wake_ec |
+| `knee_freq_n1` | — *(pending T1-M1; runs on 12)* | Hz | `invented` |  | n1 |
+| `knee_freq_n2` | — *(pending T1-M1; runs on 10)* | Hz | `invented` |  | n2 |
+| `knee_freq_n3` | — *(pending T1-M1; runs on 0.5)* | Hz | `invented` |  | n3 |
+| `knee_freq_rem` | — *(pending T1-M1; runs on 20)* | Hz | `invented` |  | rem |
+| `k_wake_eo` | — *(pending T1-M1; runs on 9.3597)* | — | `invented` |  | wake_eo |
+| `k_wake_ec` | — *(pending T1-M1; runs on 15.3851)* | — | `invented` |  | wake_ec |
+| `k_n1` | — *(pending T1-M1; runs on 32.423)* | — | `invented` |  | n1 |
+| `k_n2` | — *(pending T1-M1; runs on 50.1187)* | — | `invented` |  | n2 |
+| `k_n3` | — *(pending T1-M1; runs on 0.2973)* | — | `invented` |  | n3 |
+| `k_rem` | — *(pending T1-M1; runs on 539.7131)* | — | `invented` |  | rem |
 | `fit_band_broad` | 1–45 *(band_edges)* | Hz | `chosen` | one of eleven bands in use in the literature; ours by choice | all |
 | `fit_band_narrow` | 30–45 *(band_edges)* | Hz | `literature` | Lendner et al. 2020, *eLife* | all |
 
@@ -112,14 +119,14 @@ absent from it** — a Tier 0 acceptance check, enforced by `tools/lint/literals
 | `theta_band` | 4–7 *(band_edges)* | Hz | `chosen` | conventional band edges | n2, rem |
 | `theta_amp` | 15–40 *(uncertainty)* | uV | `invented` | textbook range | n2, rem |
 | `delta_band` | 0.5–2 *(band_edges)* | Hz | `definitional` | AASM Manual for the Scoring of Sleep and Associated Events — slow wave activity band | n3 |
-| `delta_amp` | 100–200 *(uncertainty)* | uV | `invented` | textbook range, matching neighbouring so_amp and kc_amp. Explicitly NOT derived from the 75 uV AASM criterion. | n3 |
+| `delta_amp` | 100–200 *(uncertainty)* | uV_pp | `invented` | textbook range, matching neighbouring so_amp and kc_amp. Explicitly NOT derived from the 75 uV AASM criterion. | n3 |
 | `so_freq` | <1 | Hz | `invented` | distinct from the AASM delta band; uncited | n3 |
 | `so_amp` | 100–200 *(uncertainty)* | uV | `invented` | uncited | n3 |
 | `filter_order` | 4 | — | `chosen` | Butterworth bandpass | all |
 
 **`alpha_band`.** Re-standed definitional -> chosen on import: a convention in wide use is not a named standard. Same for beta_band, theta_band.
 
-**`delta_amp`.** Given a Tier 0 value on import; see Execution-Scheme D10. Left blank, this row and snr_nominal are under-determined by one degree of freedom and the calibration absorbs it, setting delta amplitude from the 75 uV figure through the back door — the exact circularity D5 exists to close, re-entering through the one row D5's prose leaves empty. The AASM number appears in gate_aasm_n3 and nowhere else.
+**`delta_amp`.** Given a Tier 0 value on import; see Execution-Scheme D10. Left blank, this row and snr_nominal are under-determined by one degree of freedom and the calibration absorbs it, setting delta amplitude from the 75 uV figure through the back door — the exact circularity D5 exists to close, re-entering through the one row D5's prose leaves empty. The AASM number appears in gate_aasm_n3 and nowhere else. UNITS CORRECTED to uV_pp on review: the textbook 100-200 figure for slow waves is peak-to-peak, and it had been placed on a row declared in plain uV. Read as peak it is 200-400 uV p-p, which at snr_null_offset = -6 dB still clears the 75 uV criterion — so G5's null could not have failed, and under D9 that null is G5's only failable arm. D10's claim that fixing this row "makes snr_nominal a genuine single-scalar solve" is FALSE and is withdrawn: so_amp (100-200 uV, so_freq < 1 Hz) also lands inside gate_aasm_n3_band, the aperiodic offset b has no registry row at all, and the interval-to-point reduction rule is unregistered with zero Dv rows in the registry. At least three further degrees of freedom remain. See Execution-Scheme section 7.
 
 ## 5. Topography and geometry
 
@@ -290,7 +297,7 @@ absent from it** — a Tier 0 acceptance check, enforced by `tools/lint/literals
 | `gate_g4_criterion` | coupling index exceeds g4_threshold_value at f1 (spectral-neighbourhood null) and does not at f2 (circular-shift null) | — | `derived` | from the null distributions; see Execution-Scheme D8 | all |
 | `gate_g4_seed_aggregation` | exact binomial test of the observed f2 exceedance count against the per-seed false-exceedance rate implied by g4_percentile_level | — | `derived` | estimator property: a correctly-sized null exceeds its own percentile at the complementary rate by construction | all |
 | `gate_topography` | argmax over electrodes matches the topo_expect_* rows | — | `derived` | structural — no tolerance required; expectations are literature and independent of the projection file | all |
-| `gate_determinism` | bit-identical, within-platform and within-version only | — | `definitional` | IEEE 754 binary64 — bit-identity of float64 representations | all |
+| `gate_determinism` | bit-identical, within-platform and within-version only | — | `chosen` | This project's definition of determinism. No external standard fixes it. | all |
 | `gate_chi_tol_knee` | — *(absent)* | — | `absent` | T1-M2 estimator characterization | all |
 | `gate_chi_tol_fixed` | — *(absent)* | — | `absent` | T1-M2 estimator characterization | all |
 | `gate_spindle_f1` | — *(absent)* | — | `absent` | T1 sets the criterion by roll-off shape against MODA's per-event agreement counts | n2 |
@@ -309,7 +316,7 @@ absent from it** — a Tier 0 acceptance check, enforced by `tools/lint/literals
 
 **`gate_g4_seed_aggregation`.** Added on import. The spec never stated how per-seed results aggregate to a verdict, and 'all seeds must pass' fails ~64% of the time at n_seeds=20 on a working generator (0.95^20 = 0.36), because the f2 arm has a 5% per-seed false-exceedance rate BY DESIGN.
 
-**`gate_determinism`.** Build Plan 9 groups G2 with the record-only gates, but bit-identity has no distribution to record and a determinism gate that cannot fail is worthless. It is also the root of the dependency graph. Canonically PASS/FAIL; see Execution-Scheme section 1.
+**`gate_determinism`.** Build Plan 9 groups G2 with the record-only gates, but bit-identity has no distribution to record and a determinism gate that cannot fail is worthless. It is also the root of the dependency graph. Canonically PASS/FAIL; see Execution-Scheme section 1. RE-STANDED definitional -> chosen on review. It had been sourced to "IEEE 754 binary64", which defines float64 representation and arithmetic but says nothing about one seed producing identical output -- that is a property of OUR implementation and its draw ordering, which is exactly why the Build Plan strikes any cross-implementation clause. That was a re-sourcing by guess, the remedy this registry's own discipline forbids, and it sat on the criterion of a failable gate. No numeric tolerance is invented here, so `chosen` is adequate for a structural criterion -- as it is for gate_topography.
 
 **`gate_chi_tol_knee`.** The source markdown expected G1a's error to EXCEED G1b's. Measured on clean aperiodic signal the ordering is reversed by two orders of magnitude: G1a median |error| 0.005, G1b 0.417. See Tier0-Estimator-Probe Finding 2. Re-measure under the full generator before amending DECISIONS D3.
 
@@ -325,10 +332,10 @@ absent from it** — a Tier 0 acceptance check, enforced by `tools/lint/literals
 
 | Standing | Rows |
 |---|---|
-| `definitional` | 12 |
-| `chosen` | 39 |
+| `definitional` | 11 |
+| `chosen` | 40 |
 | `literature` | 8 |
 | `derived` | 7 |
-| `invented` | 61 |
+| `invented` | 67 |
 | `absent` | 8 |
-| **total** | **135** |
+| **total** | **141** |
