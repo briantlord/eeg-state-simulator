@@ -245,19 +245,30 @@ export function synthesizeGraphoelements(
     const rng = Rng.substream(seed, `slow_osc/${state}`);
     const soFreq = boundOf('so_freq');
     const travel = travelDelaySamples(fs);
+    // EACH WAVE GETS ITS OWN ORIGIN. Projecting every slow oscillation through the one `delta`
+    // topography made each event identical across all 19 channels -- the dominant visible defect
+    // in N3, and worth 0.21 of effective rank. See so_origin_coherent_fraction.
+    const originCoherent = scalarValue('so_origin_coherent_fraction');
+    const nSub = scalarValue('osc_n_sources');
     for (const onset of scheduleOnsets(rng, durationS, 60 * soFreq * 0.55)) { // @lit-ok seconds per minute; 0.55 = invented SO occurrence-rate factor, TODO(T1-M1)
       const period = 1 / rng.uniform(soFreq * 0.6, soFreq); // @lit-ok invented SO period lower-draw factor; TODO(T1-M1) register+fit
       const nEv = Math.round(period * fs);
       const amp = draw(rng, 'so_amp') / 2; // p-p to peak
       const wave = slowOscWaveform(nEv, amp, scalarValue('so_rdsym'));
       const start = Math.round(onset * fs);
-      add(wave, start, 'delta', travel);
+      // Drawn per event, so the sidecar records the origin this wave actually used rather than a
+      // nominal one -- a reader checking topography against the events needs the real generator.
+      const origin: GeneratorId =
+        rng.nextFloat() < originCoherent
+          ? 'delta'
+          : (`delta_s${Math.floor(rng.nextFloat() * nSub)}` as GeneratorId);
+      add(wave, start, origin, travel);
       soTimes.push(onset);
       events.push(
         makeEvent('slow_oscillation', 'slow_osc', onset, period, amp, rng, state, seed, {
           periodS: period,
           travelVelocityMps: scalarValue('so_travel_v_used'),
-        }, 'delta'),
+        }, origin),
       );
     }
   }

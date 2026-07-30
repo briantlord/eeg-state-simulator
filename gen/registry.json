@@ -1506,6 +1506,24 @@
       "section": "4. Oscillations",
       "note": "A BAND RHYTHM IS NOT ONE SOURCE, and modelling it as one is what collapsed N3. Measured before this row existed: N3 effective rank 1.07 against a real 3.09, PC1 carrying 0.967 of the variance, median inter-channel |correlation| 0.950 -- every channel the same trace scaled. The aperiodic background alone measured 3.44, so the ceiling was fine and the oscillation layer on top of it was the single dominant source. THIS IS FINDING 11 ONE LAYER UP. That finding fixed exactly this shape for the background (rank 1.14 -> 2.99) by replacing one uniformly-weighted source with six spatially distinct ones. The same argument had simply never been applied to the oscillations. THE SUB-SOURCES ARE NOT A RING, though the first attempt was. A ring of three about the band's own centre was built and measured: the band family's effective rank topped out at 1.26 swept from radius 0.30 to 1.30, and the shipped N3 moved only 1.07 -> 1.14. The reason is that at topo_far_field_fraction = 0.50 every source is half a near-flat pedestal and all of them share that term -- no radius beats a component held in common, so the ring was never going to work at any setting. The sub-sources therefore sit on the SAME six regional centres the background uses, which is the basis already measured at 3.44. That makes this row definitional rather than chosen, and retired osc_source_spread."
     },
+    "so_origin_coherent_fraction": {
+      "value": {
+        "kind": "scalar",
+        "v": 0.45
+      },
+      "units": null,
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "no measured distribution of slow-wave origin sites at 10-20 resolution was available; set equal to osc_coherent_fraction so the event layer and the continuous layer make the same spatial assumption until one of them is fitted. TODO(T1-M1)"
+      },
+      "states": [
+        "n3"
+      ],
+      "section": "4. Oscillations",
+      "milestone": "T1-M1",
+      "note": "EVERY SLOW WAVE HAD THE SAME TOPOGRAPHY, and in N3 that is most of the signal. Slow oscillations project through the `delta` generator, so each event landed on all 19 channels in one fixed spatial pattern -- visible directly on the trace at a 5 s window as the same large wave in every lane with only the fine detail differing. The per-channel travel delay did not hide it: at 1 Hz a 100 ms anterior-posterior lag is 36 degrees, so the delayed copy still correlates at about 0.8. Measured, the event layer cost N3 0.21 of effective rank (1.53 without graphoelements, 1.32 with them) on top of an oscillation layer that was itself low. This row is the probability that a slow wave originates at the registered delta centre. The rest originate at one of the osc_n_sources regional sub-sources, so successive waves have DIFFERENT topographies and the channels decorrelate across events while any single wave still looks like a proper slow wave. Real slow waves do have variable origins with a frontal predominance, which is the shape this reproduces, though the fraction itself is invented. IT CANNOT GO TOO LOW WITHOUT BREAKING G5. The AASM N3 criterion is measured on frontal derivations, so sending too many waves elsewhere would reduce the fraction of each epoch meeting the 75 uV threshold -- gate, not guess: verify after changing it."
+    },
     "osc_coherent_fraction": {
       "value": {
         "kind": "scalar",

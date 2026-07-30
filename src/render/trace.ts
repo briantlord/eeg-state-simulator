@@ -213,8 +213,24 @@ export function drawTrace(canvas: HTMLCanvasElement, o: TraceOptions): void {
 }
 
 /**
- * One lane of min/max-decimated trace. Shared by the montage and by the raw overlay, so the two
- * cannot drift into drawing the same samples differently.
+ * One lane of trace. Shared by the montage and by the raw overlay, so the two cannot drift into
+ * drawing the same samples differently.
+ *
+ * TWO REGIMES, because one of them does not survive a short window.
+ *
+ * Min/max decimation to pixel columns is what makes 19 x 7680 samples drawable at frame rate,
+ * and it preserves the ENVELOPE: a spike narrower than a column still reaches the top of that
+ * column, where naive subsampling would drop it. But drawn as INDEPENDENT vertical bars it only
+ * looks like a trace when each column spans several samples and neighbouring bars overlap
+ * vertically. At a 5 s window there are barely more samples than pixels, most columns collapse
+ * to lo === hi -- a zero-length segment -- and the trace renders as detached ticks with gaps
+ * rather than a continuous line. Reported as "the lines lose continuity and look like a mess",
+ * and it was: the decimator was drawing 1280 samples as ~880 disconnected marks.
+ *
+ * So when there are fewer than two samples per column the samples themselves are drawn, joined
+ * -- an EEG trace at that zoom is a line through points, not an envelope. Above it, the envelope
+ * is kept but the path is now continuous across columns instead of restarting at each one, which
+ * is what made the wide window look right by accident.
  */
 function drawLane(
   ctx: CanvasRenderingContext2D,
@@ -227,21 +243,45 @@ function drawLane(
   count: number,
   pxPerUv: number,
 ): void {
+  const y = (v: number): number => Math.max(0, Math.min(plotH, mid - v * pxPerUv));
+  const end = Math.min(start + count, data.length);
   ctx.beginPath();
+
+  if (count < plotW * 2) {
+    let open = false;
+    for (let i = start; i < end; i++) {
+      const px = left + ((i - start) / count) * plotW;
+      if (open) ctx.lineTo(px, y(data[i]!));
+      else {
+        ctx.moveTo(px, y(data[i]!));
+        open = true;
+      }
+    }
+    ctx.stroke();
+    return;
+  }
+
+  let open = false;
   for (let px = 0; px < plotW; px++) {
     const i0 = start + Math.floor((px / plotW) * count);
     const i1 = start + Math.floor(((px + 1) / plotW) * count);
     let lo = Infinity;
     let hi = -Infinity;
-    for (let i = i0; i < i1 && i < data.length; i++) {
+    for (let i = i0; i < i1 && i < end; i++) {
       const v = data[i]!;
       if (v < lo) lo = v;
       if (v > hi) hi = v;
     }
     if (lo === Infinity) continue;
     const x = left + px + 0.5;
-    ctx.moveTo(x, Math.max(0, Math.min(plotH, mid - hi * pxPerUv)));
-    ctx.lineTo(x, Math.max(0, Math.min(plotH, mid - lo * pxPerUv)));
+    // Continue the path from the previous column rather than starting a new stroke, so the
+    // envelope reads as one line even where a column spans a single sample.
+    if (open) ctx.lineTo(x, y(hi));
+    else {
+      ctx.moveTo(x, y(hi));
+      open = true;
+    }
+    ctx.lineTo(x, y(lo));
   }
   ctx.stroke();
 }

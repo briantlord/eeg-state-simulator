@@ -159,6 +159,7 @@ export type ParamKey =
   | 'snr_range_ui'
   | 'so_amp'
   | 'so_freq'
+  | 'so_origin_coherent_fraction'
   | 'so_rdsym'
   | 'so_spindle_pref_phase'
   | 'so_spindle_strength'
@@ -375,6 +376,7 @@ export interface ParamKindMap {
   'snr_range_ui': 'interval';
   'so_amp': 'interval';
   'so_freq': 'bound';
+  'so_origin_coherent_fraction': 'scalar';
   'so_rdsym': 'scalar';
   'so_spindle_pref_phase': 'pending';
   'so_spindle_strength': 'pending';
