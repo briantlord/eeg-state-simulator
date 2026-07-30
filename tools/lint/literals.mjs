@@ -45,12 +45,34 @@ const ROOT = join(fileURLToPath(import.meta.url), '..', '..', '..');
 const SCAN = [
   { dir: 'src', exts: ['.ts'] },
   { dir: 'bin', exts: ['.mts'] },
+  // PRODUCERS OF SHIPPED ARTIFACTS, whatever language they are written in.
+  //
+  // prep/ is excluded below as a measurement tool, and that exclusion got read as "Python is out
+  // of scope". It is not: prep/leadfield/make_projection.py GENERATES data/projection_10_20.json,
+  // which the runtime loads. When the projection producer moved there from tools/*.mjs it left
+  // this linter's reach, and three registry rows became a Python constant in the same commit --
+  // the guard that exists to catch exactly that was switched off by the migration that needed it.
+  // The line is "does it produce something the generator ships", not "what extension is it".
 ];
 /** Single files scanned directly. */
-const SCAN_FILES = ['index.html'];
+const SCAN_FILES = [
+  'index.html',
+  // The PRODUCER of data/projection_10_20.json, named individually rather than by directory.
+  // Its neighbours in prep/leadfield are probes -- measurement tools, excluded for the same
+  // reason the rest of prep/ is. The distinction is "does it produce something the generator
+  // ships", not what language it is written in or which folder it sits in.
+  'prep/leadfield/make_projection.py',
+];
 
 /** Never descend into these. */
-const SKIP_DIRS = new Set(['node_modules', '.git', 'gen', 'prep', 'tools', 'data', 'test', '.venv']);
+const SKIP_DIRS = new Set([
+  'node_modules', '.git', 'gen', 'tools', 'data', 'test', '.venv',
+  // Committed derived artifacts (the fsaverage lead field), not code.
+  'cache',
+  // The measurement harness proper. `prep/leadfield` is listed in SCAN above and reached
+  // directly, so removing 'prep' from this set would pull in the probes as well.
+  'reference', 'gates', 'nulls', 'fixtures', 'out', 'realdata',
+]);
 /** Never scan these even if the extension matches (e.g. tests colocated in src). */
 const SKIP_FILE = (rel) => rel.endsWith('.test.ts') || rel.endsWith('.d.ts');
 
@@ -84,6 +106,55 @@ export const WAIVER = '@lit-ok';
 const FILE_WAIVER = '@lit-ok-file';
 
 // ------------------------------------------------------------------ tokenizer
+
+/**
+ * The same masking for Python: `#` comments, single- and triple-quoted strings.
+ *
+ * Separate from `maskCode` rather than generalised, because the two languages disagree about
+ * exactly the constructs a masker gets wrong. Python has no template literals and no block
+ * comments, but it has triple-quoted strings that span lines and contain `#` freely — and this
+ * project's producer opens with a 120-line docstring full of numbers, including a measured
+ * sensitivity table. Mis-masking that would bury one real finding under dozens of imaginary ones
+ * on the very first run, which is how a linter gets switched off instead of fixed.
+ */
+export function maskPython(src) {
+  const out = new Array(src.length);
+  for (let i = 0; i < src.length; i++) out[i] = src[i] === '\n' ? '\n' : src[i];
+  const blank = (from, to) => {
+    for (let i = from; i < to && i < src.length; i++) if (src[i] !== '\n') out[i] = ' ';
+  };
+  const TRIPLES = ['"""', "'''"];
+  let i = 0;
+  while (i < src.length) {
+    const c = src[i];
+    if (c === '#') {
+      let j = i;
+      while (j < src.length && src[j] !== '\n') j++;
+      blank(i, j);
+      i = j;
+      continue;
+    }
+    if (c === '"' || c === "'") {
+      const three = src.slice(i, i + 3);
+      const delim = TRIPLES.includes(three) ? three : c;
+      const isTriple = delim.length === 3;
+      let j = i + delim.length;
+      while (j < src.length) {
+        if (src[j] === '\\') { j += 2; continue; }
+        if (src.startsWith(delim, j)) break;
+        // An unterminated single-quoted string ends at the newline; without this a stray
+        // apostrophe in a comment-free line would swallow the rest of the file.
+        if (!isTriple && src[j] === '\n') break;
+        j++;
+      }
+      blank(i, Math.min(j + delim.length, src.length));
+      i = j + delim.length;
+      continue;
+    }
+    i++;
+  }
+  return out.join('');
+}
 
 /**
  * Replace every comment and string with spaces of equal length, so line and column numbers of
@@ -260,10 +331,12 @@ const audit = new Map(); // value -> [{file, line, raw}]
 let fileWaived = 0;
 for (const file of scanTargets()) {
   const src = readFileSync(file, 'utf8');
-  const isHtml = extname(file) === '.html';
+  const ext = extname(file);
+  const isHtml = ext === '.html';
+  const isPy = ext === '.py';
   // A file-level waiver only counts when it appears inside a comment, so the token cannot be
   // waived into effect by a string literal in the code. Check it against the masked source.
-  const masked = isHtml ? maskHtml(src) : maskCode(src);
+  const masked = isHtml ? maskHtml(src) : isPy ? maskPython(src) : maskCode(src);
   // The token counts only where the masker blanked it — i.e. inside a comment or string —
   // so a bare `@lit-ok-file` written as executable code cannot waive its own file.
   if (!AUDIT && inMaskedRegion(src, masked, FILE_WAIVER)) { fileWaived++; continue; }

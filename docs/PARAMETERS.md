@@ -4,7 +4,7 @@
 > Regenerate with `npm run registry:emit`; `npm run registry:check` fails the build if
 > this file and the registry have drifted apart. See `tools/registry/GRAMMAR.md`.
 
-Generator version `0.2.0` · schema `1`
+Generator version `0.3.0` · schema `1`
 
 **Code reads the registry. No scientific constant may appear in source or UI copy that
 is absent from it** — a Tier 0 acceptance check, **enforced by `tools/lint/literals.mjs`**
@@ -93,9 +93,11 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 | Key | Value | Units | Standing | Source | States |
 |---|---|---|---|---|---|
 | `aperiodic_model` | knee form: L(f) = b - log10(k + f^chi) | — | `chosen` | single-knee form | all |
+| `chi_inband_slope` | DERIVED, NOT STORED. The least-squares log-log slope of the generative aperiodic form L(f) = b - log10(k + f^chi) over chi_inband_band, with k = knee_freq_state ** chi_state. Computed by prep/reference/t1m1_chi_knee_fit.py; deliberately not a stored value, because a stored copy of a quantity computed from two other rows can only drift from them. | — | `derived` | LS log-log slope of L(f) = b - log10(k + f^chi) over chi_inband_band. The form is specparam's knee-mode aperiodic model and identical to Build Plan 3.2's. | all |
+| `chi_inband_band` | 1–20 *(band_edges)* | Hz | `derived` | The only band in which the reference corpus is usable. PhysioNet EEGMAT carries an acquisition low-pass around 30-45 Hz: local slope 6.7 over 20-30 Hz, a 50 Hz mains notch and a flat instrument floor above 80 Hz, so a fit above ~20 Hz measures their filter and not their cortex. See compare_real.py. | all |
 | `chi_direction` | wake flattest < N1 < N2 ~ N3 < REM steepest | — | `literature` | Lendner et al. 2020, *eLife* — NSRR replication, final analytic sample N=10,255 | all |
 | `chi_wake_eo` | — *(pending T1-M1; runs on 0.9)* | — | `invented` |  | wake_eo |
-| `chi_wake_ec` | — *(pending T1-M1; runs on 1.1)* | — | `invented` |  | wake_ec |
+| `chi_wake_ec` | — *(pending T1-M1; runs on 0.85)* | — | `invented` |  | wake_ec |
 | `chi_n1` | — *(pending T1-M1; runs on 1.4)* | — | `invented` |  | n1 |
 | `chi_n2` | — *(pending T1-M1; runs on 1.7)* | — | `invented` |  | n2 |
 | `chi_n3` | — *(pending T1-M1; runs on 1.66)* | — | `invented` |  | n3 |
@@ -105,19 +107,23 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 | `knee_freq_high_unmodelled` | 45 | Hz | `invented` | ibid.; documented, NOT generated at any tier | all |
 | `knee_present` | REM prominent; wake/N1/N2 attenuated; N3 absent | — | `invented` | ibid.; direction reported, magnitudes not read out | all |
 | `knee_freq_wake_eo` | — *(pending T1-M1; runs on 12)* | Hz | `invented` |  | wake_eo |
-| `knee_freq_wake_ec` | — *(pending T1-M1; runs on 12)* | Hz | `invented` |  | wake_ec |
+| `knee_freq_wake_ec` | — *(pending T1-M1; runs on 3)* | Hz | `invented` |  | wake_ec |
 | `knee_freq_n1` | — *(pending T1-M1; runs on 12)* | Hz | `invented` |  | n1 |
 | `knee_freq_n2` | — *(pending T1-M1; runs on 10)* | Hz | `invented` |  | n2 |
 | `knee_freq_n3` | — *(pending T1-M1; runs on 0.5)* | Hz | `invented` |  | n3 |
 | `knee_freq_rem` | — *(pending T1-M1; runs on 20)* | Hz | `invented` |  | rem |
 | `k_wake_eo` | — *(pending T1-M1; runs on 9.3597)* | — | `invented` |  | wake_eo |
-| `k_wake_ec` | — *(pending T1-M1; runs on 15.3851)* | — | `invented` |  | wake_ec |
+| `k_wake_ec` | — *(pending T1-M1; runs on 2.5442)* | — | `invented` |  | wake_ec |
 | `k_n1` | — *(pending T1-M1; runs on 32.423)* | — | `invented` |  | n1 |
 | `k_n2` | — *(pending T1-M1; runs on 50.1187)* | — | `invented` |  | n2 |
 | `k_n3` | — *(pending T1-M1; runs on 0.3164)* | — | `invented` |  | n3 |
 | `k_rem` | — *(pending T1-M1; runs on 539.7131)* | — | `invented` |  | rem |
 | `fit_band_broad` | 1–45 *(band_edges)* | Hz | `chosen` | one of eleven bands in use in the literature; ours by choice | all |
 | `fit_band_narrow` | 30–45 *(band_edges)* | Hz | `literature` | Lendner et al. 2020, *eLife* | all |
+
+**`chi_inband_slope`.** THE QUANTITY A READER MEASURES, which is not the quantity `chi_*` stores. `chi_*` is the ASYMPTOTIC exponent: the slope the spectrum approaches far above the knee. Any fit over a finite band that contains or sits below the knee returns something shallower, because below a knee the spectrum is flat. THE GAP IS LARGE AND WAS UNRECORDED. chi_wake_ec at its old 1.1 with a 12 Hz knee predicts an in-band slope of 0.303 over 1-20 Hz; the generator measured 0.31, agreeing with its own parameters exactly. It was compared against a real 0.99 and read as a threefold generator error for three sessions. It was two different quantities. Build Plan 3.7 warned that a published exponent is a joint function of method, band, knee model, reference and acquisition; the warning was written and then compared across anyway. NO STATE ORDERING MAY BE CLAIMED FROM THIS QUANTITY. See chi_direction.
+
+**`chi_inband_band`.** A CORPUS PROPERTY, not a choice about EEG. Change the corpus and this changes with it, which is why chi_inband_slope is derived rather than stored: the derived quantity is only meaningful beside the band it was derived over.
 
 **`chi_direction`.** Deliberately NOT a total order. N2 and N3 are related to REM but not to each other: Build Plan 3.2 records N1-N3 correlate r~0.7 and are poorly separated by slope alone, 7 notes a small N3 reversal, and 10 instructs that a clean monotonic ladder be treated as a bug. A strictly monotone encoding would contradict all three.
 
@@ -186,6 +192,10 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 | Key | Value | Units | Standing | Source | States |
 |---|---|---|---|---|---|
 | `event_topography_spread` | — *(pending T1-M1; runs on 0.5)* | — | `invented` | no source consulted quantifies how much slow-wave or spindle topography varies event to event at 10-20 resolution | n2, n3 |
+| `topo_centre_resp_artifact_x` | 0 | normalized_10_20 | `invented` | midline by symmetry: the chest is not lateralised | all |
+| `topo_centre_resp_artifact_y` | 0.55 | normalized_10_20 | `invented` | frontal: the artifact is largest where the leads run and where frontal electrodes sit furthest from the reference | all |
+| `topo_sigma_resp_artifact` | 0.9 | normalized_10_20 | `invented` | broad: a mechanical artifact is not focal, and nothing measured constrains the width | all |
+| `bem_source_mindist_mm` | 5 | mm | `chosen` | MNE's default exclusion distance between a source and the inner skull surface; kept rather than chosen independently, because departing from a forward-modelling package's default is a claim needing its own justification | all |
 | `cortical_coherence_mm` | — *(pending T1-M1; runs on 40)* | mm | `invented` | no source consulted gives a cortical coherence length for a specific rhythm at this resolution; it is the ONE spatial shape parameter left after the lead field replaced 31 | all |
 | `patch_mode_variance` | 0.99 | — | `chosen` | how much of a patch's spatial variance the retained eigenmodes must carry; a truncation tolerance, not a physical quantity | all |
 | `channel_local_share` | — *(pending T1-M1; runs on 0.2)* | — | `invented` | an independent-EQUIVALENT share under this model, not a measured physiological quantity; part of it is certainly model mismatch | all |
@@ -198,6 +208,14 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 | `so_travel_v_used` | 3 | m/s | `chosen` | point value drawn from the so_travel_v literature interval 1-7 m/s | n3 |
 
 **`event_topography_spread`.** EVERY SLOW WAVE USED TO HAVE THE SAME TOPOGRAPHY, and in N3 that is most of the signal -- visible at a 5 s window as one large wave repeated in all 19 lanes, worth 0.21 of effective rank. Real slow waves originate at varying cortical sites, so the events should differ. A patch's channel covariance is sum_m w_m w_m^T over its eigenmodes, so drawing c_m ~ N(0,1) and forming sum_m c_m w_m samples an anatomically admissible field for that patch. Doing exactly that, however, varies each event's amplitude at any FIXED electrode a great deal, and the AASM criterion is measured at one derivation: G5's positive arm fell from 0.75 to 0.33 of held-out epochs. Real N3 meets that criterion by definition, so an unconstrained draw makes N3 less like N3, not more. This row keeps the dominant mode at full strength and admixes the higher ones: every event is recognisably the patch's field, and they differ. At 0 the behaviour is exactly the single fixed topography this replaced, which makes the cost of the variability measurable rather than assumed. IT TRADES AGAINST G5 AND MUST NOT BE FITTED TO IT. The trade is reported in Finding 21.
+
+**`topo_centre_resp_artifact_x`.** THE ONE TOPOGRAPHY THAT IS DELIBERATELY NOT CORTICAL. Mechanism (a) is mechanical -- electrode movement and impedance change with the chest -- so a cortical forward model is the wrong instrument for it and it keeps an electrode-space Gaussian. THESE THREE ROWS BRIEFLY LEFT THE REGISTRY AND THAT WAS A DEFECT. When the projection producer moved from tools/make_projection.mjs to prep/leadfield/make_projection.py they became a Python constant, because tools/lint/literals.mjs only scans .ts and .mjs -- the guard that exists to catch exactly this was switched off by the migration that needed it. The linter now covers the producer.
+
+**`topo_centre_resp_artifact_y`.** See topo_centre_resp_artifact_x. Deliberately unlike any neural generator's centre, because Build Plan 5.1 requires the three respiratory mechanisms stay separable -- if the artifact shared a topography with a rhythm, no montage could tell them apart.
+
+**`topo_sigma_resp_artifact`.** See topo_centre_resp_artifact_x. Wide compared with any cortical patch, which is the point: a movement artifact spreads across the montage rather than peaking over a generator.
+
+**`bem_source_mindist_mm`.** Sources closer than this to the inner skull are dropped from the forward solution. It is a NUMERICAL SAFEGUARD, not a physiological statement: the BEM potential diverges as a dipole approaches a conductivity boundary, so nearby sources would otherwise dominate every topography with an artefact of the discretisation. FOUND BY THE LINTER, not by review. It was an inline 5.0 in the producer, and it is a modelling parameter that shapes every weight vector in data/projection_10_20.json -- the only unregistered scientific value the new Python coverage turned up, which is the argument for that coverage existing.
 
 **`cortical_coherence_mm`.** THE ONLY REMAINING FREE PARAMETER OF THE SPATIAL MODEL, and that is the point of D19. It sets the source covariance inside a patch, C_s(i,j) = exp(-d(i,j)/this), so it decides how many spatial eigenmodes a patch has and therefore how many dimensions a rhythm occupies. At 0 every dipole is independent and the patch spans as many modes as the montage can resolve; at infinity the patch collapses to one mode and the model is separable again -- which is the defect Finding 19 measured. Distances are Euclidean rather than geodesic, which makes coherence slightly too high across a sulcus. Registered as a known approximation, not silently.
 
@@ -479,9 +497,9 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 | Standing | Rows |
 |---|---|
 | `definitional` | 11 |
-| `chosen` | 55 |
+| `chosen` | 56 |
 | `literature` | 9 |
-| `derived` | 12 |
-| `invented` | 86 |
+| `derived` | 14 |
+| `invented` | 89 |
 | `absent` | 11 |
-| **total** | **184** |
+| **total** | **190** |

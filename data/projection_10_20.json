@@ -2421,7 +2421,11 @@
       "provenance": {
         "method": "electrode_space_gaussian",
         "note": "MECHANICAL, not cortical: electrode movement and impedance change with the chest, so a cortical forward model is the wrong instrument. The sole non-anatomical topography in this file.",
-        "registry_keys": []
+        "registry_keys": [
+          "topo_centre_resp_artifact_x",
+          "topo_centre_resp_artifact_y",
+          "topo_sigma_resp_artifact"
+        ]
       }
     }
   }

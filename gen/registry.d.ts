@@ -24,6 +24,7 @@ export type ParamKey =
   | 'ap_axis_span'
   | 'aperiodic_model'
   | 'background_rms_uv'
+  | 'bem_source_mindist_mm'
   | 'beta_amp'
   | 'beta_band'
   | 'blink_amp'
@@ -34,6 +35,8 @@ export type ParamKey =
   | 'chi_est_band'
   | 'chi_est_mdd_resp'
   | 'chi_est_window_s'
+  | 'chi_inband_band'
+  | 'chi_inband_slope'
   | 'chi_mod_depth'
   | 'chi_mod_phase_sleep'
   | 'chi_mod_phase_wake'
@@ -181,10 +184,13 @@ export type ParamKey =
   | 'tilt_mod_settling_ratio'
   | 'tilt_n_poles'
   | 'tilt_pole_spacing'
+  | 'topo_centre_resp_artifact_x'
+  | 'topo_centre_resp_artifact_y'
   | 'topo_expect_alpha'
   | 'topo_expect_kc'
   | 'topo_expect_spindle_fast'
   | 'topo_expect_spindle_slow'
+  | 'topo_sigma_resp_artifact'
   | 'welch_noverlap'
   | 'welch_nperseg'
   | 'welch_window';
@@ -212,6 +218,7 @@ export interface ParamKindMap {
   'ap_axis_span': 'scalar';
   'aperiodic_model': 'procedure';
   'background_rms_uv': 'interval';
+  'bem_source_mindist_mm': 'scalar';
   'beta_amp': 'interval';
   'beta_band': 'interval';
   'blink_amp': 'interval';
@@ -222,6 +229,8 @@ export interface ParamKindMap {
   'chi_est_band': 'interval';
   'chi_est_mdd_resp': 'scalar';
   'chi_est_window_s': 'scalar';
+  'chi_inband_band': 'interval';
+  'chi_inband_slope': 'procedure';
   'chi_mod_depth': 'pending';
   'chi_mod_phase_sleep': 'procedure';
   'chi_mod_phase_wake': 'procedure';
@@ -369,10 +378,13 @@ export interface ParamKindMap {
   'tilt_mod_settling_ratio': 'absent';
   'tilt_n_poles': 'scalar';
   'tilt_pole_spacing': 'procedure';
+  'topo_centre_resp_artifact_x': 'scalar';
+  'topo_centre_resp_artifact_y': 'scalar';
   'topo_expect_alpha': 'electrodes';
   'topo_expect_kc': 'electrodes';
   'topo_expect_spindle_fast': 'electrodes';
   'topo_expect_spindle_slow': 'electrodes';
+  'topo_sigma_resp_artifact': 'scalar';
   'welch_noverlap': 'scalar';
   'welch_nperseg': 'scalar';
   'welch_window': 'enum';

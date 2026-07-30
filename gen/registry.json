@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generator_version": "0.2.0",
+  "generator_version": "0.3.0",
   "states": [
     "wake_eo",
     "wake_ec",
@@ -442,6 +442,38 @@
       "states": "all",
       "section": "3. Aperiodic background"
     },
+    "chi_inband_slope": {
+      "value": {
+        "kind": "procedure",
+        "text": "DERIVED, NOT STORED. The least-squares log-log slope of the generative aperiodic form L(f) = b - log10(k + f^chi) over chi_inband_band, with k = knee_freq_state ** chi_state. Computed by prep/reference/t1m1_chi_knee_fit.py; deliberately not a stored value, because a stored copy of a quantity computed from two other rows can only drift from them."
+      },
+      "units": null,
+      "standing": "derived",
+      "source": {
+        "kind": "procedure",
+        "text": "LS log-log slope of L(f) = b - log10(k + f^chi) over chi_inband_band. The form is specparam's knee-mode aperiodic model and identical to Build Plan 3.2's."
+      },
+      "states": "all",
+      "section": "3. Aperiodic background",
+      "note": "THE QUANTITY A READER MEASURES, which is not the quantity `chi_*` stores. `chi_*` is the ASYMPTOTIC exponent: the slope the spectrum approaches far above the knee. Any fit over a finite band that contains or sits below the knee returns something shallower, because below a knee the spectrum is flat. THE GAP IS LARGE AND WAS UNRECORDED. chi_wake_ec at its old 1.1 with a 12 Hz knee predicts an in-band slope of 0.303 over 1-20 Hz; the generator measured 0.31, agreeing with its own parameters exactly. It was compared against a real 0.99 and read as a threefold generator error for three sessions. It was two different quantities. Build Plan 3.7 warned that a published exponent is a joint function of method, band, knee model, reference and acquisition; the warning was written and then compared across anyway. NO STATE ORDERING MAY BE CLAIMED FROM THIS QUANTITY. See chi_direction."
+    },
+    "chi_inband_band": {
+      "value": {
+        "kind": "interval",
+        "lo": 1,
+        "hi": 20,
+        "meaning": "band_edges"
+      },
+      "units": "Hz",
+      "standing": "derived",
+      "source": {
+        "kind": "procedure",
+        "text": "The only band in which the reference corpus is usable. PhysioNet EEGMAT carries an acquisition low-pass around 30-45 Hz: local slope 6.7 over 20-30 Hz, a 50 Hz mains notch and a flat instrument floor above 80 Hz, so a fit above ~20 Hz measures their filter and not their cortex. See compare_real.py."
+      },
+      "states": "all",
+      "section": "3. Aperiodic background",
+      "note": "A CORPUS PROPERTY, not a choice about EEG. Change the corpus and this changes with it, which is why chi_inband_slope is derived rather than stored: the derived quantity is only meaningful beside the band it was derived over."
+    },
     "chi_direction": {
       "value": {
         "kind": "ordering",
@@ -505,8 +537,8 @@
         "kind": "pending"
       },
       "provisional": {
-        "v": 1.1,
-        "basis": "eyes-closed, slightly steeper than eyes-open",
+        "v": 0.85,
+        "basis": "SOLVED (P10), not assigned. The registry stores a SOURCE exponent; the real 0.850 is an OUTPUT of a 19-channel average-referenced scalp signal, and setting one equal to the other assumes the montage is transparent. Swept source (chi, knee) and measured the generated signal through the identical pipeline the real recordings went through. Knee matches (output 10.32 Hz vs real 9.87); output chi is 1.574 against a real median 0.850 whose per-subject IQR is 0.373-1.300 -- see Finding 22 for the floor that prevents a closer match",
         "expires_at_milestone": "T1-M1",
         "constrained_by": "must not be set from any gate threshold"
       },
@@ -709,8 +741,8 @@
         "kind": "pending"
       },
       "provisional": {
-        "v": 12,
-        "basis": "attenuated per knee_present",
+        "v": 3,
+        "basis": "SOLVED (P10) jointly with chi_wake_ec by inversion, not assigned: the source value whose generated output matches the real measured knee of 9.87 Hz (achieved 10.32). Real knee is the well-determined half of the pair, IQR 9.54-10.19 Hz across 8 subjects",
         "expires_at_milestone": "T1-M1",
         "constrained_by": "must not be tuned to hit a target G1b bias"
       },
@@ -841,8 +873,8 @@
         "kind": "pending"
       },
       "provisional": {
-        "v": 15.3851,
-        "basis": "k = knee_freq_wake_ec ** chi_wake_ec = 12.0 ** 1.10",
+        "v": 2.5442,
+        "basis": "k = knee_freq_wake_ec ** chi_wake_ec = 9.87 ** 0.85, both FITTED jointly against PhysioNet EEGMAT (P10). Cross-checked by emit.mjs, which rejected the stale 15.3851 the moment the knee moved -- the registry catching a derived value left behind by its inputs",
         "expires_at_milestone": "T1-M1",
         "constrained_by": "must follow from the knee frequency"
       },
@@ -1466,6 +1498,69 @@
       "section": "5. Topography and geometry",
       "milestone": "T1-M1",
       "note": "EVERY SLOW WAVE USED TO HAVE THE SAME TOPOGRAPHY, and in N3 that is most of the signal -- visible at a 5 s window as one large wave repeated in all 19 lanes, worth 0.21 of effective rank. Real slow waves originate at varying cortical sites, so the events should differ. A patch's channel covariance is sum_m w_m w_m^T over its eigenmodes, so drawing c_m ~ N(0,1) and forming sum_m c_m w_m samples an anatomically admissible field for that patch. Doing exactly that, however, varies each event's amplitude at any FIXED electrode a great deal, and the AASM criterion is measured at one derivation: G5's positive arm fell from 0.75 to 0.33 of held-out epochs. Real N3 meets that criterion by definition, so an unconstrained draw makes N3 less like N3, not more. This row keeps the dominant mode at full strength and admixes the higher ones: every event is recognisably the patch's field, and they differ. At 0 the behaviour is exactly the single fixed topography this replaced, which makes the cost of the variability measurable rather than assumed. IT TRADES AGAINST G5 AND MUST NOT BE FITTED TO IT. The trade is reported in Finding 21."
+    },
+    "topo_centre_resp_artifact_x": {
+      "value": {
+        "kind": "scalar",
+        "v": 0
+      },
+      "units": "normalized_10_20",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "midline by symmetry: the chest is not lateralised"
+      },
+      "states": "all",
+      "section": "5. Topography and geometry",
+      "milestone": "T1-M1",
+      "note": "THE ONE TOPOGRAPHY THAT IS DELIBERATELY NOT CORTICAL. Mechanism (a) is mechanical -- electrode movement and impedance change with the chest -- so a cortical forward model is the wrong instrument for it and it keeps an electrode-space Gaussian. THESE THREE ROWS BRIEFLY LEFT THE REGISTRY AND THAT WAS A DEFECT. When the projection producer moved from tools/make_projection.mjs to prep/leadfield/make_projection.py they became a Python constant, because tools/lint/literals.mjs only scans .ts and .mjs -- the guard that exists to catch exactly this was switched off by the migration that needed it. The linter now covers the producer."
+    },
+    "topo_centre_resp_artifact_y": {
+      "value": {
+        "kind": "scalar",
+        "v": 0.55
+      },
+      "units": "normalized_10_20",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "frontal: the artifact is largest where the leads run and where frontal electrodes sit furthest from the reference"
+      },
+      "states": "all",
+      "section": "5. Topography and geometry",
+      "milestone": "T1-M1",
+      "note": "See topo_centre_resp_artifact_x. Deliberately unlike any neural generator's centre, because Build Plan 5.1 requires the three respiratory mechanisms stay separable -- if the artifact shared a topography with a rhythm, no montage could tell them apart."
+    },
+    "topo_sigma_resp_artifact": {
+      "value": {
+        "kind": "scalar",
+        "v": 0.9
+      },
+      "units": "normalized_10_20",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "broad: a mechanical artifact is not focal, and nothing measured constrains the width"
+      },
+      "states": "all",
+      "section": "5. Topography and geometry",
+      "milestone": "T1-M1",
+      "note": "See topo_centre_resp_artifact_x. Wide compared with any cortical patch, which is the point: a movement artifact spreads across the montage rather than peaking over a generator."
+    },
+    "bem_source_mindist_mm": {
+      "value": {
+        "kind": "scalar",
+        "v": 5
+      },
+      "units": "mm",
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "MNE's default exclusion distance between a source and the inner skull surface; kept rather than chosen independently, because departing from a forward-modelling package's default is a claim needing its own justification"
+      },
+      "states": "all",
+      "section": "5. Topography and geometry",
+      "note": "Sources closer than this to the inner skull are dropped from the forward solution. It is a NUMERICAL SAFEGUARD, not a physiological statement: the BEM potential diverges as a dipole approaches a conductivity boundary, so nearby sources would otherwise dominate every topography with an artefact of the discretisation. FOUND BY THE LINTER, not by review. It was an inline 5.0 in the producer, and it is a modelling parameter that shapes every weight vector in data/projection_10_20.json -- the only unregistered scientific value the new Python coverage turned up, which is the argument for that coverage existing."
     },
     "cortical_coherence_mm": {
       "value": {

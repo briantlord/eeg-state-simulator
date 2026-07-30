@@ -124,11 +124,15 @@ PATCHES: dict[str, list[str]] = {
 #: The aperiodic background is the whole cortex, not a region.
 BACKGROUND = 'background'
 
-#: THE ONE TOPOGRAPHY THAT IS DELIBERATELY NOT CORTICAL. `resp_artifact` is mechanical -- electrode
-#: movement and impedance change with the chest -- so a cortical forward model is the wrong
-#: instrument for it. It keeps an explicit electrode-space profile, and being the sole exception is
-#: itself informative: everything else in this file is now anatomy.
-RESP_GAUSSIAN = {'centre': (0.0, 0.55), 'sigma': 0.9}
+# THE ONE TOPOGRAPHY THAT IS DELIBERATELY NOT CORTICAL. `resp_artifact` is mechanical -- electrode
+# movement and impedance change with the chest -- so a cortical forward model is the wrong
+# instrument for it. It keeps an explicit electrode-space profile, and being the sole exception is
+# itself informative: everything else in this file is now anatomy.
+#
+# ITS THREE NUMBERS ARE REGISTRY ROWS, not constants here. They were briefly inlined when this
+# producer replaced the JavaScript one, because tools/lint/literals.mjs scanned only .ts and .mjs
+# -- the migration silently moved the file out of the linter's reach and took three scientific
+# values out of the normative registry with it. The linter now covers this directory.
 
 
 def num(key: str) -> float:
@@ -159,7 +163,7 @@ def build_leadfield(subjects_dir: Path):
     info.set_montage('standard_1005', on_missing='raise')
     fwd = mne.make_forward_solution(info, trans='fsaverage', src=str(src_path),
                                     bem=str(bem_path), eeg=True, meg=False,
-                                    mindist=5.0, verbose=False)
+                                    mindist=num('bem_source_mindist_mm'), verbose=False)
     # Fixed orientation: dipoles normal to the surface. That is the pyramidal-cell assumption and
     # it removes three free orientation parameters per source rather than fitting them.
     fwd = mne.convert_forward_solution(fwd, force_fixed=True, surf_ori=True, use_cps=True,
@@ -167,7 +171,7 @@ def build_leadfield(subjects_dir: Path):
     L = np.asarray(fwd['sol']['data'], dtype=np.float64)
     names = list(fwd['info']['ch_names'])
     src = fwd['src']
-    pos = np.vstack([s['rr'][s['vertno']] for s in src]) * 1000.0     # mm
+    pos = np.vstack([s['rr'][s['vertno']] for s in src]) * 1000.0  # @lit-ok m -> mm, an SI prefix
 
     # Map each anatomical label to indices into the forward solution's source ordering.
     verts = [src[0]['vertno'], src[1]['vertno']]
@@ -202,7 +206,7 @@ def patch_covariance(Lp: np.ndarray, pp: np.ndarray, lam_mm: float) -> np.ndarra
     """
     n = Lp.shape[1]
     acc = np.zeros((Lp.shape[0], n))
-    block = 2048
+    block = 2048  # @lit-ok rows of the kernel held at once; a memory bound, and the result is identical at any block size
     for i in range(0, n, block):
         d = np.linalg.norm(pp[i:i + block, None, :] - pp[None, :, :], axis=-1)
         acc[:, i:i + block] = Lp @ np.exp(-d / lam_mm).T
@@ -296,8 +300,9 @@ def main() -> int:
     emit(BACKGROUND, allsrc, ['<whole cortex>'])
 
     # The one non-cortical topography; see RESP_GAUSSIAN.
-    cx, cy = RESP_GAUSSIAN['centre']
-    sg = RESP_GAUSSIAN['sigma']
+    cx = num('topo_centre_resp_artifact_x')
+    cy = num('topo_centre_resp_artifact_y')
+    sg = num('topo_sigma_resp_artifact')
     w = np.array([np.exp(-(((chan_xy[c][0] - cx) ** 2 + (chan_xy[c][1] - cy) ** 2))
                          / (2 * sg * sg)) for c in chan_names])
     projections['resp_artifact'] = {
@@ -307,7 +312,8 @@ def main() -> int:
             'note': 'MECHANICAL, not cortical: electrode movement and impedance change with the '
                     'chest, so a cortical forward model is the wrong instrument. The sole '
                     'non-anatomical topography in this file.',
-            'registry_keys': [],
+            'registry_keys': ['topo_centre_resp_artifact_x',
+                              'topo_centre_resp_artifact_y', 'topo_sigma_resp_artifact'],
         },
     }
 

@@ -1795,3 +1795,89 @@ bound.
 
 Reproduce: `prep/leadfield/make_projection.py`, `check_projection_stats.py`,
 `check_generated_spatial.py`, `fit_amplitude.py`, `prep/reference/compare_real.py`.
+
+---
+
+# Finding 22 — P10 and P13: two quantities, an inversion, and a floor the corpus cannot see past
+
+## P13 — the registry's chi is not the number anyone measures
+
+`chi_wake_ec` was 1.1 with `knee_freq_wake_ec` at 12 Hz. The generator measured 0.31 over 1–20 Hz
+against a real 0.99, and that was read as a threefold generator error for three sessions.
+
+It was not an error. `chi_*` is the **asymptotic** exponent of `L(f) = b − log10(k + f^chi)`;
+`compare_real.py` measures an LS slope over a band; and a 12 Hz knee sits **inside** that band,
+below which the spectrum is flat. Registered 1.1 with a 12 Hz knee *predicts* an in-band slope of
+0.303 — the generator was agreeing with its own parameters to two decimals. Build Plan 3.7 already
+warned that a published exponent is a joint function of method, band and knee model.
+
+**Closed by naming the second quantity.** `chi_inband_slope` is registered as `derived` with the
+procedure that computes it, and `chi_inband_band` records the band it is meaningful over. Neither
+stores a value: a stored copy of a quantity computed from two other rows can only drift from them.
+
+**And it exposed a claim that does not survive translation.** The registered `chi_direction`
+ordering holds for the asymptotic parameter. In the quantity a reader measures it does not:
+
+| state | chi (registered) | knee_freq | → in-band slope |
+|---|---|---|---|
+| wake_eo | 0.900 | 12.00 | 0.275 |
+| n1 | 1.400 | 12.00 | 0.333 |
+| n2 | 1.700 | 10.00 | 0.431 |
+| **n3** | 1.660 | 0.50 | **1.589** |
+| **rem** | **2.100** | 20.00 | **0.172** |
+
+REM has the steepest chi and the *flattest* measured slope; N3 is mid-order in chi and by far the
+steepest measured. The inversion is largely by design — `knee_present` records "REM prominent, N3
+absent" — but the consequence was never written down: **no state ordering may be claimed from a
+band-limited slope.** That independently reinforces Finding 14, which showed narrowband χ cannot
+resolve the spacing between adjacent states even when the ordering is real.
+
+## P10 — and the same mistake, committed while closing P13
+
+Real EEGMAT, average reference, knee-mode specparam over 1–20 Hz: **chi 0.850 [IQR 0.373–1.300],
+knee 9.87 Hz [IQR 9.54–10.19]**.
+
+Those numbers were written straight into the registry. Measured back out of the generator through
+the identical pipeline they returned **chi 2.173, knee 16.58 Hz**.
+
+The registry rows are **source** parameters describing the process each background mode is
+synthesised from; the fitted numbers are **output** properties of a 19-channel, average-referenced,
+spatially-mixed scalp signal. Setting one equal to the other assumes the montage is transparent.
+**That is precisely the error P13 exists to name, committed in the act of closing P13** — which is
+the argument for solving rather than assigning.
+
+So the pair is **inverted**: sweep source (chi, knee), measure the generated signal exactly as the
+real recordings were measured, keep the pair whose *output* matches.
+
+| src chi | src knee | → out chi | out knee | err |
+|---|---|---|---|---|
+| 0.85 | 1.0 | 1.270 | 5.50 | 0.469 |
+| **0.85** | **3.0** | **1.574** | **10.32** | **0.448** |
+| 1.20 | 6.0 | 1.776 | 10.06 | 0.554 |
+| 2.00 | 10.0 | 2.538 | 11.58 | 1.080 |
+
+## The floor, which is the actual result
+
+**Output chi never falls below 1.27 anywhere in the grid.** No source setting produces an
+average-referenced output as shallow as the real 0.850. The knee is matched (10.32 against 9.87);
+chi is not, and it is not a matter of choosing better numbers.
+
+Two things are true at once, and both matter:
+
+- **The real target is poorly determined.** Per-subject chi spans 0.373–1.300 while the knee spans
+  9.54–10.19. With a knee near 10 Hz and a band ending at 20 Hz there is *half a decade* above the
+  knee to determine an asymptotic exponent from. The knee is well constrained because it sits in
+  the middle of the band; chi is barely constrained at all.
+- **The band cannot be widened with this corpus.** EEGMAT carries an acquisition low-pass around
+  30–45 Hz — local slope 6.7 over 20–30 Hz, a 50 Hz notch, a flat instrument floor above 80 Hz —
+  so fitting higher measures their filter, not their cortex.
+
+**P10 is therefore closed for the knee and remains open for chi, and the blocker is the corpus
+rather than the model.** Pinning an asymptotic exponent needs clean data well above the knee. That
+is a dataset decision, not a fitting one.
+
+`k_wake_ec` was caught by the emitter the moment the knee moved — it must equal
+`knee_freq ** chi`, and the stale 15.3851 failed the build rather than shipping. That
+cross-check is the registry doing exactly the job it exists for.
+
+Reproduce: `prep/reference/t1m1_chi_knee_fit.py`, `prep/reference/t1m1_chi_invert.py`.
