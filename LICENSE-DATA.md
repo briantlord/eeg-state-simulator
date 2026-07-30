@@ -1,55 +1,70 @@
-# Derived data, and what may be redistributed
+# Third-party data and attribution
 
-The BSD-3-Clause `LICENSE` covers the code. Two committed artifacts are **derived from
-third-party data** and are not covered by it. This file states what they are so the question is
-visible before the repository is public, rather than after.
+The BSD-3-Clause `LICENSE` covers the code in this repository. Two committed artifacts are derived
+from third-party data and carry additional terms, reproduced here so that they travel with any
+copy.
 
-## 1. `data/projection_10_20.json` — committed, and I believe fine
+**This file is a statement of attribution and compliance, not legal advice.** If this project is
+used commercially or redistributed as part of a product, read the FreeSurfer licence yourself.
 
-58 weight vectors of 21 numbers each. Produced by `prep/leadfield/make_projection.py` from an
-fsaverage three-shell BEM forward solution, reduced to the spatial eigenmodes of seven cortical
-patches over a 10-20 montage.
+## FreeSurfer / fsaverage
 
-This is a **heavily processed derivative**: roughly 1,200 numbers distilled from a 21 x 20,484
-lead field, with the anatomy collapsed into per-patch covariance eigenmodes. It does not permit
-reconstruction of the head model, the source space, or any anatomical image. Redistributing it
-with attribution is, in my reading, ordinary derived-work practice for a research artifact.
+`data/projection_10_20.json` and `prep/leadfield/cache/*.npz` are computed from the **fsaverage**
+template subject, distributed with [MNE-Python](https://mne.tools) and derived from
+[FreeSurfer](https://surfer.nmr.mgh.harvard.edu/). fsaverage is a template brain built from a
+combination of 40 MRI scans.
 
-**Attribution:** fsaverage, distributed with MNE-Python, derived from FreeSurfer;
-Desikan-Killiany (`aparc`) parcellation.
+- `prep/leadfield/cache/fsaverage_leadfield.npz` — a three-shell BEM lead field, 21 electrodes ×
+  20,484 cortical sources, with source coordinates.
+- `prep/leadfield/cache/fsaverage_labels.npz` — Desikan–Killiany (`aparc`) label to source-index
+  mapping.
+- `data/projection_10_20.json` — 58 weight vectors of 21 numbers each, being the leading spatial
+  eigenmodes of seven cortical patches. A heavy reduction of the above: it does not permit
+  reconstruction of the head model, the source space, or any anatomical image.
 
-## 2. `prep/leadfield/cache/fsaverage_leadfield.npz` — committed, and this is the one to decide
+The FreeSurfer licence grants the right to copy, modify and make derivative works, including for
+commercial purposes, provided that the terms travel with any redistributed copy and that
+attributions are preserved. As it requires:
 
-2.3 MB containing the **lead field matrix itself** (21 x 20,484 float64) plus source coordinates,
-and `fsaverage_labels.npz` with the atlas label-to-source index mapping. This is a far more direct
-derivative of FreeSurfer's fsaverage subject than the projection file is.
+> All or portions of this licensed product (such portions are the "Software") have been obtained
+> under license from The General Hospital Corporation and are subject to the following terms and
+> conditions.
 
-It was committed for a concrete reason: `npm run verify` re-derives
-`data/projection_10_20.json` and fails on drift, and that check is only meaningful if it can run
-on a clean checkout. Requiring a ~1 GB anatomical download first would mean it never ran in
-practice.
+The full FreeSurfer Software License Agreement is at
+<https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferSoftwareLicense> and applies to the
+fsaverage-derived files listed above.
 
-**That reason does not settle the licence question, and it should be settled before the repo is
-public.** FreeSurfer is distributed under its own terms, which restrict redistribution.
+The licence also states that **clinical applications are neither recommended nor advised**, and
+that any commercialisation is at the sole risk of the party undertaking it. Neither the names nor
+the logos of MGH may be used to endorse or promote anything derived from this work.
 
-### Recommended resolution
+For the parcellation used to define the cortical patches, cite Desikan et al. (2006), *An automated
+labeling system for subdividing the human cerebral cortex on MRI scans into gyral based regions of
+interest*, NeuroImage 31(3).
 
-Remove the cache from the public repository and have CI regenerate it:
+## Recordings — not redistributed
 
-1. Add `prep/leadfield/cache/` to `.gitignore`.
-2. In the `verify` workflow, run `python -c "import mne; mne.datasets.fetch_fsaverage()"` before
-   `npm run verify`, with `~/mne_data` restored from `actions/cache` so it downloads once.
-3. Locally the producer already regenerates the cache on first run, so nothing changes for a
-   developer.
+`prep/realdata/` is **gitignored**. The PhysioNet recordings used for fitting — [EEG During Mental
+Arithmetic Tasks](https://physionet.org/content/eegmat/) and the [Haaglanden Medisch Centrum sleep
+staging database](https://physionet.org/content/hmc-sleep-staging/) — are fetched by
+`prep/realdata/fetch_hmc.sh` and are governed by PhysioNet's own terms. No recording, and no
+per-subject derivative of one, is committed here.
 
-The cost is a slower first CI run. The benefit is that nothing in the repository redistributes
-anatomical data, and the drift check keeps working.
+## If you would rather not carry the fsaverage files at all
 
-Until that is done, treat this repository as **not cleared for redistribution of the cache
-files.**
+The lead field cache is committed so that the projection drift check in `npm run verify` works on
+a clean checkout without a ~1 GB anatomical download first. That is an engineering convenience,
+not a requirement.
 
-## 3. Recordings — not redistributed at all
+To remove it, note that **`.gitignore` is not sufficient**: the files are already in the history
+of commits `9737542` and `99b2543`, and publishing the repository would publish them whatever the
+ignore file says. Removing them means rewriting history —
 
-`prep/realdata/` is gitignored. The EEGMAT and HMC recordings used for fitting are fetched from
-PhysioNet by `prep/realdata/fetch_hmc.sh` and are governed by PhysioNet's own terms. No recording,
-and no per-subject derivative of one, is committed here.
+```bash
+git filter-repo --path prep/leadfield/cache --invert-paths
+```
+
+— before the first push, and then having CI fetch fsaverage once, cached with `actions/cache`.
+
+`data/projection_10_20.json` stays either way: it is what the runtime loads, and it is the reduced
+derivative described above.

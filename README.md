@@ -114,7 +114,10 @@ docs/                       planning documents, decisions, findings, status
 ## Attribution
 
 - **Head model:** fsaverage, distributed with [MNE-Python](https://mne.tools), derived from
-  FreeSurfer. The projection weights in `data/` are a derived work; see `LICENSE-DATA.md`.
+  [FreeSurfer](https://surfer.nmr.mgh.harvard.edu/). The projection weights in `data/` are a
+  derived work. Portions have been obtained under license from The General Hospital Corporation
+  and are subject to the FreeSurfer Software License Agreement — see `LICENSE-DATA.md`.
+  **Clinical applications are neither recommended nor advised.**
 - **Atlas:** Desikan–Killiany (`aparc`) cortical parcellation.
 - **Reference recordings:** PhysioNet [EEG During Mental Arithmetic Tasks](https://physionet.org/content/eegmat/)
   and the [Haaglanden Medisch Centrum sleep staging database](https://physionet.org/content/hmc-sleep-staging/).
