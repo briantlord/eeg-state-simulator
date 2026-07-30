@@ -396,6 +396,202 @@ shaping, and it must be characterized before any PAC recovery gate is trusted.
 
 ---
 
+## D19 — the spatial model is separable, and that is why the metrics counterbalance; adopt a lead field
+
+**Decided.** The Gaussian-mixture projection is **retired as the generative spatial model** and
+replaced by a published lead field (P9, promoted from shortfall to architecture). The temporal
+engine is **kept unchanged**. New rule adopted: **a metric used to fit a parameter may not also be
+reported as evidence of realism.**
+
+**Prompted by a design question, not a defect:** *"is this a parsimonious strategy, or are we
+setting ourselves up to chase metrics that keep counterbalancing off each other?"* The second. This
+entry records why that is structural rather than bad luck, because the distinction determines
+whether more fitting would ever help.
+
+### The mechanism: every source is rank 1 in space × time
+
+Each source contributes `s_g(t) · w_g(channel)` — an outer product of a time course and a fixed
+topography. The model is therefore **separable**: spatial and temporal structure are independent by
+construction, and the channel covariance is exactly
+
+```
+C = Σ_g var_g · w_g w_gᵀ
+```
+
+which is why the analytic surrogate in Finding 19 is *exact* rather than approximate. Two
+consequences follow, and both are visible in the measurements:
+
+1. **The model admits exactly one function of distance.** Correlation-versus-distance is fully
+   determined by the Gaussian widths, so near-pair and far-pair correlation cannot be matched
+   together. Measured across **21 configurations** spanning four parameters: near-pair at or above
+   real (0.740–0.812 against 0.767), far-pair always below (0.251–0.323 against 0.440), PC1 always
+   below (0.426–0.473 against 0.534) — **simultaneously, in every one.** The signature never moved
+   because it cannot.
+
+2. **The covariance observables are not independent.** Effective rank, PC1 share, near-pair and
+   far-pair correlation are four summaries of one 21 × 21 matrix. Fitting any one *necessarily*
+   moves the others. This is not tuning difficulty; it is the model family not containing the
+   target.
+
+### The degrees-of-freedom accounting
+
+**37 generative spatial rows, 31 of them `invented`.** Section 5 holds 35 rows (27 invented, 2
+derived, 1 chosen, 5 literature) plus six more outside it (`background_n_sources`,
+`background_global_fraction`, `osc_n_sources`, `osc_coherent_fraction`, `so_origin_coherent_fraction`,
+`osc_carrier_flatten`). Four of the five literature rows are `topo_expect_*` — **G6's expectations,
+i.e. the test, not the generator** — and the fifth is `so_travel_v`, a velocity. So **no topography
+in this project has external provenance.**
+
+Thirty-one invented numbers generate a 21 × 21 covariance and are fitted against ~5 non-independent
+statistics of that same covariance. The model is **simultaneously overparameterized in knobs and
+underparameterized in shape.** That is the formal statement of the counterbalancing.
+
+### A circularity leak, and the rule that closes it
+
+The project already forbids thresholds derived from our own spread. It did not forbid the
+neighbouring error, and Finding 19 committed it: `near_corr` and alpha frontal/occipital prominence
+were **fitted**, then reported as "hit almost exactly" — which is evidence the optimiser worked, not
+that the model is realistic.
+
+> **Rule (D19).** A metric used to fit a parameter may not also be reported as evidence of realism.
+> It becomes a **consistency check**. Realism claims require a metric that was not targeted.
+
+Under this rule, wake_ec's effective rank landing in the real IQR is the one genuine spatial
+agreement in Finding 19, because it was not directly targeted. **And it is weak evidence:** rank is
+a scalar summary of an eigenspectrum whose *shape* is demonstrably wrong, so it can land correctly
+for the wrong reason.
+
+### The same error class, in χ
+
+`chi_wake_ec` is registered 1.1; the generated signal measures 0.29 over 1–20 Hz. This was first
+called a knee problem. The sharper diagnosis is that **two different quantities are being
+compared**: the registry stores an asymptotic exponent, `compare_real.py` measures an in-band slope,
+and `knee_freq_wake_ec` = 12 Hz puts the knee inside the fit band. Build Plan 3.7 already warns that
+a published exponent is a joint function of method, band and knee model — the warning was written
+and then compared across anyway.
+
+So this is a **quantity-definition error, not a tuning error**, exactly like the leak above. Resolve
+by deciding which quantity `chi_*` denotes: either register the in-band slope, or keep the
+asymptotic exponent and report the in-band slope as a *derived prediction*. **Do not move the knee
+to close a gap between two different quantities.** Registered as P13.
+
+### How this compares to the alternatives
+
+| family | examples | buys | costs |
+|---|---|---|---|
+| **colored noise + injected oscillations** (ours) | `neurodsp`, most spindle/SO detector-validation work | exact per-source ground truth, direct control of the demonstrated parameter, cheap, auditable | **univariate by design**; spatial claims are outside its competence |
+| **lead-field forward model** | SEREEGA, MNE `SourceSimulator`, FieldTrip, Brainstorm | spatial mixing is *physics, not fitted* — distance kernel, eigenspectrum shape, near/far ratio all emerge | needs a head model and lead field (published, free) |
+| **neural mass / mean field** | Jansen–Rit, Wendling, The Virtual Brain | rhythms, cross-frequency coupling and state transitions *emerge* from dynamics | parameters are physiological, not "χ = 1.1 at 30 µV"; forfeits the controllability a state simulator needs |
+| **MVAR fitted to real data** | connectivity-method validation | unbeatable second-order realism — it is fitted to it | no interpretable knobs, no event ground truth, no counterfactuals; replays the training corpus's statistics |
+| **deep generative** | EEG-GANs, diffusion | discriminator-grade realism | zero interpretability, no ground truth; incompatible with *"a model, not a measurement"* |
+
+**Where this project actually sits.** The temporal engine is the correct family for what the χ, PAC
+and LZc gates claim, and it is what the `neurodsp`/`specparam` ecosystem does. The trouble began
+when the project started making **spatial** claims — volume conduction, topography, inter-channel
+correlation, effective rank. The engine was never built to support those, and D18 plus Finding 19
+are the record of trying to make it.
+
+### The decision
+
+**Seam 3 already anticipated this.** `tools/make_projection.mjs` states it: *"swapping in eigenmode
+columns or a SEREEGA lead field is a file, not a refactor."* This is not a rewrite; it is executing
+a seam that was designed in.
+
+1. **Replace the Gaussian weights with a published lead field.** Highest leverage available. Rank,
+   PC1, near and far stop being *targets* and become *predictions* — their agreement becomes a
+   falsification test, which is this project's gate philosophy rather than a departure from it.
+   Parsimony: **31 invented numbers → source locations with literature provenance plus one published
+   matrix.** It also removes `topo_reference_far_field` **physically**: A1/A2 pick up less cortex
+   because of where they sit in the volume, and a lead field says so, so the fudge introduced in
+   D18 disappears rather than being re-tuned.
+
+2. **Distributed sources, not point sources.** A lead field alone is not sufficient: seven dipoles
+   through a real lead field still gives rank ≤ 7 and is still separable. The eigenspectrum's
+   natural decay comes from cortical **patches** — many dipoles with graded coherence. Lead field
+   *and* patches is what makes the covariance shape right.
+
+3. **Then the temporal items a lead field cannot touch:** burstiness (real alpha arrives in bursts;
+   ours is a fixed-depth sinusoidal envelope — `neurodsp`'s `sim_bursty_oscillation` is the
+   precedent, and this is likely the largest *perceptual* realism gain available), the χ
+   quantity-definition fix, and N3's delta dominance.
+
+### What is explicitly rejected
+
+- **Do not chase far-field correlation with more Gaussian parameters.** 21 configurations of direct
+  evidence that it cannot work.
+- **Do not add sources to fix the eigenspectrum.** That is fitting a symptom of separability.
+- **Do not adopt neural-mass or generative approaches.** They forfeit the ground truth and
+  auditability that are the project's premise.
+- **Do not tune `delta_amp` or the knee frequencies to close metric gaps** until the quantities
+  being compared are the same quantity.
+
+### Sequencing constraint
+
+`background_global_fraction` is registered at 0.35, documented in two places as setting the common
+mode's variance share, and **read by nothing** — every background source gets equal rms in
+`compose.ts` and peak-1 weights in the projection, so the common mode carries 1/`nBg` by accident.
+Wiring it changes referenced background variance by ~24%, because a uniform component is nulled
+exactly by a linked-mastoid reference. Amplitude calibration (`Pz` RMS 10.0 µV against a real
+14.8 µV) depends on it. **Wire it before fitting any amplitude, or the two will fight.**
+
+**Related:** supersedes the *strategy* of D18 while upholding both of its defect findings.
+Finding 19 is the measurement record. P9 is promoted and P13 is new.
+
+### Amended the same day by Finding 20 — the decision stands, the mechanism was wrong
+
+Two probes were run **before** any lead field was built, on the principle that cost this project an
+8× error once already (Finding 19's self-checking surrogate). Both changed the design.
+
+**1. The far-field deficit was never a forward-model deficiency.** A real fsaverage 3-shell BEM lead
+field with a parameter-free white-cortex source model measures far-pair **0.239** under
+linked-mastoid — *worse* than the 0.303 of the Gaussian mixture it was meant to replace, with a
+near/far ratio of 3.03 against a real 1.74. A coherence-length sweep reproduced the same
+far-up/rank-down trade and reached only 0.290. **The prescription in this decision would not have
+fixed the metric it named.**
+
+**2. Most of the real 0.440 is the reference.** The same recordings measure far-pair **0.437** under
+linked-ear and **0.257** under average reference, with effective rank 3.07 against 5.36 — a 70% swing
+from the reference alone, larger than any difference between any two models compared in this project.
+
+That exposes a circularity this entry did not catch. `topo_reference_far_field` = 0.30 is an
+**invented** number (D18) for how much cortex the mastoids see, and the generator's linked-mastoid
+output depends on it directly. **Fitting spatial parameters against linked-ear far-pair correlation
+fitted them against that invented number as much as against the head.** It is the D19 rule's own
+failure mode, one level further out than the rule as written.
+
+> **Amendment (D19.1).** Spatial metrics are compared under **average reference**, which is defined
+> by the montage and invents nothing. Linked-ear/linked-mastoid figures may be *reported* — it is the
+> montage the artifact ships — but no parameter may be fitted against them while any reference
+> electrode's cortical pickup is an invented row.
+
+**3. An independent per-channel component is required, not optional.** Under average reference the
+lead field is *too* correlated (near 0.553 against a real 0.413) — the opposite sign to the
+linked-ear comparison. Real EEG is **less** spatially correlated than white-cortex-through-a-lead-
+field, and no source-coherence model can do that, because coherence only raises correlation. Only
+per-electrode independent signal lowers it.
+
+`sensor_noise_rms` is 1.5 µV against a 20 µV background: **0.56% of variance, where the fit wants
+20%** (~10 µV rms per channel). Not amplifier noise — the non-neural contribution real scalp
+recordings carry independently at each site.
+
+**The result that settles the decision:**
+
+| average reference | mean relative error | free parameters |
+|---|---|---|
+| shipped Gaussian mixture *(linked-ear)* | 0.250 | 31 invented |
+| lead field + independent share 0.20 | **0.125** | **1** |
+
+Half the error, one parameter instead of thirty-one, under a reference that invents nothing — so the
+numbers are a prediction rather than a fit. **This decision is strengthened; its item 1 rationale is
+replaced by the above, and a fourth implementation item is added: an independent per-channel
+component, fitted as one number and carrying the caveat that it is an *independent-equivalent* share
+under this model, not a measured physiological quantity** (fsaverage is a template, the near/far
+split is 2-D, white cortex is an assumption).
+
+**Registered as P16.** Finding 20 is the measurement record.
+
+---
+
 ## D18 — volume conduction needs the reference electrodes to differ in kind, and slow oscillations must start at zero
 
 **Two defects found by looking at the artifact, neither of which any gate could see.**
@@ -707,9 +903,13 @@ decisions in exactly that state.
 | P4 | Corpus selection for T1-M1 fitting | every `invented` row | T1-M1 |
 | ~~P7~~ | ~~Non-sinusoidal waveform shape for alpha and the SO~~ | — | **Implemented, not fitted.** See below |
 | P8 | Fit `alpha_shape_rdsym` / `alpha_shape_triangularity` / `so_rdsym` against a corpus | any PAC recovery gate | T1-M2 |
-| P9 | Replace Gaussian projection weights with LΨᵀ columns or a SEREEGA lead field | far-field correlation structure | T1-M1 |
+| **P9** | Replace Gaussian projection weights with LΨᵀ columns or a SEREEGA lead field | far-field correlation structure; **every spatial claim** | **PROMOTED — decided in D19, now the active work** |
 | P10 | Fit χ and `knee_freq_*` **jointly** per state | state orderings; any comparability claim | T1-M1 |
 | P12 | Characterize `filterbank`'s over-response, then decide the default tilt scheme | any χ modulation above ~0.3 Hz | T1-M2 |
+| P13 | Decide which quantity `chi_*` denotes: in-band slope, or asymptotic exponent with the in-band slope as a derived prediction | any χ comparison against real data or published values | T1-M1, with P10 |
+| P14 | Wire `background_global_fraction`, which is registered and documented but read by nothing | amplitude calibration; `snr_nominal` | before any amplitude fit (D19) |
+| P15 | Bursty rather than continuously-modulated oscillation envelopes | perceptual realism; any burst-rate claim | T1-M1 |
+| **P16** | Fit the independent per-channel share (~0.20 measured); `sensor_noise_rms` is 1.5 µV = 0.56% of variance where the fit wants 20% | inter-channel correlation; **a second, simpler cause of “too correlated” than topography** | with the lead field (D19.1, Finding 20) |
 | ~~P11~~ | ~~Respiratory mechanism (a), and the amplitude half of (c)~~ | — | **Closed, implemented.** Demo 1 now moves 100% → 1%. See below |
 
 **P7 is implemented and deliberately left unfitted.** Alpha and the slow oscillation are now
@@ -733,10 +933,16 @@ appreciably.
 
 **P9 and P10 are new**, and each is a concrete blocker rather than a worry:
 
-- **P9** — measured against real EEG, far-field inter-channel correlation is 0.29 against a
-  real 0.44, and a handful of Gaussian sources cannot fix it: more global component raises
-  far-field correlation and *lowers* effective rank, while real EEG has both at once. Build
-  Plan §3.4 already names the fix and the projection-file schema already supports it.
+- **P9 is no longer a worry but a decision — see D19.** The original entry read: far-field
+  correlation 0.29 against a real 0.44, and a handful of Gaussian sources cannot fix it, because
+  more global component raises far-field correlation and *lowers* effective rank while real EEG
+  has both at once. Finding 19 turned that into a structural argument with 21 configurations of
+  evidence: the model is **separable**, so it admits exactly one function of distance, and
+  near-pair sat at or above real while far-pair and PC1 sat below it in every single
+  configuration. **31 invented spatial parameters, no topography with external provenance, fitted
+  against ~5 non-independent summaries of one covariance matrix.** Build Plan §3.4 names the fix
+  and the projection-file schema already supports it, so this is executing seam 3 rather than a
+  refactor.
 - **P10** — the recovered state ordering is a joint function of χ and the knee, so fitting
   either alone cannot reproduce the documented orderings (Finding 9), and our χ over 1–20 Hz
   is 0.32 against a real 0.99 because the knee sits inside the band (Finding 12).

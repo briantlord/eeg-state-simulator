@@ -404,4 +404,18 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
+    # A WINDOWS CONSOLE DEFAULTS TO cp1252, AND THE REPORT CONTAINS "chi".
+    #
+    # Without this, `npm run verify` ran every gate, reached VERDICT: PASS, wrote both artifacts,
+    # and then died with UnicodeEncodeError while PRINTING the summary -- reporting a failed build
+    # for a console encoding. Worse, it was invisible to anyone whose environment happened to set
+    # PYTHONIOENCODING, which is why it read as flaky: the same commit passed and failed depending
+    # on who invoked it.
+    #
+    # `errors="replace"` rather than "strict": a character that cannot be rendered should degrade
+    # to a question mark in a human summary, never fail a build whose result is already decided.
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
     raise SystemExit(main())

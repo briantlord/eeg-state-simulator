@@ -1467,3 +1467,241 @@ real 0.271–0.298 across runs), gives frontal alpha that is visibly a rhythm (F
 own aperiodic fit, against 1.78× before), and has the lowest profile RMS of anything tested.
 
 Reproduce: `t1m1_alpha_profile.py`, `t1m1_alpha_profile_fit.py`.
+
+---
+
+# Finding 19 — the oscillation layer was rank 1 in every state, and the pedestal was why `[RESOLVED — and it changed the strategy]`
+
+Prompted by an observation that the signal "seems way too correlated", then again by "it still
+looks kinda correlated". Both were right, and the second one was right about a different layer
+than the first.
+
+Finding 11 rebuilt the aperiodic **background** as six spatially distinct sources and took it from
+rank 1.14 to 2.99. It closed with "and N3 still is". This is that sentence, worked out.
+
+## What was actually measured
+
+| state, as shipped before this finding | effective rank | PC1 | median \|corr\| |
+|---|---|---|---|
+| wake_ec | 2.46 | 0.592 | 0.521 |
+| n2 | 2.80 | 0.527 | 0.452 |
+| **n3** | **1.07** | **0.967** | **0.950** |
+| *real (PhysioNet EEGMAT, resting wake)* | *3.09* | *0.534* | *0.482* |
+
+`check_rank_decompose.py` removes one layer at a time. The aperiodic background **alone** measured
+**3.44** — so the ceiling was never the problem. Removing the graphoelements moved N3 from 1.14 to
+only 1.21, so the events were not the problem either. The continuous band oscillation was.
+
+`check_topo_rank.py` then made the decisive measurement, and it needed no signal at all. Every
+source draws from its own substream, so the sources are independent and the channel covariance is
+exactly `Σ_g var_g w_g w_gᵀ`, with referencing a linear operator. The effective rank of that is a
+property of the projection file and the amplitudes, computable in milliseconds:
+
+| a band's own source family | effective rank | PC1 |
+|---|---|---|
+| alpha | 1.08 | 0.962 |
+| beta | 1.12 | 0.946 |
+| theta | 1.12 | 0.946 |
+| delta | 1.10 | 0.951 |
+
+**The defect was in every state, not in N3.** Each state drives one band from one centre, so the
+oscillation layer was rank ~1 everywhere. It only *showed* in N3, where delta at 100–200 µV p-p is
+87% of the variance and swamps the rank-3.44 background. In wake_ec the background dominates and
+hid it. One defect; one state exposing it.
+
+## Two fixes were built, measured, and refuted
+
+**A ring of sub-sources** about each band's own centre. Measured **1.07 → 1.14**. Swept from radius
+0.30 to 1.30 the family's rank tops out at **1.26** — because at `topo_far_field_fraction` = 0.50
+every source is half a near-flat pedestal and *they all share that term*. No radius beats a
+component held in common, so the ring could not have worked at any setting. `osc_source_spread` was
+retired with it.
+
+**Moving the sub-sources onto the background's six regional centres** — the basis already measured
+at 3.44. Better in principle, **1.10 → 1.18** in practice. Same shared term, same ceiling.
+
+## The cause, and it was a parameter that documented its own trap
+
+`topo_sigma_far` was 2.5, and its registry row said in as many words: *"broad enough that the far
+Gaussian is near-flat across the montage, so the fraction alone sets the tail."* Flat, combined
+with `topo_reference_far_field` attenuating the mastoids, leaves **every source carrying an
+identical residual pedestal of `ff·(1 − refFf)` = 0.35 after the reference is subtracted.** An
+identical component in every source is a rank-1 term that nothing downstream can break up.
+
+The two rows were added one finding apart (D18) for a good reason each — a heavy tail for frontal
+alpha, a mastoid attenuation so a linked reference would not cancel it — and their *combination*
+produced an artefact neither was checked for.
+
+Narrowing `topo_sigma_far` to 1.6 makes the tail a **gradient centred on each source** rather than
+a pedestal they share, which is also closer to what a dipolar far field does.
+
+## An analytic surrogate, and why it validates itself first
+
+`t1m1_osc_basis.py` sweeps the exact covariance: a fit that took eight minutes as
+generate-and-measure runs in under a second, which is what made four coupled parameters affordable.
+It prints its own prediction against the generator **before** printing the sweep.
+
+That check earned its place immediately. The first draft predicted wake_ec rank **1.16** against a
+measured **3.20**, because it scaled `background_rms_uv` by `amp_pp_to_rms` when `compose.ts` does
+not — an **8× error in the background variance**, the term that decides whether a state looks like
+its background or like its band. Every number in the sweep would have been fitted to it.
+
+The validated surrogate is still biased — it under-predicts wake_ec rank by ~0.7 and over-predicts
+far correlation by ~0.13 — so it is used to narrow the region and never to pick the value.
+`t1m1_spatial_joint.py` chooses against the generator.
+
+## Slow oscillations had one topography, and in N3 that is most of the signal
+
+Visible directly at a 5 s window: the same large wave in every one of 19 lanes with only the fine
+detail differing. Slow oscillations projected through the single `delta` topography. The
+anterior-posterior travel delay did not hide it — at 1 Hz a 100 ms lag is 36°, so the delayed copy
+still correlates at ~0.8. Measured cost: **0.21 of effective rank** (1.32 with events, 1.53
+without).
+
+`so_origin_coherent_fraction` gives each wave its own origin. Successive waves now have different
+topographies while any single wave still looks like a proper slow wave; real slow waves do have
+variable origins with a frontal predominance. The event layer now costs nothing: 1.63 with events
+against 1.53 without.
+
+**G5 was the risk worth checking,** because the AASM criterion is measured on frontal derivations
+and sending waves elsewhere could have pushed epochs below 75 µV. It held — G5~null still
+discriminates N3 0.67 against N2 0.00 and N3−6 dB 0.00.
+
+## Result
+
+| | effective rank | PC1 | median \|corr\| |
+|---|---|---|---|
+| wake_ec | 2.46 → **3.17** | 0.592 → 0.473 | 0.521 → 0.379 |
+| n2 | 2.80 → **3.27** | 0.527 → 0.445 | 0.452 → 0.375 |
+| n3 | 1.07 → **1.63** | 0.967 → 0.771 | 0.950 → 0.694 |
+| *real* | *3.09 [2.88–3.28]* | *0.534* | *0.482* |
+
+wake_ec and n2 land inside the real interquartile range.
+
+## What this finding does NOT establish, stated because the numbers read stronger than they are
+
+**Near-pair correlation and alpha prominence were FITTED. They are not evidence of realism.**
+Reporting "near-pair 0.767 against a real 0.767" and "alpha frontal/occipital 0.266 against a real
+0.271" as successes is very nearly circular — it is evidence the optimiser worked. Effective rank
+is the one genuine spatial agreement here, because it was not directly targeted. See D19, which
+turns this into a rule.
+
+**N3 is not fitted at all.** EEGMAT is resting wake; there is no real N3 in the corpus, so N3
+contributed nothing to any error metric and its column is a sanity bound, not a fit.
+
+**The remaining N3 gap is not topography.** The continuous delta band caps N3 at 1.53 on its own,
+and no topography parameter moves it — delta is 87% of N3's variance, which may double-count the
+slow-wave events now modelled beside it. `delta_amp` feeds `snr_nominal` and G5, so it is named
+rather than tuned.
+
+**Far-field correlation never moved.** 0.251–0.323 across all 21 configurations swept, against a
+real 0.440, while near-pair sat at or above real and PC1 below it — simultaneously, in every one.
+That signature is the model class, not a setting: a Gaussian mixture gives one distance kernel, so
+near and far cannot be matched together. **This is the measurement that escalates P9 from a
+shortfall to an architectural decision (D19).**
+
+Reproduce: `check_rank_decompose.py`, `check_topo_rank.py`, `t1m1_osc_basis.py`,
+`t1m1_spatial_joint.py`, `compare_real.py`.
+
+---
+
+# Finding 20 — the far-field target was mostly the reference, and the model is missing ~20% independent per-channel variance `[CORRECTS D19's MECHANISM]`
+
+D19 decided to replace the Gaussian-mixture projection with a published lead field, on the strength
+of Finding 19's separability argument. **The decision survives. Its stated mechanism does not, and
+two probes run before any lead field was built are why.**
+
+MNE 1.12.1 was already installed as a YASA dependency and MNE-fsaverage-data was already on disk, so
+the test cost nothing: a real 3-shell BEM forward solution on fsaverage, 21 channels × 20 484
+cortical sources, dipoles fixed normal to the surface.
+
+## The go/no-go, and it failed
+
+The source model is **white on the cortex** — every dipole independent and unit variance, the
+standard "aperiodic activity everywhere" assumption. It is **parameter-free**, so `C = L Lᵀ` is a
+prediction with nothing fitted.
+
+| linked-mastoid / linked-ear | rank | PC1 | near | far | near/far |
+|---|---|---|---|---|---|
+| real (EEGMAT) | 3.09 | 0.534 | 0.767 | 0.440 | 1.74 |
+| shipped Gaussian mixture, 4 params fitted | 3.17 | 0.473 | 0.812 | 0.303 | 2.68 |
+| **lead field, white cortex, 0 params** | 3.91 | 0.417 | 0.725 | **0.239** | **3.03** |
+
+**Worse on the target it was prescribed to fix.** Real head geometry, given uncorrelated cortical
+activity, produces *less* long-range correlation than our invented Gaussians did, and the near/far
+ratio moves further from real. A coherence-length sweep (10–80 mm) reproduced the same trade this
+project has fought throughout — far-pair up, effective rank down — reaching only 0.290.
+
+So the far-field deficit was never a forward-model deficiency, and no amount of source modelling was
+going to close it. That prompted the question that should have come first.
+
+## Is the real 0.440 even a neural quantity?
+
+`probe_real_farfield_origin.py` re-references the same eight recordings. Common mode is *defined* by
+what a reference removes, so if the target is common mode it collapses under average reference.
+
+| real EEGMAT, 8 subjects | rank | PC1 | near | far |
+|---|---|---|---|---|
+| **as recorded (linked-ear)** | 3.07 | 0.535 | 0.765 | **0.437** |
+| average reference | **5.36** | 0.369 | 0.413 | **0.257** |
+| Laplacian (near-neighbour) | 6.35 | 0.276 | 0.394 | 0.119 |
+| linked-ear, band 1–4 Hz | 2.83 | 0.567 | 0.773 | 0.504 |
+| linked-ear, band 20–40 Hz | 3.33 | 0.492 | 0.764 | 0.392 |
+
+**A 70% swing in far-pair correlation from the reference alone — larger than any difference between
+any two models this project has compared.** Most of the real 0.440 is a spatially broad component
+that survives a linked-EAR reference, because real earlobes carry signal and so do not cancel it.
+It is not long-range neural coherence in a form average referencing preserves, and the band rows
+show it is not primarily eye or muscle artifact either.
+
+**This makes the fit circular in a way not previously seen.** The generator's linked-mastoid
+behaviour is set by `topo_reference_far_field` = 0.30 — an *invented* number, introduced in D18 for
+how much cortex the mastoids see. Fitting spatial parameters against linked-ear far-pair correlation
+therefore fitted them against that invented number as much as against the head. **Average reference
+is defined by the montage alone and invents nothing, so it is the comparison that can be trusted.**
+
+## Under a trustworthy reference, the sign flips — and one parameter beats thirty-one
+
+| average reference | rank | PC1 | near | far | mean rel. err |
+|---|---|---|---|---|---|
+| real | 5.36 | 0.369 | 0.413 | 0.257 | — |
+| lead field, white cortex `[0 par]` | 4.32 | 0.346 | 0.553 | 0.376 | 0.264 |
+| + independent share 0.10 | 5.00 | 0.319 | 0.475 | 0.339 | 0.168 |
+| **+ independent share 0.20 `[1 par]`** | 5.85 | 0.291 | **0.403** | 0.302 | **0.125** |
+| + independent share 0.30 | 6.90 | 0.263 | 0.344 | 0.263 | 0.191 |
+| *shipped Gaussian mixture, linked-ear, 31 invented rows* | — | — | — | — | *0.250* |
+
+Under average reference the lead field is **too** correlated, not too little — the opposite sign to
+the linked-ear comparison, which is the clearest possible demonstration that the reference was
+driving the conclusion.
+
+**Real EEG is less spatially correlated than white-cortex-through-a-lead-field.** No source
+coherence model can produce that: coherence only ever *raises* correlation. The only thing that
+lowers it is signal independent **per electrode**.
+
+And the current model has almost none. `sensor_noise_rms` is 1.5 µV against a 20 µV background —
+**0.56% of the variance**, where the fit wants **20%**, i.e. about 10 µV rms per channel. This is
+not amplifier noise; it is the non-neural contribution real scalp recordings carry at each site
+independently: local muscle tone, skin potential, electrode drift, contact impedance.
+
+**A completely different explanation for "it seems way too correlated" than the one three commits
+chased.** Topography was one cause and it was real. Missing independent per-channel variance is a
+second, simpler, and larger one, and no amount of topography work would have found it.
+
+## What this does and does not license
+
+**Honest about the 20%:** it is an *independent-equivalent* share under this model, not a measured
+physiological quantity. Some of it is certainly model mismatch — fsaverage is a template rather than
+these eight subjects' heads, the near/far split uses 2-D projected montage coordinates, and white
+cortex is an assumption. It should be fitted as one number with that caveat attached, not promoted
+to a claim about scalp physiology.
+
+**D19's decision stands and is strengthened:** lead field + one independent-share parameter reaches
+**0.125** mean relative error against **0.250** for 31 fitted invented rows — and does it under a
+reference that invents nothing, which means the numbers are a prediction rather than a fit.
+
+**Three amendments to D19**, recorded there: the far-field mechanism was the reference, not the
+forward model; spatial metrics must be compared under **average reference**; and an independent
+per-channel component is now a required part of the design rather than an afterthought.
+
+Reproduce: `prep/leadfield/probe_leadfield_gono.py`, `prep/leadfield/probe_real_farfield_origin.py`.
