@@ -1391,7 +1391,99 @@ params:
     note: "Resolves pending decision P3 by showing it is not answerable as posed. Build both interpolation schemes behind one interface and let G4 choose."
 
   # =====================================================================
-  # 9. Artifacts   (section 8, Cardiac, is Tier 1 and omitted at Tier 0)
+  # =====================================================================
+  # 8. Cardiac  (T1-M5 in the plan; a displayable PREFIX is built early)
+  # =====================================================================
+  #
+  # "Rebuilding solved generators. ECG, respiration and EMG all exist in NeuroKit2 with published
+  # models. Mitigation: transcribe, cite, validate against the originals." -- risk register.
+  # The FORM below is McSharry, Clifford, Tarassenko & Smith (2003), "A dynamical model for
+  # generating synthetic electrocardiogram signals", IEEE TBME 50(3):289-294: five Gaussians
+  # (P, Q, R, S, T) placed at fixed angles on the cardiac cycle. Their paper integrates three
+  # coupled ODEs; this evaluates the same Gaussian sum directly on the beat phase, which is the
+  # standard reduction and is what makes it a Tier-0-style crude implementation behind a stable
+  # interface rather than a placeholder.
+  #
+  # THE THIRD STEP OF THE MITIGATION IS NOT DONE: nothing here has been validated against
+  # neurokit2.ecg_simulate or against a real ECG. TODO(T1-M5). No gate reads any of it.
+
+  hr_mean:
+    value: {kind: pending}
+    provisional: {v: 62, basis: "resting adult heart rate; slower in sleep than wake, not yet split by state", expires_at_milestone: T1-M5, constrained_by: "must not be derived from any HEP analysis that uses the R peaks it defines"}
+    units: 1/min
+    standing: invented
+    source: {kind: none, rationale: "uncited; a single resting value pending the state-conditional fit at T1-M5"}
+    states: all
+    section: "8. Cardiac"
+    milestone: T1-M5
+    note: >-
+      ONE VALUE FOR EVERY STATE, which is known to be wrong: heart rate falls through NREM and is
+      more variable in REM, exactly as respiration is (resp_rate_* is already state-conditional).
+      Registered as a single row rather than six invented ones so the gap is visible instead of
+      being dressed up as six independent measurements.
+
+  hr_sd:
+    value: {kind: pending}
+    provisional: {v: 3.0, basis: "beat-to-beat standard deviation of instantaneous rate, excluding the respiratory component", expires_at_milestone: T1-M5}
+    units: 1/min
+    standing: invented
+    source: {kind: none, rationale: "uncited; the non-respiratory part of heart-rate variability"}
+    states: all
+    section: "8. Cardiac"
+    milestone: T1-M5
+
+  rsa_depth:
+    value: {kind: pending}
+    provisional: {v: 0.08, basis: "fractional modulation of the RR interval by respiratory phase", expires_at_milestone: T1-M5, constrained_by: "must not be derived from any respiration-cardiac coupling measure it would then be used to validate"}
+    units: null
+    standing: invented
+    source: {kind: none, rationale: "respiratory sinus arrhythmia is well established; the depth is uncited and varies strongly with age and state"}
+    states: all
+    section: "8. Cardiac"
+    milestone: T1-M5
+    note: >-
+      RESPIRATORY SINUS ARRHYTHMIA -- the heart speeds on inspiration and slows on expiration. It
+      is modelled because it is the reason the two new traces belong on the same screen: the ECG
+      is not independent of the respiration belt, and a viewer who watches both should be able to
+      see that. It is driven from the SAME respiratory phase the EEG mechanisms use, so the three
+      cannot drift apart.
+
+  ecg_r_amp:
+    value: {kind: pending}
+    provisional: {v: 1000, basis: "R-wave peak on a lead-II-like surface derivation", expires_at_milestone: T1-M5}
+    units: uV
+    standing: invented
+    source: {kind: none, rationale: "uncited; amplitude depends entirely on lead placement"}
+    states: all
+    section: "8. Cardiac"
+    milestone: T1-M5
+    note: >-
+      ROUGHLY 50x A LARGE EEG DEFLECTION, which is why the ECG cannot share the trace's uV/mm
+      scale and gets its own lane with its own stated scale.
+
+  ecg_wave_shape:
+    value: {kind: procedure, text: "Five Gaussians (P, Q, R, S, T) on the beat phase. Per wave, (phase in cycles from the R peak, amplitude relative to ecg_r_amp, width in cycles): P (-0.20, +0.12, 0.030), Q (-0.025, -0.16, 0.0060), R (0, +1.00, 0.0075), S (+0.030, -0.28, 0.0090), T (+0.22, +0.31, 0.045)."}
+    units: null
+    standing: literature
+    source:
+      kind: citation
+      authors: "McSharry, Clifford, Tarassenko & Smith"
+      year: 2003
+      venue: "IEEE Transactions on Biomedical Engineering 50(3):289-294"
+      note: "A dynamical model for generating synthetic electrocardiogram signals. The five-Gaussian PQRST form is theirs; the numbers here are that structure re-expressed in cycles-from-R and normalised to the R peak."
+    states: all
+    section: "8. Cardiac"
+    note: >-
+      THE FORM IS TRANSCRIBED, THE NUMBERS ARE ADAPTED. McSharry et al. specify the five-Gaussian
+      PQRST structure and give angles, amplitudes and widths for a 60 bpm exemplar; the values
+      here are their structure re-expressed in cycles-from-R and normalised to the R peak so that
+      ecg_r_amp carries the scale. Standing is `literature` for the FORM. The individual numbers
+      have not been validated against neurokit2.ecg_simulate or a real recording -- that is the
+      third step of the risk register's mitigation and it is TODO(T1-M5).
+      A procedure row rather than fifteen scalars, because they are one model and fitting them
+      independently would be meaningless.
+
+  # 9. Artifacts
   # =====================================================================
 
   blink_dur:  {value: {kind: interval, lo: 0.2, hi: 0.4, meaning: uncertainty}, units: s,  standing: invented, source: {kind: none, rationale: "uncited"}, states: [wake_eo, wake_ec], section: "9. Artifacts", milestone: T1-M1}

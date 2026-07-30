@@ -60,6 +60,7 @@
             <label for="sens" class="inline">µV/mm</label>
             <select id="sens" class="inline-sel"></select>
             <button id="showref" aria-pressed="false">show A1/A2</button>
+            <button id="showaux" aria-pressed="true">hide resp/ECG</button>
             <button id="linenoise" aria-pressed="false">mains off</button>
             <select id="linefreq" class="inline-sel" aria-label="mains frequency"></select>
             <span class="clock" id="clock"></span>
@@ -80,6 +81,14 @@
             them. Knowing where they are is the thing no real recording can give you, which is
             what the gates use them for. <strong>mains</strong> adds 60 Hz interference with a
             per-channel phase and gain, so it cannot be removed by changing the reference.
+          </p>
+          <p class="note">
+            Below the heavier rule sit <strong>respiration</strong> (belt displacement) and
+            <strong>ECG</strong>. They are not EEG and are not in the montage: each is scaled to
+            its own lane and states its full-scale range, because an ECG R wave is around 1000 µV
+            and would be 14 cm tall at the scale above. Watch the heart rate rise on inspiration
+            and fall on expiration — that is respiratory sinus arrhythmia, driven from the same
+            respiratory phase that drives the EEG coupling in Demo 1.
           </p>
 
           <div class="panel">

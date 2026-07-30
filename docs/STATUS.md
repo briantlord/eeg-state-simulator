@@ -41,7 +41,8 @@ missed.
 | All three respiratory mechanisms | **done** | separately switchable; Demo 1 moves 100% → 1% (Finding 10, resolved) |
 | Observables χ / LZc / coupling | **done** | pink-noise demo passes under both LZ parses |
 | SNR calibration | **done** | `snr_nominal` = -3.0765 dB, re-solved after D18 changed the mastoid weights |
-| Web artifact | **done** | scrolling trace, filter panel, reference montages, 119 kB static |
+| Web artifact | **done** | scrolling trace, filter panel, reference montages, resp/ECG lanes |
+| Cardiac (T1-M5 prefix) | **partial** | McSharry PQRST + RSA, displayable; NOT validated against neurokit2 |
 | Gate runner | **done** | class/status separation, matched-null refusal, per-arm thresholds |
 | **All seven ledger arms** | **done** | G1a, G1b, G2, G3, G4, G5, G6, each with its matched null |
 | ``--allow-partial`` | **removed** | the runner now refuses to start if a gate goes missing |

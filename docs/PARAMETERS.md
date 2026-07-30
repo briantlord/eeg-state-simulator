@@ -333,6 +333,24 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 
 **`tilt_block_s`.** THE COEFFICIENT-HOLD LENGTH OF THE BLOCKWISE TILT SCHEME, and it decides how much of a requested chi modulation is generated AT ALL. `tiltBlockwise` averages delta-chi over each block and applies one fixed tilt, then overlap-adds at a hop of 0.75*B -- two stacked smoothings. At the previously hardcoded 2.0 s only 48% of the requested modulation survived at the RESPIRATORY RATE of 0.25 Hz, and 11% at 0.40 Hz. That loss is entirely generator-side, before any estimator sees the signal, which is why it went unnoticed through all of Tier 0. G4 COULD NOT HAVE CAUGHT IT. The gate runs at g4_f1 = 0.10 Hz, where the 2.0 s hold retains 95%; the defect lives at the respiratory rate, which G4 deliberately keeps clear of so that f1 and f2 stay separable. A gate can only see the frequencies it probes. THE LITERAL LINTER COULD NOT HAVE CAUGHT IT EITHER. The constant was written `Math.round(2 * fs)`, and `2` is on the linter's arithmetic-furniture allowlist. This is the documented cost of that allowlist, paid: the most consequential unregistered constant in the generator was a `2`. Recorded in D15's own limitations rather than left implicit.
 
+## 8. Cardiac
+
+| Key | Value | Units | Standing | Source | States |
+|---|---|---|---|---|---|
+| `hr_mean` | — *(pending T1-M5; runs on 62)* | 1/min | `invented` | uncited; a single resting value pending the state-conditional fit at T1-M5 | all |
+| `hr_sd` | — *(pending T1-M5; runs on 3)* | 1/min | `invented` | uncited; the non-respiratory part of heart-rate variability | all |
+| `rsa_depth` | — *(pending T1-M5; runs on 0.08)* | — | `invented` | respiratory sinus arrhythmia is well established; the depth is uncited and varies strongly with age and state | all |
+| `ecg_r_amp` | — *(pending T1-M5; runs on 1000)* | uV | `invented` | uncited; amplitude depends entirely on lead placement | all |
+| `ecg_wave_shape` | Five Gaussians (P, Q, R, S, T) on the beat phase. Per wave, (phase in cycles from the R peak, amplitude relative to ecg_r_amp, width in cycles): P (-0.20, +0.12, 0.030), Q (-0.025, -0.16, 0.0060), R (0, +1.00, 0.0075), S (+0.030, -0.28, 0.0090), T (+0.22, +0.31, 0.045). | — | `literature` | McSharry, Clifford, Tarassenko & Smith 2003, *IEEE Transactions on Biomedical Engineering 50(3):289-294* — A dynamical model for generating synthetic electrocardiogram signals. The five-Gaussian PQRST form is theirs; the numbers here are that structure re-expressed in cycles-from-R and normalised to the R peak. | all |
+
+**`hr_mean`.** ONE VALUE FOR EVERY STATE, which is known to be wrong: heart rate falls through NREM and is more variable in REM, exactly as respiration is (resp_rate_* is already state-conditional). Registered as a single row rather than six invented ones so the gap is visible instead of being dressed up as six independent measurements.
+
+**`rsa_depth`.** RESPIRATORY SINUS ARRHYTHMIA -- the heart speeds on inspiration and slows on expiration. It is modelled because it is the reason the two new traces belong on the same screen: the ECG is not independent of the respiration belt, and a viewer who watches both should be able to see that. It is driven from the SAME respiratory phase the EEG mechanisms use, so the three cannot drift apart.
+
+**`ecg_r_amp`.** ROUGHLY 50x A LARGE EEG DEFLECTION, which is why the ECG cannot share the trace's uV/mm scale and gets its own lane with its own stated scale.
+
+**`ecg_wave_shape`.** THE FORM IS TRANSCRIBED, THE NUMBERS ARE ADAPTED. McSharry et al. specify the five-Gaussian PQRST structure and give angles, amplitudes and widths for a 60 bpm exemplar; the values here are their structure re-expressed in cycles-from-R and normalised to the R peak so that ecg_r_amp carries the scale. Standing is `literature` for the FORM. The individual numbers have not been validated against neurokit2.ecg_simulate or a real recording -- that is the third step of the risk register's mitigation and it is TODO(T1-M5). A procedure row rather than fifteen scalars, because they are one model and fitting them independently would be meaningless.
+
 ## 9. Artifacts
 
 | Key | Value | Units | Standing | Source | States |
@@ -485,8 +503,8 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 |---|---|
 | `definitional` | 11 |
 | `chosen` | 51 |
-| `literature` | 8 |
+| `literature` | 9 |
 | `derived` | 14 |
-| `invented` | 107 |
+| `invented` | 111 |
 | `absent` | 11 |
-| **total** | **202** |
+| **total** | **207** |

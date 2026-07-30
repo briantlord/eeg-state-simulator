@@ -20,6 +20,23 @@
  */
 import { scalarValue } from '../core/registry.ts';
 
+/**
+ * A non-EEG channel drawn below the montage: respiration belt, ECG.
+ *
+ * SCALED PER LANE, which is the one place this file is allowed to autoscale. The "never
+ * autoscale" rule exists so the amplitude difference between N3 delta and waking alpha survives
+ * on screen — it is about comparing EEG to EEG. These are different physical quantities: the
+ * respiration belt has no meaningful absolute unit at all, and an ECG R wave is ~1000 uV, which
+ * at 7 uV/mm would be 14 cm tall and would flatten every EEG trace beside it. Each lane states
+ * its own scale, so nothing is claimed that is not shown.
+ */
+export interface AuxChannel {
+  readonly label: string;
+  readonly data: Float64Array;
+  /** Printed beside the lane, e.g. "µV" or "a.u." */
+  readonly unit: string;
+}
+
 export interface TraceEvent {
   readonly onset: number;
   readonly duration: number;
@@ -36,6 +53,8 @@ export interface TraceOptions {
   /** Assumed physical pixel density, for the µV/mm claim to mean anything. */
   readonly pxPerMm: number;
   readonly events?: readonly TraceEvent[];
+  /** Respiration, ECG: drawn below a firm boundary, each scaled to its own lane. */
+  readonly aux?: readonly AuxChannel[];
   /** Seconds from the start of the buffer to display. */
   readonly windowS: number;
   readonly tOffsetS: number;
@@ -78,7 +97,11 @@ export function drawTrace(canvas: HTMLCanvasElement, o: TraceOptions): void {
   // different setting. This makes the reservation a function of what has to fit in it.
   const calPx = scalarValue('display_cal_pulse_amp') * (o.pxPerMm / o.sensitivityUvPerMm);
   const footerH = Math.max(26, Math.ceil(calPx) + 22);
-  const plotH = cssH - footerH;
+  // Auxiliary lanes sit between the montage and the footer, behind a firmer rule, so they read
+  // as a different KIND of signal rather than as three more electrodes.
+  const aux = o.aux ?? [];
+  const auxH = aux.length > 0 ? Math.min(120, 34 * aux.length) : 0;
+  const plotH = cssH - footerH - auxH;
   const laneH = plotH / n;
 
   // --- time grid: one second per minor rule, five per major -----------------
@@ -157,16 +180,99 @@ export function drawTrace(canvas: HTMLCanvasElement, o: TraceOptions): void {
     ctx.fillText(o.labels[c] ?? '', left - 8, mid);
   }
 
-  // Footer boundary: a firmer rule than a lane separator, so the strip below reads as a
-  // different kind of thing rather than as one more channel.
+  // Boundary between EEG and everything else.
   ctx.strokeStyle = ruleMajor;
+  ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(0, Math.round(plotH) + 0.5);
   ctx.lineTo(cssW, Math.round(plotH) + 0.5);
   ctx.stroke();
+  ctx.lineWidth = 1;
+
+  drawAux(ctx, aux, left, right, plotW, plotH, auxH, start, count, inkFaint, ink, rule);
 
   drawCalibrationBar(ctx, left, cssH, pxPerUv, o.sensitivityUvPerMm, inkFaint, ink);
-  drawEventLegend(ctx, o.events ?? [], left, plotH, cssH, inkFaint, penEvent);
+  drawEventLegend(ctx, o.events ?? [], left, cssH - footerH, cssH, inkFaint, penEvent);
+}
+
+/**
+ * Respiration and ECG, below the montage.
+ *
+ * Each lane is normalised to its own peak-to-peak range and says so. See `AuxChannel` for why
+ * autoscaling is correct here and wrong for the EEG above.
+ */
+function drawAux(
+  ctx: CanvasRenderingContext2D,
+  aux: readonly AuxChannel[],
+  left: number,
+  right: number,
+  plotW: number,
+  top: number,
+  totalH: number,
+  start: number,
+  count: number,
+  faint: string,
+  ink: string,
+  rule: string,
+): void {
+  if (aux.length === 0) return;
+  const laneH = totalH / aux.length;
+
+  for (let a = 0; a < aux.length; a++) {
+    const y0 = top + a * laneH;
+    const mid = y0 + laneH / 2;
+    const ch = aux[a]!;
+
+    // Range over the VISIBLE window only, so the lane fills its height as the signal scrolls
+    // rather than being flattened by an excursion that has already left the screen.
+    let lo = Infinity;
+    let hi = -Infinity;
+    for (let i = start; i < start + count && i < ch.data.length; i++) {
+      const v = ch.data[i]!;
+      if (v < lo) lo = v;
+      if (v > hi) hi = v;
+    }
+    if (!Number.isFinite(lo) || hi <= lo) continue;
+    const scale = (laneH * 0.8) / (hi - lo);
+
+    ctx.strokeStyle = ink;
+    ctx.beginPath();
+    for (let px = 0; px < plotW; px++) {
+      const i0 = start + Math.floor((px / plotW) * count);
+      const i1 = start + Math.floor(((px + 1) / plotW) * count);
+      let mn = Infinity;
+      let mx = -Infinity;
+      for (let i = i0; i < i1 && i < ch.data.length; i++) {
+        const v = ch.data[i]!;
+        if (v < mn) mn = v;
+        if (v > mx) mx = v;
+      }
+      if (mn === Infinity) continue;
+      const c = (lo + hi) / 2;
+      const x = left + px + 0.5;
+      ctx.moveTo(x, mid - (mx - c) * scale);
+      ctx.lineTo(x, mid - (mn - c) * scale);
+    }
+    ctx.stroke();
+
+    if (a > 0) {
+      ctx.strokeStyle = rule;
+      ctx.beginPath();
+      ctx.moveTo(left, Math.round(y0) + 0.5);
+      ctx.lineTo(right, Math.round(y0) + 0.5);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = faint;
+    ctx.font = '11px ui-sans-serif, system-ui, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(ch.label, left - 8, mid);
+    // Right-aligned at the far edge: at the left it sat on top of the trace's first second.
+    ctx.textAlign = 'right';
+    ctx.font = '9px ui-sans-serif, system-ui, sans-serif';
+    ctx.fillText(`${(hi - lo).toPrecision(3)} ${ch.unit} full scale`, right - 4, y0 + 8);
+  }
 }
 
 /**
@@ -180,14 +286,16 @@ function drawEventLegend(
   ctx: CanvasRenderingContext2D,
   events: readonly TraceEvent[],
   left: number,
-  plotH: number,
+  footerTop: number,
   cssH: number,
   faint: string,
   penEvent: string,
 ): void {
   if (events.length === 0) return;
   const kinds = [...new Set(events.map((e) => e.type))].sort();
-  const y = (plotH + cssH) / 2;
+  // Centred in the FOOTER. Passing plotH here instead put the legend inside the respiration and
+  // ECG lanes once those existed, drawn straight across the ECG trace.
+  const y = (footerTop + cssH) / 2;
 
   ctx.font = '10px ui-sans-serif, system-ui, sans-serif';
   ctx.textAlign = 'left';

@@ -75,6 +75,15 @@ export class SignalStream {
     return this.current.respirationPhase;
   }
 
+  /** Respiration belt and surface ECG, for the auxiliary display lanes. */
+  get respirationBelt(): Float64Array {
+    return this.current.respirationBelt;
+  }
+
+  get ecg(): Float64Array {
+    return this.current.ecg;
+  }
+
   get segmentSeconds(): number {
     return this.segmentS;
   }
@@ -115,7 +124,15 @@ export class SignalStream {
    */
   private crossfadeIn(): void {
     const n = Math.round(this.crossfadeS * this.fs);
-    for (const ch of this.current.channels) {
+    // The aux traces are tapered TOO. They are drawn on the same screen from the same segment,
+    // so leaving them out would put a step in the respiration and ECG lanes at exactly the
+    // moment the EEG lanes are being smoothed -- the defect this taper exists to remove.
+    const tracks = [
+      ...this.current.channels,
+      this.current.respirationBelt,
+      this.current.ecg,
+    ];
+    for (const ch of tracks) {
       for (let i = 0; i < n && i < ch.length; i++) {
         ch[i] = ch[i]! * (0.5 * (1 - Math.cos((Math.PI * i) / n)));
       }

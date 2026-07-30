@@ -48,6 +48,8 @@ const ui = {
   running: true,
   /** Scalp only, or scalp plus the mastoid references the AASM criterion needs. */
   showReference: false,
+  /** Respiration belt and ECG, below the montage behind a firm boundary. */
+  showAux: true,
   /** Mains interference. Off by default -- it sits above every band measured here. */
   lineNoise: false,
   // North American mains, not `line_freq`'s first option. The row's own rationale is "regional
@@ -148,6 +150,12 @@ function drawFrame(): void {
       duration: e.duration,
       type: e.type,
     })),
+    aux: ui.showAux
+      ? [
+          { label: 'Resp', data: stream.respirationBelt, unit: 'a.u.' },
+          { label: 'ECG', data: stream.ecg, unit: 'µV' },
+        ]
+      : [],
     windowS: ui.windowS,
     tOffsetS: tStart,
   });
@@ -446,6 +454,13 @@ function mount(): void {
     ui.seed = Math.floor(Math.random() * 2_000_000_000); // @lit-ok seed range, an arbitrary large integer
     seedInput.value = String(ui.seed);
     restart();
+  });
+
+  const auxBtn = $<HTMLButtonElement>('showaux');
+  auxBtn.addEventListener('click', () => {
+    ui.showAux = !ui.showAux;
+    auxBtn.setAttribute('aria-pressed', String(ui.showAux));
+    auxBtn.textContent = ui.showAux ? 'hide resp/ECG' : 'show resp/ECG';
   });
 
   const lineBtn = $<HTMLButtonElement>('linenoise');

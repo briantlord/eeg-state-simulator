@@ -54,6 +54,8 @@ export type ParamKey =
   | 'display_sensitivity'
   | 'display_sensitivity_options'
   | 'display_window_options'
+  | 'ecg_r_amp'
+  | 'ecg_wave_shape'
   | 'emg_amp_wake'
   | 'emg_band'
   | 'emg_rem_level'
@@ -93,6 +95,8 @@ export type ParamKey =
   | 'gate_spindle_f1'
   | 'gate_topography'
   | 'hpf_options'
+  | 'hr_mean'
+  | 'hr_sd'
   | 'k_n1'
   | 'k_n2'
   | 'k_n3'
@@ -141,6 +145,7 @@ export type ParamKey =
   | 'resp_rate_rem'
   | 'resp_rate_wake'
   | 'rng_algorithm_ts'
+  | 'rsa_depth'
   | 'sensor_noise_rms'
   | 'snr_calibration_epoch'
   | 'snr_calibration_seed'
@@ -260,6 +265,8 @@ export interface ParamKindMap {
   'display_sensitivity': 'scalar';
   'display_sensitivity_options': 'enum';
   'display_window_options': 'enum';
+  'ecg_r_amp': 'pending';
+  'ecg_wave_shape': 'procedure';
   'emg_amp_wake': 'interval';
   'emg_band': 'bound';
   'emg_rem_level': 'scalar';
@@ -299,6 +306,8 @@ export interface ParamKindMap {
   'gate_spindle_f1': 'absent';
   'gate_topography': 'procedure';
   'hpf_options': 'enum';
+  'hr_mean': 'pending';
+  'hr_sd': 'pending';
   'k_n1': 'pending';
   'k_n2': 'pending';
   'k_n3': 'pending';
@@ -347,6 +356,7 @@ export interface ParamKindMap {
   'resp_rate_rem': 'interval';
   'resp_rate_wake': 'interval';
   'rng_algorithm_ts': 'enum';
+  'rsa_depth': 'pending';
   'sensor_noise_rms': 'interval';
   'snr_calibration_epoch': 'scalar';
   'snr_calibration_seed': 'scalar';

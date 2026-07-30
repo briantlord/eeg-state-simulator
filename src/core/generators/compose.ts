@@ -19,6 +19,7 @@ import {
 } from './oscillations.ts';
 import { ALL_CHANNELS, projectInto, type GeneratorId } from './projection.ts';
 import { synthesizeGraphoelements } from './graphoelements.ts';
+import { synthesizeEcg } from './cardiac.ts';
 import {
   synthesizeRespiration,
   chiModulation,
@@ -148,6 +149,15 @@ export interface ComposeResult {
   readonly respirationBelt: Float64Array;
   /** Respiration phase. Ground truth for every coupling measure; NOT derived by Hilbert. */
   readonly respirationPhase: Float64Array;
+  /**
+   * Surface ECG in microvolts, and the R-peak times a HEP analysis would need.
+   *
+   * NOT a scalp channel and deliberately not in `channels`: it is a different physical quantity
+   * on a different derivation, and putting it in the montage array would let it be referenced,
+   * ranked and band-analysed as though it were EEG.
+   */
+  readonly ecg: Float64Array;
+  readonly rPeaks: readonly number[];
   /** Ground truth actually injected, for the epoch sidecar. */
   readonly truth: {
     chi: number;
@@ -172,6 +182,8 @@ export interface ComposeResult {
      * the signal.
      */
     graphoelementGenerators: readonly string[];
+    /** Achieved mean heart rate, for the sidecar. */
+    meanHrBpm: number;
   };
 }
 
@@ -407,11 +419,18 @@ export function composeState(
     }
   }
 
+  // Cardiac, driven by the SAME respiration phase the EEG mechanisms use, so respiratory sinus
+  // arrhythmia in the ECG lines up with the belt above it rather than being an independent
+  // rhythm that happens to have a similar rate.
+  const cardiac = synthesizeEcg(seed, nSamples, resp.phase, fs);
+
   return {
     channels: out,
     events: grapho.events,
     respirationBelt: resp.belt,
     respirationPhase: resp.phase,
+    ecg: cardiac.ecg,
+    rPeaks: cardiac.rPeaks,
     truth: {
       chi,
       knee,
@@ -426,6 +445,7 @@ export function composeState(
       respFreqHz: resp.meanRatePerMin / 60, // @lit-ok seconds per minute
       independentChiModFreq: opts.independentChiModFreq ?? null,
       graphoelementGenerators: grapho.generators,
+      meanHrBpm: cardiac.meanHrBpm,
     },
   };
 }

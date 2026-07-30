@@ -148,6 +148,19 @@ export function provisionalValue(key: ParamKey): number {
   return r.provisional.v;
 }
 
+/**
+ * The text of a `procedure` row.
+ *
+ * Most procedure rows describe how a GATE decides, and are read only by the runner for display.
+ * `ecg_wave_shape` is the first read by the generator: its five (phase, amplitude, width) triples
+ * are one model, so they live in one row rather than fifteen scalars, and the generator parses
+ * them out. That keeps fifteen numbers inside the registry instead of inside a source file, which
+ * is what seam 6 and the literal linter are both for.
+ */
+export function procedureText(key: ParamKey): string {
+  return expect(key, 'procedure').text;
+}
+
 /** Value solved by a one-time procedure (currently `snr_nominal`), read from its artifact. */
 export function solvedValue(key: ParamKey, artifactLookup: (path: string) => number): number {
   const v = expect(key, 'solved');
