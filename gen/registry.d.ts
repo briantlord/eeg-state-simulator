@@ -192,6 +192,7 @@ export type ParamKey =
   | 'topo_expect_spindle_fast'
   | 'topo_expect_spindle_slow'
   | 'topo_far_field_fraction'
+  | 'topo_reference_far_field'
   | 'topo_sigma_alpha'
   | 'topo_sigma_background'
   | 'topo_sigma_beta'
@@ -397,6 +398,7 @@ export interface ParamKindMap {
   'topo_expect_spindle_fast': 'electrodes';
   'topo_expect_spindle_slow': 'electrodes';
   'topo_far_field_fraction': 'scalar';
+  'topo_reference_far_field': 'scalar';
   'topo_sigma_alpha': 'pending';
   'topo_sigma_background': 'scalar';
   'topo_sigma_beta': 'pending';

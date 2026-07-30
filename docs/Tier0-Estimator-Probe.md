@@ -1322,3 +1322,148 @@ rectifies rather than scales — so the fundamental at f₂ stops growing. Harml
 sweep only needed to bracket the threshold and the registered value is 0.35, but it means **depths
 near or above 1 are not a valid way to scale this mechanism** and the row's usable range should be
 capped when it is fitted at T1-M1.
+
+---
+
+# Finding 18 — frontal alpha, and why a linked reference cancelled the first fix
+
+Reported after Finding 17's far-field mixture: *"the alpha is still not very prominent at all in
+the frontal electrodes... when I do recordings and see posterior alpha that large it always shows
+up quite prominently in the frontal electrodes."* Correct, and the first fix failed for a reason
+worth keeping.
+
+## The first fix was fitted against the wrong quantity
+
+Finding 17 matched far-pair **correlation** and reported a frontal/occipital alpha **band-power**
+ratio of 0.225, which looked adequate. It was not: at a frontal electrode most of the 8–12 Hz band
+power is aperiodic background, not alpha. **Band power cannot distinguish "there is a rhythm here"
+from "there is broadband activity here"** — and prominence is exactly that distinction.
+
+Measured properly, as the height of the 8–12 Hz bump above each channel's own aperiodic fit:
+
+| | frontal | occipital | excess ratio |
+|---|---|---|---|
+| **real** (EEGMAT, n = 8) | 6.51× | 22.86× | **0.271** |
+| ours, after Finding 17 | 1.78× | 55.78× | **0.014** |
+
+1.78× is not a rhythm. The report was right and the previous measurement had missed it entirely.
+
+## The mechanism: a common-mode pedestal is what a linked reference removes
+
+The far-field term is a broad Gaussian centred on the source, so it reaches **every** electrode —
+including the mastoids. And the mastoids sit at (±1.12, 0.08), which is **closer to an occipital
+source than Fp1 is**. Measured weights:
+
+| | raw weight | after linked-mastoid |
+|---|---|---|
+| frontal mean | 0.196 | **−0.015** |
+| mastoid mean | **0.211** | — |
+| occipital mean | 0.890 | +0.679 |
+
+The mastoids picked up *more* alpha than the frontal sites, so referencing subtracted more than
+frontal had, leaving referenced frontal alpha **negative and essentially zero**. No value of the
+fraction or the width could have fixed this: a pedestal is common mode, and removing common mode
+is what a linked reference *is*. **The model needed the reference sites to differ in kind, not in
+degree.**
+
+## The fix: the mastoid is not scalp over cortex
+
+That is the reason an ear or mastoid reference is usable at all — it sits behind the ear over
+bone with no cortex beneath, so it is relatively inactive. `topo_reference_far_field` attenuates
+the volume-conducted pedestal at A1/A2 only.
+
+Fitted jointly against the real prominence ratio:
+
+| fraction | σ_far | ref far-field | frontal | occipital | ratio | vs real 0.271 |
+|---|---|---|---|---|---|---|
+| 0.35 | 1.2 | **1.00** | 1.78× | 55.78× | 0.014 | 0.257 |
+| **0.50** | **2.5** | **0.30** | 19.30× | 62.98× | **0.296** | **0.025** |
+| 0.60 | 3.0 | 0.15 | 33.67× | 67.83× | 0.489 | 0.219 |
+| 0.70 | 4.0 | 0.05 | 47.27× | 72.08× | 0.651 | 0.381 |
+
+**The reference attenuation is the load-bearing parameter**, not the fraction or the width — the
+first row is the previous configuration and it is the only one that fails outright.
+
+Measured on the shipped configuration in the running artifact, on the referenced view the display
+actually shows: **frontal 10.48×, occipital 38.06×, excess ratio 0.256** against a real 0.271.
+Fz alone reads 12.1× where it read 1.78×.
+
+## Two consequences, neither cosmetic
+
+**`snr_nominal` had to be re-solved.** G5's AASM criterion is evaluated on a contralateral-mastoid
+derivation, so attenuating the mastoids increases the referenced amplitude. The pass fraction went
+straight to 1.00 before recalibration. Re-solved: `snr_nominal` **+1.4288 → −3.0765 dB**, pass
+fraction back to 0.67, and G5's null still discriminates (N3 0.67 vs N2 0.00 and N3−6 dB 0.00).
+This is the calibration-is-a-procedure-not-a-knob rule (D5) doing its job.
+
+**`gate_alpha_ratio` now contradicts its own recorded quantity.** Posterior/frontal alpha weight
+ratio measured **1049.77** before volume conduction existed and **1.95** after; the invented bound
+is > 3. It fails nothing — the row is `invented` and record-only, which is precisely why D6 made
+it so — but the bound was set against a generator with no far field at all and is not evidence
+about the new value. It is also not the same quantity as the fitted target (prominence excess,
+0.271 ≈ 3.7 posterior/frontal). Recorded against the row for T1-M2.
+
+Reproduce: `prep/reference/t1m1_alpha_spread.py`.
+
+## Finding 18, continued — the profile matches on average and not in shape, and that is P9
+
+Asked directly whether the per-electrode alpha profile matches the real recordings, the answer is
+**the ratio does; the topography does not.** Normalised so each profile peaks at 1.0 (our absolute
+prominence runs high, which is `alpha_amp` against background, a different parameter):
+
+| region | real | ours |
+|---|---|---|
+| frontopolar | 0.207 | 0.196 |
+| frontal | 0.227 | 0.147 |
+| **temporal** | **0.445** | **0.266** |
+| **central** | **0.406** | **0.231** |
+| parietal | 0.737 | 0.620 |
+| occipital | 0.851 | 0.767 |
+| Pz specifically | 0.653 | **0.841** |
+
+Profile correlation **+0.883**, RMS **0.169**. *Read the RMS, not the correlation* — a profile
+uniformly too steep through the middle still rises and falls in the right order, so it correlates
+well while looking wrong.
+
+The error is systematic and it is in the **middle of the head**: ours is a sharp posterior peak on
+a flat pedestal where real is a smooth gradient. The pedestal lifts the far end but cannot bend
+the middle.
+
+### Widening the source makes it worse, for a geometric reason
+
+The obvious fix — widen `topo_sigma_alpha`, lean less on the pedestal — was measured and fails:
+
+| σ_alpha | far fraction | profile RMS | frontal/occipital ratio | central |
+|---|---|---|---|---|
+| **0.35** | 0.50 | **0.165** | **0.219** | 0.229 |
+| 0.55 | 0.35 | 0.190 | 0.091 | 0.229 |
+| 0.75 | 0.20 | 0.210 | 0.032 | 0.235 |
+| 1.20 | 0.05 | 0.217 | 0.068 | 0.222 |
+| *real* | | *0.000* | *0.298* | *0.406* |
+
+RMS worsens monotonically and the frontal/occipital ratio **collapses**. A wider posterior Gaussian
+reaches the *mastoids* harder too, and the reference subtracts exactly what it adds. Central stays
+pinned near 0.23 throughout — no width helps it.
+
+**The geometry says why.** T3/T4 sit at (±1.00, 0.00); A1/A2 at (±1.12, 0.08). They are
+essentially co-located. Under a linked-mastoid reference, *any* topography isotropic about a
+posterior centre gives T3 ≈ A1, so the temporal belt is driven toward zero by construction. Real
+recordings do not do this because the mastoid is over bone with no cortex beneath — it is not
+merely "a scalp site 0.12 units from T3".
+
+`topo_reference_far_field` already encodes part of that, and it is what made frontal alpha
+possible at all. But one attenuation factor cannot also bend the mid-belt into shape.
+
+### What this establishes
+
+**A Gaussian mixture about a single centre has a ceiling, and this profile is it.** The remaining
+error is not a parameter that has not been fitted; it is the model class. That is P9 — replace the
+weights with LΨᵀ columns or a SEREEGA lead field — now supported by a specific, measurable
+signature rather than by a single summary correlation: *the central and temporal belt is
+compressed by roughly a factor of two, under every width and pedestal setting tested.*
+
+The shipped configuration is kept: it matches the frontal/occipital ratio (0.219–0.256 against a
+real 0.271–0.298 across runs), gives frontal alpha that is visibly a rhythm (Fz 12.1× above its
+own aperiodic fit, against 1.78× before), and has the lowest profile RMS of anything tested.
+
+Reproduce: `t1m1_alpha_profile.py`, `t1m1_alpha_profile_fit.py`.

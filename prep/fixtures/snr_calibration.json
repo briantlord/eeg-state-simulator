@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "solved": "snr_nominal",
-  "value_db": 1.4288,
+  "value_db": -3.0765,
   "units": "dB",
   "procedure": "Bisection on the mix parameter until AASM N3 occupancy reaches gate_aasm_n3_min_fraction on the named fixture seed and epoch, C3-A2.",
   "fixture": {
@@ -11,7 +11,7 @@
     "derivation": "C3-A2"
   },
   "target_fraction": 0.2,
-  "achieved_fraction": 0.201172,
-  "generator_version": "0.1.0",
+  "achieved_fraction": 0.204818,
+  "generator_version": "0.2.0",
   "warning": "HELD OUT of every G5 evaluation. G5 must run on other seeds and report a pass fraction. Tuning this value until G5 passes would make G5 pass by construction."
 }

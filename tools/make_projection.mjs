@@ -114,8 +114,21 @@ for (let i = 1; i < bgN; i++) {
 // carrying the volume-conducted spread. Two Gaussians are not a lead field, but they give the
 // heavy tail the physics requires while keeping the same one-file schema, and
 // `topo_far_field_fraction` is FITTED against the real recordings rather than chosen.
+// THE REFERENCE ELECTRODES ARE NOT SCALP OVER CORTEX, and that is the whole reason an ear or
+// mastoid reference is usable at all: it sits behind the ear over bone with no cortex beneath, so
+// it picks up markedly less cortical activity than any scalp site. Modelled here as an
+// attenuation of the volume-conducted pedestal at A1/A2 only.
+//
+// WITHOUT IT THE PEDESTAL IS SELF-DEFEATING, which took a measurement to see. The mastoids sit at
+// (+-1.12, 0.08) -- closer to an occipital source than Fp1 is -- so an isotropic pedestal gave
+// them MORE alpha (0.211) than the frontal mean (0.196). Linked-mastoid referencing then
+// subtracted slightly more than frontal had, leaving referenced frontal alpha at -0.015: zero and
+// inverted. A common-mode pedestal is precisely what a linked reference removes, so no fraction
+// or width could have fixed it; the model needed the reference sites to differ in kind.
 const ffFrac = num('topo_far_field_fraction');
 const ffSigma = num('topo_sigma_far');
+const refFf = num('topo_reference_far_field');
+const REF_LABELS = new Set(montage.reference.map((c) => c.label));
 
 for (const g of GENERATORS) {
   const cx = num(`topo_centre_${g}_x`);
@@ -126,9 +139,10 @@ for (const g of GENERATORS) {
     const d2 = (ch.x - cx) ** 2 + (ch.y - cy) ** 2;
     const near = Math.exp(-d2 / (2 * sigma * sigma));
     const far = Math.exp(-d2 / (2 * ffSigma * ffSigma));
+    const share = REF_LABELS.has(ch.label) ? ffFrac * refFf : ffFrac;
     // Convex, so w(0) = 1 before normalization and the mixture cannot change the peak's
     // location -- G6's argmax check therefore still tests the centre, not this mixture.
-    return (1 - ffFrac) * near + ffFrac * far;
+    return (1 - share) * near + share * far;
   });
 
   // Normalize to a unit maximum so the weight vector carries SHAPE and the generator's

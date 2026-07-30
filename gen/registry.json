@@ -1494,24 +1494,39 @@
     "topo_far_field_fraction": {
       "value": {
         "kind": "scalar",
-        "v": 0.35
+        "v": 0.5
       },
       "units": null,
       "standing": "derived",
       "source": {
         "kind": "procedure",
-        "text": "Swept 0.00-0.60 against PhysioNet EEGMAT resting (n = 8, same 19-channel 10-20 montage, same linked-mastoid reference) measuring near/far pair correlation, effective rank and PC1 share. THE SWEEP DOES NOT SHARPLY IDENTIFY THE VALUE -- far-pair correlation moves only 0.281 to 0.312 across the whole range against a 0.440 real target -- so 0.35 is taken mid-range: it removes the reported defect (frontal/occipital alpha weight ratio 0.001 to 0.220) and improves effective rank (2.77 to 2.99 against a real 3.09) without the PC1 degradation the top of the range shows (0.503 vs a real 0.534, against 0.485 at 0.60). Bounded, not pinpointed. See Finding 17; prep/reference/t1m1_far_field.py."
+        "text": "Fitted jointly with topo_sigma_far and topo_reference_far_field against frontal/occipital ALPHA PROMINENCE in PhysioNet EEGMAT (n = 8, same montage, same linked-mastoid reference): the real excess ratio is 0.271, and (0.50, 2.5, 0.30) measures 0.296. Prominence is the height of the 8-12 Hz bump above each channel's own aperiodic fit -- the quantity that makes a rhythm visible -- and it replaced an earlier fit against far-pair CORRELATION, which reported a healthy-looking band-power ratio of 0.225 while referenced frontal alpha was actually -0.015. Band power cannot tell \"there is a rhythm here\" from \"there is broadband activity here\". See Finding 18; prep/reference/t1m1_alpha_spread.py."
       },
       "states": "all",
       "section": "5. Topography and geometry",
-      "note": "HOW MUCH OF EACH GENERATOR'S TOPOGRAPHY IS VOLUME-CONDUCTED SPREAD rather than local field. Build Plan 3.4 specifies a single Gaussian, and a single Gaussian is wrong in the far field in a way that shows on the trace: at topo_sigma_alpha = 0.35 a posterior alpha source reaches the frontal electrodes at exp(-8) ~ 3e-4, so frontal alpha was absent entirely. Real posterior alpha is plainly visible frontally at reduced amplitude, because a dipole's scalp potential falls off as a power law rather than a Gaussian. IT IS NOT THE SAME CAUSE AS P9, and the sweep refuted that hypothesis. Missing frontal alpha and the far-field correlation shortfall looked like one defect seen from two sides; measured, this row fixes the first and barely touches the second (0.281 to 0.312 against a real 0.440). Worse, effective rank improves toward real while PC1 share moves AWAY from it -- both come from the same eigenspectrum, so its SHAPE is wrong in a way no single tail parameter can repair. P9 therefore STANDS, with sharper evidence: the weights need LPsi^T columns or a SEREEGA lead field, not a heavier tail. A two-Gaussian mixture buys the tail the physics requires without pretending to be a forward model, and the schema is unchanged. The mixture is CONVEX, so it cannot move a generator's peak electrode -- G6's argmax check still tests topo_centre_* against the literature, not this row."
+      "note": "HOW MUCH OF EACH GENERATOR'S TOPOGRAPHY IS VOLUME-CONDUCTED SPREAD rather than local field. Build Plan 3.4 specifies a single Gaussian, and a single Gaussian is wrong in the far field in a way that shows on the trace: at topo_sigma_alpha = 0.35 a posterior alpha source reaches the frontal electrodes at exp(-8) ~ 3e-4, so frontal alpha was absent entirely. Real posterior alpha is plainly visible frontally at reduced amplitude, because a dipole's scalp potential falls off as a power law rather than a Gaussian. IT IS NOT THE SAME CAUSE AS P9, and the sweep refuted that hypothesis. Missing frontal alpha and the far-field correlation shortfall looked like one defect seen from two sides; measured, this row fixes the first and barely touches the second (0.281 to 0.312 against a real 0.440). IT ALSO NEEDED topo_reference_far_field TO WORK AT ALL. On its own the pedestal is common mode, and a linked-mastoid reference removes common mode by construction -- see that row. Worse, effective rank improves toward real while PC1 share moves AWAY from it -- both come from the same eigenspectrum, so its SHAPE is wrong in a way no single tail parameter can repair. P9 therefore STANDS, with sharper evidence: the weights need LPsi^T columns or a SEREEGA lead field, not a heavier tail. A two-Gaussian mixture buys the tail the physics requires without pretending to be a forward model, and the schema is unchanged. The mixture is CONVEX, so it cannot move a generator's peak electrode -- G6's argmax check still tests topo_centre_* against the literature, not this row."
+    },
+    "topo_reference_far_field": {
+      "value": {
+        "kind": "scalar",
+        "v": 0.3
+      },
+      "units": null,
+      "standing": "derived",
+      "source": {
+        "kind": "procedure",
+        "text": "Fraction of the volume-conducted pedestal reaching A1/A2. Fitted with topo_far_field_fraction and topo_sigma_far against frontal/occipital ALPHA PROMINENCE (height of the 8-12 Hz bump above each channel's own aperiodic fit) in PhysioNet EEGMAT, which measures 6.51x frontal against 22.86x occipital, an excess ratio of 0.271. Measured under the same linked-mastoid reference. See Finding 18; prep/reference/t1m1_alpha_spread.py."
+      },
+      "states": "all",
+      "section": "5. Topography and geometry",
+      "note": "THE REFERENCE ELECTRODES ARE NOT SCALP OVER CORTEX. A1/A2 sit behind the ear over bone with no cortex beneath, which is the reason an ear or mastoid reference is usable at all -- it is relatively inactive. Without modelling that, the far-field pedestal was self-defeating: the mastoids sit at (+-1.12, 0.08), CLOSER to an occipital source than Fp1, so an isotropic pedestal gave them more alpha (0.211) than the frontal mean (0.196), and linked-mastoid referencing left referenced frontal alpha at -0.015 -- zero and inverted. A COMMON-MODE PEDESTAL IS EXACTLY WHAT A LINKED REFERENCE REMOVES, so no value of the fraction or the width could have produced frontal alpha. The model needed the reference sites to differ in KIND, not in degree. That is a fact about references worth having in the generator rather than only in a textbook. IT MOVES snr_nominal. G5's AASM criterion is evaluated on a contralateral-mastoid derivation, so attenuating the mastoids increases the referenced amplitude and the calibration must be re-solved; that is a procedure, not a tuning step (D5)."
     },
     "topo_sigma_far": {
       "value": {
         "kind": "pending"
       },
       "provisional": {
-        "v": 1.2,
+        "v": 2.5,
         "basis": "broad enough that the far Gaussian is near-flat across the montage, so the fraction alone sets the tail",
         "expires_at_milestone": "T1-M1",
         "constrained_by": "must not be derived from topo_expect_* — G6 compares the two"
@@ -3704,7 +3719,7 @@
         "arm": "positive",
         "failable": false
       },
-      "note": "RECORDED, NOT A PASS CRITERION, until T1-M2. G6 uses structural argmax instead."
+      "note": "THE RECORDED QUANTITY NOW CONTRADICTS THIS BOUND, and that is recorded rather than quietly reconciled. Posterior/frontal alpha weight ratio measured 1049.77 before volume conduction was modelled -- frontal alpha was absent, so the ratio was nearly unbounded -- and measures 1.95 after (D18). The invented bound of > 3 was therefore set against a generator with no far field at all, and it is not evidence about the new value. IT DOES NOT FAIL ANYTHING: the row is `invented` and record-only, so G6's verdict rests on the structural argmax check alone, which is the whole reason D6 made it record-only. It is also not directly comparable to the fitted target -- the fit matched PROMINENCE excess (real 0.271, i.e. ~3.7 posterior/frontal) while this row is a raw WEIGHT ratio, and the two differ by the background each channel carries. T1-M2 must settle which quantity the bound is about before giving it a value. RECORDED, NOT A PASS CRITERION, until T1-M2. G6 uses structural argmax instead."
     },
     "gate_pac_tol": {
       "value": {

@@ -396,6 +396,58 @@ shaping, and it must be characterized before any PAC recovery gate is trusted.
 
 ---
 
+## D18 — volume conduction needs the reference electrodes to differ in kind, and slow oscillations must start at zero
+
+**Two defects found by looking at the artifact, neither of which any gate could see.**
+
+### Slow oscillations were spliced in with a full-amplitude step
+
+`slowOscWaveform` computed `cos(2π(w − 0.5))`, which is `−cos(2πw)` and therefore **−1 at both
+endpoints**. Every slow oscillation began and ended at full negative amplitude — a 50–100 µV step
+at `so_amp`, added to all 19 channels simultaneously through the projection. On screen: a hard
+vertical jump in every trace at once, at each event boundary. `−sin(2πw)` starts and ends at a
+zero crossing while keeping standard polarity and the rise-decay warp.
+
+Measured: splice step **100% of amplitude → 1.5%**, and the largest jump at any event boundary is
+now **1.04×** the 99.9th percentile of jumps elsewhere — indistinguishable from the background's
+own sample-to-sample variation.
+
+**No gate could have caught it.** G3 asks whether YASA finds spindles, G5 about 0.5–2 Hz
+occupancy, G6 about topography. A step is broadband, so it barely moves a band ratio; it is
+synchronous across channels, so it does not hurt effective rank either. It was plainly visible and
+entirely unmeasured — the argument for looking at the trace, not only at the numbers.
+
+### Frontal alpha: a pedestal is exactly what a linked reference removes
+
+D17's far-field mixture did not produce visible frontal alpha, and the reason is structural. The
+far term is centred on the source, so it reaches the mastoids too — and the mastoids sit at
+(±1.12, 0.08), **closer to an occipital source than Fp1**. They picked up more alpha (0.211) than
+the frontal mean (0.196), so linked-mastoid referencing left referenced frontal alpha at
+**−0.015**: zero and inverted. No fraction or width could fix that, because a pedestal is common
+mode and removing common mode is what a linked reference *is*.
+
+`topo_reference_far_field` attenuates the pedestal at A1/A2 only. The justification is the reason
+ear references exist: **the mastoid is behind the ear over bone with no cortex beneath**, so it is
+relatively inactive. Fitted jointly against real alpha *prominence* — the height of the 8–12 Hz
+bump above each channel's own aperiodic fit — giving 0.296 against a real 0.271.
+
+**D17's fit was against the wrong quantity**, and that is the transferable lesson. It matched
+far-pair correlation and reported a frontal/occipital *band-power* ratio of 0.225, which looked
+fine while referenced frontal alpha was negative. Band power cannot tell "there is a rhythm here"
+from "there is broadband activity here".
+
+### `snr_nominal` re-solved, as a consequence rather than a tweak
+
+Attenuating the mastoids raises the referenced amplitude, so G5's pass fraction went to 1.00.
+Re-solved **+1.4288 → −3.0765 dB**; pass fraction 0.67, null still discriminating. This is D5's
+calibration-is-a-procedure rule doing exactly what it was written for.
+
+`gate_alpha_ratio`'s invented `> 3` bound now contradicts its own recorded quantity (1049.77 →
+1.95). It fails nothing, being record-only, but the bound was set against a generator with no far
+field and is not evidence about the new value. Flagged on the row for T1-M2.
+
+---
+
 ## D17 — χ(t) is a least-squares slope over 2–40 Hz, not specparam; and G4's null gains an effect-size floor
 
 **Decided against the plan, on measurement.** T1-M2's stated task was to replace the cheap

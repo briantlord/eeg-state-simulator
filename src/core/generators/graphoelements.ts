@@ -166,7 +166,17 @@ function slowOscWaveform(
   for (let i = 0; i < n; i++) {
     const u = (i + 0.5) / n;
     const w = u <= r ? u / (2 * r) : 0.5 + (u - r) / (2 * (1 - r));
-    out[i] = amplitudePp * Math.cos(2 * Math.PI * (w - 0.5));
+    // STARTS AND ENDS AT A ZERO CROSSING. This was `cos(2*PI*(w - 0.5))`, which is -cos(2*PI*w)
+    // and therefore -1 at BOTH ends: every slow oscillation began and ended with a
+    // full-amplitude step, 50-100 uV at so_amp, injected into every channel simultaneously
+    // through the projection. On screen that is a hard vertical jump at each event boundary in
+    // all 19 traces at once, which is what it looked like.
+    //
+    // -sin keeps standard polarity (the down-state comes first, negative) and keeps the
+    // rise-decay warp, which acts through `w`. The endpoints now have a slope discontinuity
+    // rather than a step -- a kink of order amplitude*2*PI/duration, ~2.5 uV per sample for a
+    // 100 uV cycle over 1 s, which sits under the background's own sample-to-sample variation.
+    out[i] = -amplitudePp * Math.sin(2 * Math.PI * w);
   }
   return out;
 }

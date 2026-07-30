@@ -40,7 +40,7 @@ missed.
 | Respiration + tilt filter | **done** | sideband risk measures −34 dB (Finding: WP-F) |
 | All three respiratory mechanisms | **done** | separately switchable; Demo 1 moves 100% → 1% (Finding 10, resolved) |
 | Observables χ / LZc / coupling | **done** | pink-noise demo passes under both LZ parses |
-| SNR calibration | **done** | `snr_nominal` = 1.4288 dB, solved on the fixture seed |
+| SNR calibration | **done** | `snr_nominal` = -3.0765 dB, re-solved after D18 changed the mastoid weights |
 | Web artifact | **done** | scrolling trace, filter panel, reference montages, 119 kB static |
 | Gate runner | **done** | class/status separation, matched-null refusal, per-arm thresholds |
 | **All seven ledger arms** | **done** | G1a, G1b, G2, G3, G4, G5, G6, each with its matched null |
@@ -126,9 +126,9 @@ characterization).
 |---|---|
 | `Build-Plan.md`, `Validation-Harness_Spec.md` | the original specification, unmodified |
 | `PARAMETERS.md` | **generated** from `registry/parameters.yaml`; never edit |
-| `DECISIONS.md` | D1–D17 and pending P1–P12, append-only |
+| `DECISIONS.md` | D1–D18 and pending P1–P12, append-only |
 | `Execution-Scheme.md` | the plan: gate ledger, work packages, build order |
-| `Tier0-Estimator-Probe.md` | Findings 1–16 (16 with a resolution block), every one reproducible from `prep/reference/` |
+| `Tier0-Estimator-Probe.md` | Findings 1–18 (16 with a resolution block), every one reproducible from `prep/reference/` |
 | `STATUS.md` | this file |
 
 Corrections are marked in place rather than rewritten: Finding 2 carries a correction block
