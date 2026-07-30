@@ -13,6 +13,12 @@
       canvas { width: 100%; display: block; background: var(--paper); }
       #trace { height: 620px; border: 1px solid var(--paper-rule-major); }
       #demo3 { height: 200px; border: 1px solid var(--paper-rule-major); }
+      #spectrum { height: 190px; border: 1px solid var(--paper-rule-major); cursor: ew-resize; }
+      .filt-row { display: flex; align-items: center; gap: var(--gap-sm); }
+      .filt-row label { font-size: var(--size-sm); white-space: nowrap; }
+      .filt-row input[type='range'] { flex: 1; min-width: 60px; }
+      .filt-val { font-family: var(--font-mono); font-size: var(--size-xs);
+        color: var(--ink-soft); min-width: 62px; text-align: right; }
       .prime { border-left: 3px solid var(--ink); padding-left: var(--gap-sm); margin-bottom: var(--gap-md); }
       .prime strong { display: block; }
       table.readout-table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: var(--size-sm); }
@@ -139,25 +145,40 @@
 
           <div class="panel">
             <h2>Filter panel</h2>
-            <div class="control">
-              <label for="hpf">High-pass cutoff (Hz)</label>
-              <select id="hpf"></select>
-              <p class="note">
-                Standard practice high-passes at 0.5–1 Hz — directly on top of the respiratory
-                rate.
-              </p>
+            <canvas id="spectrum"></canvas>
+            <p class="note">
+              Drag the <strong>HP</strong> and <strong>LP</strong> handles on the spectrum. The
+              faint curve is the raw signal, the dark curve is what survives the filter, and the
+              dashed line is the filter's own response computed from its coefficients — not from
+              the ratio of the two, so it can disagree with them.
+            </p>
+            <div class="control filt-row">
+              <label><input type="checkbox" id="hp-on" checked /> high-pass</label>
+              <input type="range" id="hp-slider" min="0" max="1000" step="1" /> <!-- @lit-ok max is set by app.ts from SLIDER_MAX; this is a fallback -->
+              <span class="filt-val" id="hp-val">—</span>
             </div>
-            <div class="control">
-              <label>Filter type</label>
+            <div class="control filt-row">
+              <label><input type="checkbox" id="lp-on" /> low-pass</label>
+              <input type="range" id="lp-slider" min="0" max="1000" step="1" /> <!-- @lit-ok as above -->
+              <span class="filt-val" id="lp-val">—</span>
+            </div>
+            <div class="control filt-row">
+              <label for="forder" class="inline">order</label>
+              <select id="forder" class="inline-sel"></select>
               <div class="seg" id="ftype">
                 <button data-v="zeroPhase" aria-pressed="true">zero-phase</button>
                 <button data-v="causal" aria-pressed="false">causal IIR</button>
               </div>
-              <p class="note">
-                Causal is what an acquisition system actually does, and it distorts phase near
-                the cutoff.
-              </p>
             </div>
+            <div class="control">
+              <button id="showraw" aria-pressed="false">overlay raw on trace</button>
+            </div>
+            <p class="note">
+              <strong>Zero-phase runs the cascade twice</strong>, forwards then backwards, so it
+              has no phase distortion but the stopband of double the order. Causal is what an
+              acquisition system actually does and it distorts phase near the cutoff. A higher
+              order rolls off faster <em>and</em> rings longer — Demo 3 below shows the ringing.
+            </p>
             <p class="note">
               Alternatives to high-pass filtering exist — <em>robust detrending</em> (de
               Cheveigné &amp; Arzounian) fits and removes a slow polynomial instead. It is a

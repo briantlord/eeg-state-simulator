@@ -15,7 +15,13 @@
 import '../tokens/tokens.css';
 import { ALL_CHANNELS, REFERENCE_LABELS, weightsFor } from '../core/generators/projection.ts';
 import { STATE_IDS, STATE_LABELS, type StateId } from '../core/types/state.ts';
-import { applyHighpass, ringingDemo, type FilterType } from '../core/filters/hpf.ts';
+import {
+  applyFilterChain,
+  ringingDemo,
+  type FilterSpec,
+  type FilterType,
+} from '../core/filters/hpf.ts';
+import { drawSpectrum, spectrumLayout, fToUnit, unitToF } from '../render/spectrum.ts';
 import { couplingReadout, respiratoryCoupling } from '../analysis/coupling.ts';
 import { broadbandExponent, narrowbandExponent } from '../analysis/psd.ts';
 import { lempelZiv } from '../analysis/lz.ts';
@@ -31,7 +37,13 @@ import {
   REFERENCE_NOTE,
   type ReferenceMode,
 } from '../analysis/referencing.ts';
-import { scalarValue, enumValue, inventedKeys, GENERATOR_VERSION } from '../core/registry.ts';
+import {
+  scalarValue,
+  enumValue,
+  uiDomain,
+  inventedKeys,
+  GENERATOR_VERSION,
+} from '../core/registry.ts';
 
 const FS = scalarValue('fs');
 const ANALYSIS_HZ = scalarValue('analysis_update');
@@ -41,8 +53,16 @@ const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) 
 const ui = {
   state: 'n3' as StateId,
   seed: scalarValue('snr_calibration_seed'),
-  hpf: enumValue('hpf_options')[0] as number,
+  // The filter is now a SPEC rather than a single cutoff: two independently switchable ends, an
+  // order, and a phase mode. `hpf_options`' first entry seeds the high-pass so the panel opens
+  // where the old single-cutoff control did.
+  hpEnabled: true,
+  hpHz: enumValue('hpf_options')[0] as number,
+  lpEnabled: false,
+  lpHz: scalarValue('lpf_default'),
+  forder: scalarValue('filter_order'),
   ftype: 'zeroPhase' as FilterType,
+  showRaw: false,
   windowS: 30, // @lit-ok initial display window (s); user-selectable, 30 s = the AASM scoring epoch
   sensitivity: scalarValue('display_sensitivity'),
   running: true,
@@ -82,16 +102,29 @@ interface Processed {
   channels: Float64Array[];
   labels: string[];
   rank: number;
+  /** Referenced but UNFILTERED, when the overlay is on. */
+  raw: Float64Array[] | null;
 }
 let processed: Processed | null = null;
 let processedKey = '';
 
+/** The filter as the panel currently describes it. */
+function currentSpec(): FilterSpec {
+  return {
+    highpassHz: ui.hpEnabled ? ui.hpHz : null,
+    lowpassHz: ui.lpEnabled ? ui.lpHz : null,
+    type: ui.ftype,
+    order: ui.forder,
+  };
+}
+
 function ensureProcessed(): Processed {
   const key =
-    `${ui.hpf}|${ui.ftype}|${ui.reference}|${ui.showReference}|` +
-    `${stream.elapsedS - stream.positionS}`;
+    `${ui.hpEnabled}|${ui.hpHz}|${ui.lpEnabled}|${ui.lpHz}|${ui.forder}|${ui.ftype}|` +
+    `${ui.reference}|${ui.showReference}|${stream.elapsedS - stream.positionS}`;
   if (key !== processedKey || processed === null) {
-    const hp = stream.channels.map((c) => applyHighpass(c, ui.hpf, ui.ftype, FS));
+    const spec = currentSpec();
+    const hp = stream.channels.map((c) => applyFilterChain(c, spec, FS));
     const ref = applyReference(hp, ui.reference);
 
     // THE RANK IS COMPUTED ON THE SCALP SET ONLY, before the mastoids are appended for display.
@@ -115,7 +148,11 @@ function ensureProcessed(): Processed {
       }
     }
 
-    processed = { channels, labels, rank };
+    // The RAW view, referenced the same way but unfiltered, for the overlay. Computed here so
+    // it shares the cache: recomputing it per frame would double the reference cost.
+    const rawRef = ui.showRaw ? applyReference([...stream.channels], ui.reference) : null;
+
+    processed = { channels, labels, rank, raw: rawRef?.channels ?? null };
     processedKey = key;
   }
   return processed;
@@ -150,6 +187,7 @@ function drawFrame(): void {
       duration: e.duration,
       type: e.type,
     })),
+    raw: p.raw ?? [],
     aux: ui.showAux
       ? [
           { label: 'Resp', data: stream.respirationBelt, unit: 'a.u.' },
@@ -271,6 +309,7 @@ function updateObservables(): void {
   // Effective dimensionality, and the reference that produced it. Referencing is a rank
   // operation, so the two belong on screen together.
   $('o-rank').textContent = p.rank.toFixed(2);
+  drawSpectrumPanel();
   $('ref-note').textContent = REFERENCE_NOTE[ui.reference];
 
   renderDemo3();
@@ -330,7 +369,7 @@ function renderDemo3(): void {
   const b = a + Math.round(spanS * FS);
 
   const fz = stream.channels[ALL_CHANNELS.indexOf('Fz')]!.slice(a, b);
-  const { filtered: filt, invented } = ringingDemo(fz, ui.hpf, ui.ftype, FS);
+  const { filtered: filt, invented } = ringingDemo(fz, ui.hpEnabled ? ui.hpHz : 0, ui.ftype, FS);
 
   const pxPerUv = scalarValue('display_px_per_mm') / ui.sensitivity;
   const mid = h / 2;
@@ -359,7 +398,7 @@ function renderDemo3(): void {
   ctx.fillStyle = css('--ink-faint');
   ctx.fillText('unfiltered', 8, 14); // @lit-ok Demo 3 canvas label coordinates (px)
   ctx.fillStyle = css('--pen-trace');
-  ctx.fillText(`high-passed at ${ui.hpf} Hz (${ui.ftype})`, 8, 26); // @lit-ok Demo 3 canvas label coordinates (px)
+  ctx.fillText(`high-passed at ${ui.hpEnabled ? ui.hpHz : 0} Hz (${ui.ftype})`, 8, 26); // @lit-ok Demo 3 canvas label coordinates (px)
   ctx.fillStyle = css('--pen-event');
   ctx.fillText(`invented by the filter — ${rms.toFixed(2)} µV RMS`, 8, 38); // @lit-ok Demo 3 canvas label coordinates (px)
 
@@ -378,6 +417,144 @@ function renderDemo3(): void {
       `Centred on a ${wanted.label} at t = ${pick.onset.toFixed(1)} s. ` +
       `${rms.toFixed(2)} µV RMS of the red trace is energy the filter created, not signal.`;
   }
+}
+
+
+// ------------------------------------------------------------- filter panel
+
+const FILT_RANGE = uiDomain('filter_ui_range');
+/** Slider positions are integers; the mapping to frequency is logarithmic. */
+const SLIDER_MAX = 1000; // @lit-ok slider resolution in steps, a UI control granularity
+
+function sliderToHz(v: number): number {
+  return unitToF(v / SLIDER_MAX, FILT_RANGE.lo, FILT_RANGE.hi);
+}
+function hzToSlider(f: number): number {
+  return Math.round(fToUnit(f, FILT_RANGE.lo, FILT_RANGE.hi) * SLIDER_MAX);
+}
+function fmtHz(f: number): string {
+  return `${f < 1 ? f.toFixed(2) : f.toFixed(f < 10 ? 1 : 0)} Hz`; // @lit-ok display precision thresholds
+}
+
+function refreshFilterUi(): void {
+  $('hp-val').textContent = ui.hpEnabled ? fmtHz(ui.hpHz) : 'off';
+  $('lp-val').textContent = ui.lpEnabled ? fmtHz(ui.lpHz) : 'off';
+  $<HTMLInputElement>('hp-slider').disabled = !ui.hpEnabled;
+  $<HTMLInputElement>('lp-slider').disabled = !ui.lpEnabled;
+  processedKey = '';
+  drawSpectrumPanel();
+  updateObservables();
+}
+
+function drawSpectrumPanel(): void {
+  const p = ensureProcessed();
+  // The spectrum is drawn on the UNFILTERED referenced channel and filters it itself, so the
+  // raw curve is genuinely raw. Drawing it on `p.channels` would show a filtered signal being
+  // filtered again, and the "raw" curve would already have the stopband in it.
+  const rawRef = p.raw ? p.raw[p.labels.indexOf('Pz')] : null;
+  const src = rawRef ?? chan(p, 'Pz');
+  drawSpectrum($<HTMLCanvasElement>('spectrum'), {
+    raw: src,
+    fs: FS,
+    spec: currentSpec(),
+    fMin: FILT_RANGE.lo,
+    fMax: Math.min(FILT_RANGE.hi, FS / 2),
+    showFiltered: ui.hpEnabled || ui.lpEnabled,
+  });
+}
+
+function mountFilterPanel(): void {
+  const hpOn = $<HTMLInputElement>('hp-on');
+  const lpOn = $<HTMLInputElement>('lp-on');
+  const hpS = $<HTMLInputElement>('hp-slider');
+  const lpS = $<HTMLInputElement>('lp-slider');
+
+  hpS.max = String(SLIDER_MAX);
+  lpS.max = String(SLIDER_MAX);
+  hpS.value = String(hzToSlider(ui.hpHz));
+  lpS.value = String(hzToSlider(ui.lpHz));
+  hpOn.checked = ui.hpEnabled;
+  lpOn.checked = ui.lpEnabled;
+
+  hpOn.addEventListener('change', () => {
+    ui.hpEnabled = hpOn.checked;
+    refreshFilterUi();
+  });
+  lpOn.addEventListener('change', () => {
+    ui.lpEnabled = lpOn.checked;
+    refreshFilterUi();
+  });
+  hpS.addEventListener('input', () => {
+    // THE ENDS MAY NOT CROSS. A high-pass above the low-pass is an empty passband, and the
+    // display would go silently flat rather than obviously wrong.
+    ui.hpHz = Math.min(sliderToHz(Number(hpS.value)), ui.lpHz * 0.9); // @lit-ok minimum passband ratio, keeping the two ends from crossing
+    hpS.value = String(hzToSlider(ui.hpHz));
+    refreshFilterUi();
+  });
+  lpS.addEventListener('input', () => {
+    ui.lpHz = Math.max(sliderToHz(Number(lpS.value)), ui.hpHz / 0.9); // @lit-ok as above
+    lpS.value = String(hzToSlider(ui.lpHz));
+    refreshFilterUi();
+  });
+
+  select('forder', enumValue('filter_order_options'), ui.forder).addEventListener('change', (e) => {
+    ui.forder = Number((e.target as HTMLSelectElement).value);
+    refreshFilterUi();
+  });
+
+  const rawBtn = $<HTMLButtonElement>('showraw');
+  rawBtn.addEventListener('click', () => {
+    ui.showRaw = !ui.showRaw;
+    rawBtn.setAttribute('aria-pressed', String(ui.showRaw));
+    rawBtn.textContent = ui.showRaw ? 'hide raw overlay' : 'overlay raw on trace';
+    refreshFilterUi();
+  });
+
+  // Dragging the handles ON the spectrum, which is the control the panel is really about: the
+  // sliders below are the same state, kept in sync, for keyboard and for readers who want a
+  // number rather than a gesture.
+  const canvas = $<HTMLCanvasElement>('spectrum');
+  let dragging: 'hp' | 'lp' | null = null;
+
+  const nearest = (x: number): 'hp' | 'lp' | null => {
+    const { left, right } = spectrumLayout(canvas);
+    const u = (x - left) / (right - left);
+    const f = unitToF(u, FILT_RANGE.lo, Math.min(FILT_RANGE.hi, FS / 2));
+    const dHp = ui.hpEnabled ? Math.abs(Math.log10(f) - Math.log10(ui.hpHz)) : Infinity;
+    const dLp = ui.lpEnabled ? Math.abs(Math.log10(f) - Math.log10(ui.lpHz)) : Infinity;
+    if (!Number.isFinite(Math.min(dHp, dLp))) return null;
+    return dHp <= dLp ? 'hp' : 'lp';
+  };
+
+  const setFrom = (x: number): void => {
+    const { left, right } = spectrumLayout(canvas);
+    const f = unitToF((x - left) / (right - left), FILT_RANGE.lo, Math.min(FILT_RANGE.hi, FS / 2));
+    if (dragging === 'hp') {
+      ui.hpHz = Math.min(Math.max(f, FILT_RANGE.lo), ui.lpHz * 0.9); // @lit-ok as above
+      hpS.value = String(hzToSlider(ui.hpHz));
+    } else if (dragging === 'lp') {
+      ui.lpHz = Math.max(Math.min(f, Math.min(FILT_RANGE.hi, FS / 2)), ui.hpHz / 0.9); // @lit-ok as above
+      lpS.value = String(hzToSlider(ui.lpHz));
+    }
+    refreshFilterUi();
+  };
+
+  canvas.addEventListener('pointerdown', (e) => {
+    dragging = nearest(e.offsetX);
+    if (dragging) {
+      canvas.setPointerCapture(e.pointerId);
+      setFrom(e.offsetX);
+    }
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    if (dragging) setFrom(e.offsetX);
+  });
+  canvas.addEventListener('pointerup', (e) => {
+    dragging = null;
+    canvas.releasePointerCapture(e.pointerId);
+  });
+
+  refreshFilterUi();
 }
 
 // -------------------------------------------------------------------- mount
@@ -510,11 +687,7 @@ function mount(): void {
     updateObservables();
   });
 
-  select('hpf', enumValue('hpf_options'), ui.hpf).addEventListener('change', (e) => {
-    ui.hpf = Number((e.target as HTMLSelectElement).value);
-    processedKey = '';
-    updateObservables();
-  });
+  mountFilterPanel();
 
   for (const btn of Array.from($('ftype').querySelectorAll('button'))) {
     btn.addEventListener('click', () => {

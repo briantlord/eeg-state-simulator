@@ -387,6 +387,9 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 
 | Key | Value | Units | Standing | Source | States |
 |---|---|---|---|---|---|
+| `lpf_default` | 40 | Hz | `chosen` | conventional clinical low-pass, and BELOW both line_freq options so mains is in the stopband at either mains frequency | all |
+| `filter_ui_range` | 0.1–100 *(ui_domain)* | Hz | `chosen` | the draggable frequency domain of the filter panel: from below every clinical high-pass to above every band this project measures, and inside the Nyquist of fs = 256 | all |
+| `filter_order_options` | 2 or 4 or 8 | — | `chosen` | Butterworth orders spanning gentle to steep; even orders only, because the biquad cascade is built from second-order sections | all |
 | `hpf_options` | 0.01 or 0.1 or 0.5 or 1 | Hz | `chosen` | spans clinical and ERP practice | all |
 | `welch_nperseg` | 1024 | samples | `chosen` | 4 s at fs=256; 0.25 Hz resolution | all |
 | `welch_noverlap` | 512 | samples | `chosen` | 50% overlap | all |
@@ -399,6 +402,12 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 | `lz_binarize` | binarize around the median of the Hilbert amplitude | — | `chosen` | method described in a 2024 eNeuro slope-versus-LZc comparison; author not recorded | all |
 | `lz_surrogate` | time_shuffled | — | `chosen` | DECISIONS D1. Destroys the spectrum, so surrogate complexity depends only on length and density — chi-dependence is zero by construction, caching is legal, no characterization needed. | all |
 | `lz_parse` | — *(absent)* | — | `absent` | Decide by which parse the landmark literature used. Settle before citing any published value. | all |
+
+**`lpf_default`.** Where the panel's low-pass handle starts. 40 Hz is the usual clinical choice and it sits below both 50 and 60 Hz, so switching the mains toggle on with the low-pass enabled puts the interference in the stopband either way -- which is the demonstration the two controls make together.
+
+**`filter_ui_range`.** A UI DOMAIN, not a signal parameter -- the accessor is `uiDomain`, which throws if this is read as band edges. It bounds what a reader can drag to, and nothing else. The low end sits below hpf_options' 0.01 Hz setting deliberately: a cutoff a reader cannot reach is a cutoff they cannot compare against, and the panel's whole point is comparison.
+
+**`filter_order_options`.** ORDER IS THE SECOND AXIS OF THE DEMONSTRATION, beside zero-phase versus causal. A steeper filter rolls off faster AND rings longer, and Demo 3 already shows the ringing -- putting order under the reader's hand lets them see both halves of that trade move together instead of being told about it. Even orders only: `butterworthQs` throws on an odd order because a cascade of second-order sections cannot express one.
 
 **`welch_nperseg`.** Added on import. 7 mandates a Welch PSD and 8 budgets 5.0 ms per second for it, but no Welch settings were registered — and they determine recovered chi as much as band and mode do.
 
@@ -502,9 +511,9 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 | Standing | Rows |
 |---|---|
 | `definitional` | 11 |
-| `chosen` | 51 |
+| `chosen` | 54 |
 | `literature` | 9 |
 | `derived` | 14 |
 | `invented` | 111 |
 | `absent` | 11 |
-| **total** | **207** |
+| **total** | **210** |

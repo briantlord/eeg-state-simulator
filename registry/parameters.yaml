@@ -1536,6 +1536,47 @@ params:
   # 10. Filter and analysis controls
   # =====================================================================
 
+  lpf_default:
+    value: {kind: scalar, v: 40}
+    units: Hz
+    standing: chosen
+    source: {kind: none, rationale: "conventional clinical low-pass, and BELOW both line_freq options so mains is in the stopband at either mains frequency"}
+    states: all
+    section: "10. Filter and analysis controls"
+    note: >-
+      Where the panel's low-pass handle starts. 40 Hz is the usual clinical choice and it sits
+      below both 50 and 60 Hz, so switching the mains toggle on with the low-pass enabled puts the
+      interference in the stopband either way -- which is the demonstration the two controls make
+      together.
+
+  filter_ui_range:
+    value: {kind: interval, lo: 0.1, hi: 100, meaning: ui_domain}
+    units: Hz
+    standing: chosen
+    source: {kind: none, rationale: "the draggable frequency domain of the filter panel: from below every clinical high-pass to above every band this project measures, and inside the Nyquist of fs = 256"}
+    states: all
+    section: "10. Filter and analysis controls"
+    note: >-
+      A UI DOMAIN, not a signal parameter -- the accessor is `uiDomain`, which throws if this is
+      read as band edges. It bounds what a reader can drag to, and nothing else. The low end sits
+      below hpf_options' 0.01 Hz setting deliberately: a cutoff a reader cannot reach is a cutoff
+      they cannot compare against, and the panel's whole point is comparison.
+
+  filter_order_options:
+    value: {kind: enum, options: [2, 4, 8]}
+    units: null
+    standing: chosen
+    source: {kind: none, rationale: "Butterworth orders spanning gentle to steep; even orders only, because the biquad cascade is built from second-order sections"}
+    states: all
+    section: "10. Filter and analysis controls"
+    note: >-
+      ORDER IS THE SECOND AXIS OF THE DEMONSTRATION, beside zero-phase versus causal. A steeper
+      filter rolls off faster AND rings longer, and Demo 3 already shows the ringing -- putting
+      order under the reader's hand lets them see both halves of that trade move together instead
+      of being told about it.
+      Even orders only: `butterworthQs` throws on an odd order because a cascade of second-order
+      sections cannot express one.
+
   hpf_options:
     value: {kind: enum, options: [0.01, 0.1, 0.5, 1.0]}
     units: Hz

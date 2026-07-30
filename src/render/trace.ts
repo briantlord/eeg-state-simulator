@@ -55,6 +55,14 @@ export interface TraceOptions {
   readonly events?: readonly TraceEvent[];
   /** Respiration, ECG: drawn below a firm boundary, each scaled to its own lane. */
   readonly aux?: readonly AuxChannel[];
+  /**
+   * The same channels UNFILTERED, drawn faintly beneath.
+   *
+   * Same order and length as `channels`. Showing both is the only way to see what a filter
+   * removed rather than what it left — the filtered trace alone looks perfectly plausible,
+   * which is the entire problem with filtering.
+   */
+  readonly raw?: readonly Float64Array[];
   /** Seconds from the start of the buffer to display. */
   readonly windowS: number;
   readonly tOffsetS: number;
@@ -138,6 +146,15 @@ export function drawTrace(canvas: HTMLCanvasElement, o: TraceOptions): void {
   const start = Math.round(o.tOffsetS * o.fs);
   const count = Math.round(o.windowS * o.fs);
 
+  // The raw overlay goes down FIRST so the filtered trace draws over it, not under it.
+  if (o.raw) {
+    ctx.strokeStyle = inkFaint;
+    ctx.lineWidth = 1;
+    for (let c = 0; c < n && c < o.raw.length; c++) {
+      drawLane(ctx, o.raw[c]!, laneH * (c + 0.5), left, plotW, plotH, start, count, pxPerUv);
+    }
+  }
+
   ctx.lineWidth = 1;
   ctx.strokeStyle = ink;
   for (let c = 0; c < n; c++) {
@@ -193,6 +210,40 @@ export function drawTrace(canvas: HTMLCanvasElement, o: TraceOptions): void {
 
   drawCalibrationBar(ctx, left, cssH, pxPerUv, o.sensitivityUvPerMm, inkFaint, ink);
   drawEventLegend(ctx, o.events ?? [], left, cssH - footerH, cssH, inkFaint, penEvent);
+}
+
+/**
+ * One lane of min/max-decimated trace. Shared by the montage and by the raw overlay, so the two
+ * cannot drift into drawing the same samples differently.
+ */
+function drawLane(
+  ctx: CanvasRenderingContext2D,
+  data: Float64Array,
+  mid: number,
+  left: number,
+  plotW: number,
+  plotH: number,
+  start: number,
+  count: number,
+  pxPerUv: number,
+): void {
+  ctx.beginPath();
+  for (let px = 0; px < plotW; px++) {
+    const i0 = start + Math.floor((px / plotW) * count);
+    const i1 = start + Math.floor(((px + 1) / plotW) * count);
+    let lo = Infinity;
+    let hi = -Infinity;
+    for (let i = i0; i < i1 && i < data.length; i++) {
+      const v = data[i]!;
+      if (v < lo) lo = v;
+      if (v > hi) hi = v;
+    }
+    if (lo === Infinity) continue;
+    const x = left + px + 0.5;
+    ctx.moveTo(x, Math.max(0, Math.min(plotH, mid - hi * pxPerUv)));
+    ctx.lineTo(x, Math.max(0, Math.min(plotH, mid - lo * pxPerUv)));
+  }
+  ctx.stroke();
 }
 
 /**

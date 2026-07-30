@@ -62,6 +62,8 @@ export type ParamKey =
   | 'epoch_display'
   | 'export_schema_version'
   | 'filter_order'
+  | 'filter_order_options'
+  | 'filter_ui_range'
   | 'fit_band_broad'
   | 'fit_band_narrow'
   | 'fs'
@@ -123,6 +125,7 @@ export type ParamKey =
   | 'line_freq'
   | 'line_noise_amp'
   | 'line_noise_gain_cv'
+  | 'lpf_default'
   | 'lz_band'
   | 'lz_binarize'
   | 'lz_channel_order'
@@ -273,6 +276,8 @@ export interface ParamKindMap {
   'epoch_display': 'scalar';
   'export_schema_version': 'scalar';
   'filter_order': 'scalar';
+  'filter_order_options': 'enum';
+  'filter_ui_range': 'interval';
   'fit_band_broad': 'interval';
   'fit_band_narrow': 'interval';
   'fs': 'scalar';
@@ -334,6 +339,7 @@ export interface ParamKindMap {
   'line_freq': 'enum';
   'line_noise_amp': 'pending';
   'line_noise_gain_cv': 'pending';
+  'lpf_default': 'scalar';
   'lz_band': 'interval';
   'lz_binarize': 'procedure';
   'lz_channel_order': 'procedure';
