@@ -1,0 +1,52 @@
+# Build the static artifact and publish it to GitHub Pages.
+#
+# THERE IS NO SERVER SIDE. The registry and the projection weights are imported as JSON MODULES
+# and bundled at build time, so the running page issues no requests of its own -- the only network
+# traffic is the browser fetching the page's own script and stylesheet. Everything the simulator
+# does, it does in the visitor's browser.
+#
+# `vite.config.ts` sets `base: './'`, so the same `dist/` works at a Pages project URL
+# (user.github.io/<repo>/), at a subdirectory of another site, or opened from disk.
+name: pages
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      # The typecheck runs here because seam 7 is enforced by the type system: a type error in
+      # this project can be a science error, and it must not reach a published page.
+      - run: npm run typecheck
+      - run: npm run build
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

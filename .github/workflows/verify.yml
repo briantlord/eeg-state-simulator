@@ -1,0 +1,21 @@
+# The gate ledger, on every push.
+#
+# This is the check that matters for this project: `npm run verify` runs the registry
+# fixed-point, the projection drift check, the literal acceptance check, the typecheck, the unit
+# tests and all fourteen gate arms. It refuses to start if a gate is missing its matched null.
+name: verify
+
+on: [push, pull_request, workflow_dispatch]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: npm }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: npm ci
+      - run: pip install -r requirements.txt
+      - run: npm run verify

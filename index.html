@@ -4,7 +4,7 @@
     <meta charset="utf-8" /> <!-- @lit-ok text-encoding name, not a number -->
 
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>EEG State Simulator — a model, not a measurement</title>
+    <title>EEG State Simulator — synthetic multichannel EEG</title>
     <link rel="stylesheet" href="/src/tokens/tokens.css" />
     <style>
       .layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: var(--gap-md); }
@@ -19,8 +19,6 @@
       .filt-row input[type='range'] { flex: 1; min-width: 60px; }
       .filt-val { font-family: var(--font-mono); font-size: var(--size-xs);
         color: var(--ink-soft); min-width: 62px; text-align: right; }
-      .prime { border-left: 3px solid var(--ink); padding-left: var(--gap-sm); margin-bottom: var(--gap-md); }
-      .prime strong { display: block; }
       table.readout-table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: var(--size-sm); }
       table.readout-table th { text-align: left; font-weight: 500; color: var(--ink-soft); font-size: var(--size-xs);
         text-transform: uppercase; letter-spacing: 0.05em; padding: 2px 0; }
@@ -50,12 +48,10 @@
   <body>
     <main>
       <h1>EEG State Simulator</h1>
-      <p class="subtitle">A generator of multichannel EEG for arousal states. <span id="version"></span></p>
-
-      <div class="prime">
-        <strong>This is a model, not a measurement.</strong>
-        No pixel here is data recorded from a brain.
-      </div>
+      <p class="subtitle">
+        A lead-field based generator of synthetic multichannel EEG for arousal states.
+        <span id="version"></span>
+      </p>
 
       <div class="layout">
         <div>

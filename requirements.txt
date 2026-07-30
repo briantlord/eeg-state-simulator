@@ -5,3 +5,7 @@ PyYAML==6.0.3
 scipy==1.15.3
 specparam==2.0.0rc7
 yasa==0.7.0
+# Reading the Desikan-Killiany annotation for the lead-field patches. MNE does not
+# depend on it, but prep/leadfield/make_projection.py does, and the projection
+# drift check in `npm run verify` re-derives the weights.
+nibabel==5.4.2
