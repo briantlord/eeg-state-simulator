@@ -13,7 +13,7 @@
  *   it."
  */
 import '../tokens/tokens.css';
-import { ALL_CHANNELS, weightsFor } from '../core/generators/projection.ts';
+import { ALL_CHANNELS, REFERENCE_LABELS, weightsFor } from '../core/generators/projection.ts';
 import { STATE_IDS, STATE_LABELS, type StateId } from '../core/types/state.ts';
 import { applyHighpass, ringingDemo, type FilterType } from '../core/filters/hpf.ts';
 import { couplingReadout, respiratoryCoupling } from '../analysis/coupling.ts';
@@ -48,6 +48,13 @@ const ui = {
   running: true,
   /** Scalp only, or scalp plus the mastoid references the AASM criterion needs. */
   showReference: false,
+  /** Mains interference. Off by default -- it sits above every band measured here. */
+  lineNoise: false,
+  // North American mains, not `line_freq`'s first option. The row's own rationale is "regional
+  // mains; selected by DEPLOYMENT", so picking one here is the deployment doing its job -- and it
+  // is read OUT of the enum rather than written as a literal, so the registry still owns the set
+  // of legal values. Both options stay selectable in the UI.
+  lineFreqHz: enumValue('line_freq').at(-1) as number,
   reference: 'linked-mastoid' as ReferenceMode,
 };
 
@@ -58,6 +65,8 @@ let stream = new SignalStream({
   movementArtifact: true,
   amplitudeModulation: true,
   chiModulation: true,
+  lineNoise: ui.lineNoise,
+  lineFreqHz: ui.lineFreqHz,
 });
 
 /**
@@ -76,15 +85,35 @@ let processed: Processed | null = null;
 let processedKey = '';
 
 function ensureProcessed(): Processed {
-  const key = `${ui.hpf}|${ui.ftype}|${ui.reference}|${stream.elapsedS - stream.positionS}`;
+  const key =
+    `${ui.hpf}|${ui.ftype}|${ui.reference}|${ui.showReference}|` +
+    `${stream.elapsedS - stream.positionS}`;
   if (key !== processedKey || processed === null) {
     const hp = stream.channels.map((c) => applyHighpass(c, ui.hpf, ui.ftype, FS));
     const ref = applyReference(hp, ui.reference);
-    processed = {
-      channels: ref.channels,
-      labels: ref.labels,
-      rank: effectiveRank(ref.channels),
-    };
+
+    // THE RANK IS COMPUTED ON THE SCALP SET ONLY, before the mastoids are appended for display.
+    // A1/A2 are shown raw, so counting them would change the reported dimensionality of the
+    // montage just because a display toggle was pressed.
+    const rank = effectiveRank(ref.channels);
+
+    const channels = [...ref.channels];
+    const labels = [...ref.labels];
+    if (ui.showReference) {
+      // Appended AS GENERATED, not referenced. A mastoid referenced to itself is zero, and to
+      // the other mastoid is the difference of the two -- neither is the trace a reader wants
+      // when they ask to see what the reference is doing. `referencing.ts` says the same thing
+      // where it drops them from its output.
+      for (const label of REFERENCE_LABELS) {
+        const i = ALL_CHANNELS.indexOf(label);
+        if (i >= 0) {
+          channels.push(hp[i]!);
+          labels.push(`${label}*`);
+        }
+      }
+    }
+
+    processed = { channels, labels, rank };
     processedKey = key;
   }
   return processed;
@@ -181,9 +210,12 @@ function updateObservables(): void {
   const gain = referencedGain(weightsFor('resp_artifact'), ui.reference, 'Fz');
   const injected = stream.truth.respArtifactAmpUv * Math.abs(gain);
   const recovered = respiratoryCoupling(buffer, stream.respirationPhase);
-  $('c-inj').textContent = `${injected.toFixed(1)} µV`;
+  // The injected value is folded into the "of injected" percentage rather than given its own
+  // row: it is a constant the reader cannot change, so as a row it was one more number to
+  // ignore. The percentage is the part that moves.
   $('c-rec').textContent = `${recovered.toFixed(2)} µV`;
-  $('c-ret').textContent = injected > 0 ? `${((100 * recovered) / injected).toFixed(0)}%` : '—';
+  $('c-ret').textContent =
+    injected > 0 ? `${((100 * recovered) / injected).toFixed(0)}% of ${injected.toFixed(1)} µV` : '—';
 
   // THE NOISE FLOOR, measured rather than asserted. `respiratoryCoupling` is a projection onto
   // one phase, so it returns something positive from any signal — chance alignment over a
@@ -236,6 +268,23 @@ function updateObservables(): void {
   renderDemo3();
 }
 
+/**
+ * What Demo 3 should show in each state, and where a state has nothing to show.
+ *
+ * The ringing demonstration needs a sharp transient: the filter's invented energy is largest
+ * where the signal changes fastest. Every state has a different largest transient, and wake_eo
+ * has none worth the name -- beta on an aperiodic background is not a graphoelement, and
+ * pretending otherwise was the bug.
+ */
+const DEMO3_FEATURE: Record<StateId, { types: string[]; label: string } | null> = {
+  wake_eo: null,
+  wake_ec: null,
+  n1: null,
+  n2: { types: ['kcomplex'], label: 'K-complex' },
+  n3: { types: ['slow_oscillation'], label: 'slow oscillation' },
+  rem: null,
+};
+
 function renderDemo3(): void {
   const canvas = $<HTMLCanvasElement>('demo3');
   const dpr = window.devicePixelRatio || 1;
@@ -252,12 +301,21 @@ function renderDemo3(): void {
   ctx.fillStyle = css('--paper');
   ctx.fillRect(0, 0, w, h);
 
-  // The graphoelement nearest the playhead, so the demo tracks what is on screen.
+  // THE FEATURE THIS STATE ACTUALLY HAS, not a K-complex regardless.
+  //
+  // The demo used to hunt for a K-complex or slow oscillation in every state and silently fall
+  // back to the playhead when there was none -- so in wake and REM it showed an unlabelled
+  // stretch of background and called it a K-complex demonstration. Each state has its own
+  // largest transient, and where a state has no graphoelement at all the honest thing is to say
+  // so rather than to dress up background.
   const here = stream.positionS;
-  const kc = stream.events
-    .filter((e) => e.type === 'kcomplex' || e.type === 'slow_oscillation')
-    .sort((p, q) => Math.abs(p.onset - here) - Math.abs(q.onset - here))[0];
-  const centre = kc ? kc.onset + kc.duration / 2 : here;
+  const wanted = DEMO3_FEATURE[ui.state];
+  const pick = wanted
+    ? stream.events
+        .filter((e) => wanted.types.includes(e.type))
+        .sort((p, q) => Math.abs(p.onset - here) - Math.abs(q.onset - here))[0]
+    : undefined;
+  const centre = pick ? pick.onset + pick.duration / 2 : here;
   const spanS = 3; // @lit-ok Demo 3 display span (s)
   const total = stream.channels[0]!.length;
   const a = Math.max(0, Math.min(total - Math.round(spanS * FS), Math.round((centre - spanS / 2) * FS)));
@@ -296,6 +354,22 @@ function renderDemo3(): void {
   ctx.fillText(`high-passed at ${ui.hpf} Hz (${ui.ftype})`, 8, 26); // @lit-ok Demo 3 canvas label coordinates (px)
   ctx.fillStyle = css('--pen-event');
   ctx.fillText(`invented by the filter — ${rms.toFixed(2)} µV RMS`, 8, 38); // @lit-ok Demo 3 canvas label coordinates (px)
+
+  const note = $('demo3-note');
+  if (!wanted) {
+    note.textContent =
+      `${STATE_LABELS[ui.state]} generates no graphoelement, so there is no sharp transient ` +
+      `for the filter to ring on. The trace below is background; the ringing demonstration ` +
+      `needs N2 (K-complex) or N3 (slow oscillation).`;
+  } else if (!pick) {
+    note.textContent =
+      `Waiting for a ${wanted.label} to appear in the buffer — they are Poisson-scheduled, ` +
+      `not periodic.`;
+  } else {
+    note.textContent =
+      `Centred on a ${wanted.label} at t = ${pick.onset.toFixed(1)} s. ` +
+      `${rms.toFixed(2)} µV RMS of the red trace is energy the filter created, not signal.`;
+  }
 }
 
 // -------------------------------------------------------------------- mount
@@ -334,7 +408,10 @@ function renderInvented(): void {
 }
 
 function restart(): void {
-  stream.reset({ seed: ui.seed, state: ui.state });
+  stream.reset({
+    seed: ui.seed, state: ui.state,
+    lineNoise: ui.lineNoise, lineFreqHz: ui.lineFreqHz,
+  });
   // Prime the playhead by one window, so the chart opens full rather than filling in over the
   // first 30 seconds. A paper chart is already written on when you walk up to it.
   stream.advance(ui.windowS);
@@ -359,6 +436,34 @@ function mount(): void {
       ui.seed = v;
       restart();
     }
+  });
+
+  // A NEW SEED IS A NEW SUBJECT, not a new setting, which is why it gets its own button rather
+  // than being a spinner on the number. Every parameter is unchanged; only the draws differ.
+  // The value stays visible and typeable so a seed can be written down and returned to --
+  // determinism is only useful if the reader can act on it (G2).
+  $<HTMLButtonElement>('newseed').addEventListener('click', () => {
+    ui.seed = Math.floor(Math.random() * 2_000_000_000); // @lit-ok seed range, an arbitrary large integer
+    seedInput.value = String(ui.seed);
+    restart();
+  });
+
+  const lineBtn = $<HTMLButtonElement>('linenoise');
+  const setLineLabel = () => {
+    lineBtn.setAttribute('aria-pressed', String(ui.lineNoise));
+    lineBtn.textContent = ui.lineNoise ? `${ui.lineFreqHz} Hz mains on` : 'mains off';
+  };
+  setLineLabel();
+  lineBtn.addEventListener('click', () => {
+    ui.lineNoise = !ui.lineNoise;
+    setLineLabel();
+    restart();
+  });
+
+  select('linefreq', enumValue('line_freq'), ui.lineFreqHz).addEventListener('change', (e) => {
+    ui.lineFreqHz = Number((e.target as HTMLSelectElement).value);
+    setLineLabel();
+    if (ui.lineNoise) restart();
   });
 
   select('window', enumValue('display_window_options'), ui.windowS).addEventListener(

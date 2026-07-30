@@ -69,7 +69,17 @@ export function drawTrace(canvas: HTMLCanvasElement, o: TraceOptions): void {
   const right = cssW - 12;
   const plotW = right - left;
   const n = o.channels.length;
-  const laneH = cssH / n;
+
+  // A RESERVED FOOTER, because the calibration bar used to be drawn at h - 18 -- inside the
+  // bottom channel's lane, on top of its label and its trace.
+  //
+  // SIZED FROM THE BAR, not fixed. The bar is `display_cal_pulse_amp` tall in real pixels, so at
+  // a coarse µV/mm it grows -- a constant footer would be overrun again by the same bug at a
+  // different setting. This makes the reservation a function of what has to fit in it.
+  const calPx = scalarValue('display_cal_pulse_amp') * (o.pxPerMm / o.sensitivityUvPerMm);
+  const footerH = Math.max(26, Math.ceil(calPx) + 22);
+  const plotH = cssH - footerH;
+  const laneH = plotH / n;
 
   // --- time grid: one second per minor rule, five per major -----------------
   ctx.lineWidth = 1;
@@ -78,7 +88,7 @@ export function drawTrace(canvas: HTMLCanvasElement, o: TraceOptions): void {
     ctx.strokeStyle = s % 5 === 0 ? ruleMajor : rule;
     ctx.beginPath();
     ctx.moveTo(Math.round(x) + 0.5, 0);
-    ctx.lineTo(Math.round(x) + 0.5, cssH);
+    ctx.lineTo(Math.round(x) + 0.5, plotH);
     ctx.stroke();
   }
 
@@ -92,7 +102,7 @@ export function drawTrace(canvas: HTMLCanvasElement, o: TraceOptions): void {
       if (b < 0 || a > o.windowS) continue;
       const xa = left + (Math.max(0, a) / o.windowS) * plotW;
       const xb = left + (Math.min(o.windowS, b) / o.windowS) * plotW;
-      ctx.fillRect(xa, 0, Math.max(1, xb - xa), cssH);
+      ctx.fillRect(xa, 0, Math.max(1, xb - xa), plotH);
     }
     ctx.globalAlpha = 1;
   }
@@ -127,8 +137,8 @@ export function drawTrace(canvas: HTMLCanvasElement, o: TraceOptions): void {
       const yTop = mid - hi * pxPerUv;
       const yBot = mid - lo * pxPerUv;
       const x = left + px + 0.5;
-      ctx.moveTo(x, Math.max(0, Math.min(cssH, yTop)));
-      ctx.lineTo(x, Math.max(0, Math.min(cssH, yBot)));
+      ctx.moveTo(x, Math.max(0, Math.min(plotH, yTop)));
+      ctx.lineTo(x, Math.max(0, Math.min(plotH, yBot)));
     }
     ctx.stroke();
 
@@ -147,7 +157,50 @@ export function drawTrace(canvas: HTMLCanvasElement, o: TraceOptions): void {
     ctx.fillText(o.labels[c] ?? '', left - 8, mid);
   }
 
+  // Footer boundary: a firmer rule than a lane separator, so the strip below reads as a
+  // different kind of thing rather than as one more channel.
+  ctx.strokeStyle = ruleMajor;
+  ctx.beginPath();
+  ctx.moveTo(0, Math.round(plotH) + 0.5);
+  ctx.lineTo(cssW, Math.round(plotH) + 0.5);
+  ctx.stroke();
+
   drawCalibrationBar(ctx, left, cssH, pxPerUv, o.sensitivityUvPerMm, inkFaint, ink);
+  drawEventLegend(ctx, o.events ?? [], left, plotH, cssH, inkFaint, penEvent);
+}
+
+/**
+ * Name the pink bands.
+ *
+ * They mark injected ground-truth events, and until now nothing on screen said so -- a reader
+ * could only guess what the periodic highlights were. Ground truth being visible at all is the
+ * artifact's whole advantage over a real recording, so leaving it unlabelled wasted the point.
+ */
+function drawEventLegend(
+  ctx: CanvasRenderingContext2D,
+  events: readonly TraceEvent[],
+  left: number,
+  plotH: number,
+  cssH: number,
+  faint: string,
+  penEvent: string,
+): void {
+  if (events.length === 0) return;
+  const kinds = [...new Set(events.map((e) => e.type))].sort();
+  const y = (plotH + cssH) / 2;
+
+  ctx.font = '10px ui-sans-serif, system-ui, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+
+  let x = left + 150;
+  ctx.fillStyle = penEvent;
+  ctx.globalAlpha = 0.12;
+  ctx.fillRect(x, y - 6, 18, 12);
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = faint;
+  x += 24;
+  ctx.fillText(`injected: ${kinds.join(', ').replace(/_/g, ' ')}`, x, y);
 }
 
 /**

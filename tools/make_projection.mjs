@@ -67,7 +67,7 @@ const BG_CENTRES = [
   [-0.6, 0.0], [0.6, 0.0],
   [-0.45, -0.55], [0.45, -0.55],
 ];
-// Source 0 is GLOBAL — uniform across the scalp. Sources 1..N-1 are regional.
+// Source 0 is GLOBAL ï¿½ uniform across the scalp. Sources 1..N-1 are regional.
 //
 // Regional sources alone cannot reproduce the observed long-range correlation: measured
 // against PhysioNet EEGMAT resting (near 0.767, far 0.440), widening the regional sigma
@@ -99,15 +99,36 @@ for (let i = 1; i < bgN; i++) {
   };
 }
 
+// VOLUME CONDUCTION NEEDS A HEAVIER TAIL THAN A GAUSSIAN.
+//
+// Build Plan 3.4 specifies w = exp(-d^2/2sigma^2), and a single Gaussian is wrong in the far
+// field in a way that is visible on the trace: at `topo_sigma_alpha` = 0.35, a posterior alpha
+// source reaches the frontal electrodes at exp(-8) ~ 3e-4, i.e. NOT AT ALL. Real posterior alpha
+// is plainly visible frontally at reduced amplitude, because a dipole's scalp potential falls off
+// as a power law, not as a Gaussian.
+//
+// It is the same defect as P9's measured shortfall -- far-field inter-channel correlation 0.286
+// against a real 0.440 -- seen from the other side. One cause, two symptoms.
+//
+// The fix is a NEAR + FAR mixture: a tight Gaussian for the local generator plus a broad one
+// carrying the volume-conducted spread. Two Gaussians are not a lead field, but they give the
+// heavy tail the physics requires while keeping the same one-file schema, and
+// `topo_far_field_fraction` is FITTED against the real recordings rather than chosen.
+const ffFrac = num('topo_far_field_fraction');
+const ffSigma = num('topo_sigma_far');
+
 for (const g of GENERATORS) {
   const cx = num(`topo_centre_${g}_x`);
   const cy = num(`topo_centre_${g}_y`);
   const sigma = num(`topo_sigma_${g}`);
 
-  // w = exp(-d^2 / 2*sigma^2), Build Plan 3.4.
   const weights = channels.map((ch) => {
     const d2 = (ch.x - cx) ** 2 + (ch.y - cy) ** 2;
-    return Math.exp(-d2 / (2 * sigma * sigma));
+    const near = Math.exp(-d2 / (2 * sigma * sigma));
+    const far = Math.exp(-d2 / (2 * ffSigma * ffSigma));
+    // Convex, so w(0) = 1 before normalization and the mixture cannot change the peak's
+    // location -- G6's argmax check therefore still tests the centre, not this mixture.
+    return (1 - ffFrac) * near + ffFrac * far;
   });
 
   // Normalize to a unit maximum so the weight vector carries SHAPE and the generator's
@@ -117,10 +138,15 @@ for (const g of GENERATORS) {
   projections[g] = {
     weights: weights.map((w) => Number((w / peak).toFixed(6))),
     provenance: {
-      method: 'gaussian_on_projected_10_20',
+      method: 'gaussian_near_plus_far_on_projected_10_20',
       centre: [cx, cy],
       sigma,
-      registry_keys: [`topo_centre_${g}_x`, `topo_centre_${g}_y`, `topo_sigma_${g}`],
+      far_field_fraction: ffFrac,
+      sigma_far: ffSigma,
+      registry_keys: [
+        `topo_centre_${g}_x`, `topo_centre_${g}_y`, `topo_sigma_${g}`,
+        'topo_far_field_fraction', 'topo_sigma_far',
+      ],
     },
   };
 }

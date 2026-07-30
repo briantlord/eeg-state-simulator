@@ -824,6 +824,57 @@ params:
   # 5. Topography and geometry
   # =====================================================================
 
+  topo_far_field_fraction:
+    value: {kind: scalar, v: 0.35}
+    units: null
+    standing: derived
+    source:
+      kind: procedure
+      text: >-
+        Swept 0.00-0.60 against PhysioNet EEGMAT resting (n = 8, same 19-channel 10-20 montage,
+        same linked-mastoid reference) measuring near/far pair correlation, effective rank and PC1
+        share. THE SWEEP DOES NOT SHARPLY IDENTIFY THE VALUE -- far-pair correlation moves only
+        0.281 to 0.312 across the whole range against a 0.440 real target -- so 0.35 is taken
+        mid-range: it removes the reported defect (frontal/occipital alpha weight ratio 0.001 to
+        0.220) and improves effective rank (2.77 to 2.99 against a real 3.09) without the PC1
+        degradation the top of the range shows (0.503 vs a real 0.534, against 0.485 at 0.60).
+        Bounded, not pinpointed. See Finding 17; prep/reference/t1m1_far_field.py.
+    states: all
+    section: "5. Topography and geometry"
+    note: >-
+      HOW MUCH OF EACH GENERATOR'S TOPOGRAPHY IS VOLUME-CONDUCTED SPREAD rather than local
+      field. Build Plan 3.4 specifies a single Gaussian, and a single Gaussian is wrong in the far
+      field in a way that shows on the trace: at topo_sigma_alpha = 0.35 a posterior alpha source
+      reaches the frontal electrodes at exp(-8) ~ 3e-4, so frontal alpha was absent entirely. Real
+      posterior alpha is plainly visible frontally at reduced amplitude, because a dipole's scalp
+      potential falls off as a power law rather than a Gaussian.
+      IT IS NOT THE SAME CAUSE AS P9, and the sweep refuted that hypothesis. Missing frontal alpha
+      and the far-field correlation shortfall looked like one defect seen from two sides; measured,
+      this row fixes the first and barely touches the second (0.281 to 0.312 against a real 0.440).
+      Worse, effective rank improves toward real while PC1 share moves AWAY from it -- both come
+      from the same eigenspectrum, so its SHAPE is wrong in a way no single tail parameter can
+      repair. P9 therefore STANDS, with sharper evidence: the weights need LPsi^T columns or a
+      SEREEGA lead field, not a heavier tail. A two-Gaussian mixture buys the tail the physics
+      requires without pretending to be a forward model, and the schema is unchanged.
+      The mixture is CONVEX, so it cannot move a generator's peak electrode -- G6's argmax check
+      still tests topo_centre_* against the literature, not this row.
+
+  topo_sigma_far:
+    value: {kind: pending}
+    provisional: {v: 1.2, basis: "broad enough that the far Gaussian is near-flat across the montage, so the fraction alone sets the tail", expires_at_milestone: T1-M1, constrained_by: "must not be derived from topo_expect_* — G6 compares the two"}
+    units: normalized_10_20
+    standing: invented
+    source: {kind: none, rationale: "hand-chosen; the fitted quantity is topo_far_field_fraction, and the two trade off"}
+    states: all
+    section: "5. Topography and geometry"
+    milestone: T1-M1
+    note: >-
+      Width of the far-field Gaussian. Deliberately much larger than the montage (which spans
+      ~2 units), so this term is nearly flat and `topo_far_field_fraction` alone controls the
+      tail. The two are not independently identifiable from a correlation fit -- widening this
+      and lowering the fraction give almost the same weights -- so only the fraction is fitted
+      and this is held.
+
   topo_sigma_alpha:         {value: {kind: pending}, provisional: {v: 0.35, basis: "hand-tuned; posterior centre", expires_at_milestone: T1-M1, constrained_by: "must not be derived from topo_expect_* — G6 compares the two"}, units: normalized_10_20, standing: invented, source: {kind: none, rationale: ""}, states: [wake_ec], section: "5. Topography and geometry", milestone: T1-M1}
   topo_sigma_beta:          {value: {kind: pending}, provisional: {v: 0.40, basis: "hand-tuned; frontocentral centre", expires_at_milestone: T1-M1, constrained_by: "must not be derived from topo_expect_*"}, units: normalized_10_20, standing: invented, source: {kind: none, rationale: ""}, states: [wake_eo], section: "5. Topography and geometry", milestone: T1-M1}
   topo_sigma_theta:         {value: {kind: pending}, provisional: {v: 0.40, basis: "hand-tuned; central/frontal centre", expires_at_milestone: T1-M1, constrained_by: "must not be derived from topo_expect_*"}, units: normalized_10_20, standing: invented, source: {kind: none, rationale: ""}, states: [n2, rem], section: "5. Topography and geometry", milestone: T1-M1}
@@ -1320,6 +1371,40 @@ params:
   emg_rem_level: {value: {kind: scalar, v: 0.05}, units: null, standing: literature, source: {kind: standard, name: "AASM Manual for the Scoring of Sleep and Associated Events", clause: "REM atonia staging criterion"}, states: [rem], section: "9. Artifacts", note: "Source markdown gave 'near zero', which is not machine-readable. Encoded as a fraction of emg_amp_wake."}
 
   line_freq:  {value: {kind: enum, options: [50, 60]}, units: Hz, standing: chosen, source: {kind: none, rationale: "regional mains; selected by deployment, not by a standard this project cites"}, states: all, section: "9. Artifacts", note: "Re-standed definitional -> chosen: 'regional mains' names no standard."}
+
+  line_noise_amp:
+    value: {kind: pending}
+    provisional: {v: 3.0, basis: "peak amplitude of mains interference on a reasonably-grounded clinical recording, before notch filtering", expires_at_milestone: T1-M1, constrained_by: "must not be derived from any notch-filter gate — that would make the filter test its own input"}
+    units: uV
+    standing: invented
+    source: {kind: none, rationale: "uncited; mains amplitude depends on electrode impedance, grounding and environment rather than on physiology"}
+    states: all
+    section: "9. Artifacts"
+    milestone: T1-M1
+    note: >-
+      Peak amplitude of the mains sine, per channel, OFF BY DEFAULT. Build Plan section 1 lists
+      line noise in Tier 0's scope (WP-J) and it was the last of that group unbuilt.
+      IT IS NOT PURELY SHARED. Real mains pickup varies per electrode with impedance, so the
+      generator gives each channel an independent phase and a per-channel gain drawn about this
+      amplitude -- a single identical sine on every channel would be removable by any spatial
+      filter, i.e. exactly the wrong lesson about why line noise is annoying.
+      WHY IT IS A UI TOGGLE RATHER THAN ALWAYS ON: at 60 Hz it sits above every band this
+      project measures, so leaving it on would add a conspicuous artifact that changes no
+      observable and teaches nothing. As a toggle it demonstrates what the notch filter is for.
+
+  line_noise_gain_cv:
+    value: {kind: pending}
+    provisional: {v: 0.4, basis: "per-channel spread of mains pickup, as a coefficient of variation on the amplitude", expires_at_milestone: T1-M1, constrained_by: "must not be derived from any notch-filter gate"}
+    units: null
+    standing: invented
+    source: {kind: none, rationale: "uncited; sets how spatially non-uniform the interference is"}
+    states: all
+    section: "9. Artifacts"
+    milestone: T1-M1
+    note: >-
+      Per-channel variation in mains pickup. Zero would make the interference a single shared
+      source removable by one spatial component; this makes it inhomogeneous, which is why real
+      line noise needs a notch rather than a reference change.
   line_amp:   {value: {kind: interval, lo: 1, hi: 10, meaning: uncertainty}, units: uV, standing: invented, source: {kind: none, rationale: "uncited"}, states: all, section: "9. Artifacts", milestone: T1-M1, note: "Added on import."}
   notch_q:    {value: {kind: scalar, v: 30}, units: null, standing: chosen, source: {kind: none, rationale: "notch filter quality factor"}, states: all, section: "9. Artifacts", note: "Added on import."}
 

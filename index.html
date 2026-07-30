@@ -36,6 +36,9 @@
       .clock { margin-left: auto; font-family: var(--font-mono); font-size: var(--size-xs);
         color: var(--ink-faint); }
       #scrub { width: 100%; margin: 4px 0 0; }
+      /* The event-band swatch, matching what trace.ts paints. CSS, not an inline style, so the
+         literal lives where the linter expects presentation values. */
+      .swatch-event { background: var(--pen-event); opacity: 0.28; padding: 0 0.6em; }
     </style>
   </head>
   <body>
@@ -45,8 +48,7 @@
 
       <div class="prime">
         <strong>This is a model, not a measurement.</strong>
-        No pixel here is data recorded from a brain. The second observable axis is
-        <em>signal complexity</em> — never “awareness” or “content”.
+        No pixel here is data recorded from a brain.
       </div>
 
       <div class="layout">
@@ -58,6 +60,8 @@
             <label for="sens" class="inline">µV/mm</label>
             <select id="sens" class="inline-sel"></select>
             <button id="showref" aria-pressed="false">show A1/A2</button>
+            <button id="linenoise" aria-pressed="false">mains off</button>
+            <select id="linefreq" class="inline-sel" aria-label="mains frequency"></select>
             <span class="clock" id="clock"></span>
           </div>
           <canvas id="trace"></canvas>
@@ -70,15 +74,23 @@
             the same for every channel and every state, so the amplitude difference between N3
             delta and waking alpha survives.
           </p>
+          <p class="note">
+            The <span class="swatch-event">pink bands</span> mark <strong>injected events</strong> — the ground-truth
+            spindles, K-complexes and slow oscillations, at the exact times the generator placed
+            them. Knowing where they are is the thing no real recording can give you, which is
+            what the gates use them for. <strong>mains</strong> adds 60 Hz interference with a
+            per-channel phase and gain, so it cannot be removed by changing the reference.
+          </p>
 
           <div class="panel">
             <h2>Demo 3 — ringing the filter invented</h2>
             <canvas id="demo3"></canvas>
+            <p class="note" id="demo3-note"></p>
             <p class="note">
-              An isolated K-complex, before and after the high-pass above. The red trace is the
-              <em>difference</em>: deflections that exist only because of the filter. Some of
-              them sit at spindle-like frequencies. With real data you could not label these,
-              because you never had the unfiltered signal.
+              The state's sharpest transient, before and after the high-pass above. The red trace
+              is the <em>difference</em>: deflections that exist only because of the filter. Some
+              sit at spindle-like frequencies. With real data you could not label these, because
+              you never had the unfiltered signal.
             </p>
           </div>
         </div>
@@ -93,6 +105,13 @@
               <label for="seed">Seed</label>
               <!-- value is set by app.ts from snr_calibration_seed on mount. -->
               <input id="seed" type="number" step="1" />
+              <button id="newseed">new seed</button>
+              <p class="note">
+                A new seed is a new <em>subject</em>, not a new setting: every parameter is
+                unchanged and only the random draws differ. The number stays editable so a seed
+                can be written down and returned to — determinism is only useful if you can act
+                on it.
+              </p>
             </div>
           </div>
 
@@ -139,51 +158,49 @@
           </div>
 
           <div class="panel">
-            <h2>Demo 1 — coupling loss</h2>
+            <h2>Demo 1 — what the filter removes</h2>
+            <p class="note">
+              Raise the high-pass cutoff past the respiratory rate and watch
+              <strong>(a)</strong> collapse while <strong>(c)</strong> holds.
+            </p>
             <table class="readout-table">
-              <tr><th>injected (a) at Fz</th><td class="truth" id="c-inj">—</td></tr>
-              <tr><th>recovered</th><td class="derived" id="c-rec">—</td></tr>
-              <tr><th>retained</th><td id="c-ret">—</td></tr>
-              <tr><th>noise floor</th><td class="derived" id="c-floor">—</td></tr>
-              <tr><th>mechanism (c)</th><td class="derived" id="c-chi">—</td></tr>
+              <tr><th>(a) movement artifact</th><td class="derived" id="c-rec">—</td></tr>
+              <tr><th>&nbsp;&nbsp;of injected</th><td id="c-ret">—</td></tr>
+              <tr><th>&nbsp;&nbsp;noise floor</th><td class="derived" id="c-floor">—</td></tr>
+              <tr><th>(c) physiological</th><td class="derived" id="c-chi">—</td></tr>
             </table>
             <p class="note">
-              Move the high-pass cutoff above the respiratory rate and the <strong>(a)</strong>
-              row collapses to near zero, while <strong>(c)</strong> is untouched. That is the
-              whole lesson: a naive respiration–EEG coupling measure is dominated by the
-              movement artifact, the filter removes it — correctly, it <em>is</em> an
-              artifact — and the physiological coupling was never what the number was
-              reporting.
-            </p>
-            <p class="note">
-              <strong>(c)</strong> is labelled by mechanism, not by quantity, on purpose. It reads
-              χ̂ at the respiratory rate, and mechanism (c) has two halves — an
-              <em>exponent</em> half and an <em>amplitude</em> half that moves 0.5–4 Hz power.
-              χ̂ is now a least-squares slope over 2–40 Hz, which is far less exposed to the
-              amplitude half than the two-band ratio it replaced: measured leakage fell to
-              roughly the estimator's own detection floor. The number is in <strong>true χ
-              units</strong>, so it is directly comparable to the registry's modulation depth —
-              the previous readout was not. Still a control rather than a clean measurement of
-              exponent modulation, because the shipped depth sits only ~3× above that floor.
-            </p>
-            <p class="note">
-              The <strong>noise floor</strong> is the same estimator run off-resonance, where
-              nothing was injected. It is not zero, because a projection onto one phase
-              recovers something from any finite record — that is why “retained” can read a
-              little over 100%, and why under the Laplacian, which cuts the injected amplitude
-              to about 2 µV, it reads a lot over. Compare the recovered value to the floor, not
-              to zero.
+              <strong>A naive coupling number is mostly artifact.</strong> The filter removes it,
+              correctly — (a) <em>is</em> an artifact. The physiological coupling (c) was never
+              what the number was reporting.
             </p>
             <p class="note" id="c-window"></p>
-            <p class="note">
-              Ground truth is known because the generator injected it — and it is stated
-              <em>at the electrode</em>: the source amplitude times the gain of projection and
-              of the reference montage you selected, both of which are linear and both of which
-              are known exactly. Charging that geometry to the filter would be the same
-              conflation the demo is about. No real dataset can show this comparison.
-              G4 runs it on a 300 s record for the same reason the readout needs a long buffer:
-              a 30 s window is too coarse to separate the modulation from its sidebands.
-            </p>
+            <details>
+              <summary class="note" style="cursor:pointer">How each row is computed</summary>
+              <p class="note">
+                <strong>(a)</strong> is the component locked to respiratory phase, in µV.
+                “of injected” compares it against ground truth <em>at the electrode</em> — the
+                source amplitude times the gain of projection and of the reference you picked,
+                both linear and both known exactly. Charging that geometry to the filter would be
+                the same conflation this demo is about.
+              </p>
+              <p class="note">
+                <strong>Noise floor</strong> is the same estimator run off-resonance, where
+                nothing was injected. It is not zero, so compare (a) against the floor rather
+                than against zero.
+              </p>
+              <p class="note">
+                <strong>(c)</strong> is named by mechanism, not quantity. It reads χ̂ at the
+                respiratory rate, where both halves of mechanism (c) can appear, in true χ units.
+                It is a control that does not move with the filter — not a clean measurement of
+                exponent modulation, since the shipped depth sits only ~3× above the floor.
+              </p>
+              <p class="note">
+                Ground truth exists here only because the generator injected it; no real dataset
+                can show this comparison. G4 runs it on a 300 s record because a 30 s window
+                cannot separate the modulation from its sidebands.
+              </p>
+            </details>
           </div>
 
           <div class="panel">

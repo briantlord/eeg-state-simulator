@@ -192,6 +192,8 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 | Key | Value | Units | Standing | Source | States |
 |---|---|---|---|---|---|
 | `topo_sigma_background` | 0.55 | normalized_10_20 | `invented` | spatial extent of each background source; wide, because aperiodic activity is not focal | all |
+| `topo_far_field_fraction` | 0.35 | — | `derived` | Swept 0.00-0.60 against PhysioNet EEGMAT resting (n = 8, same 19-channel 10-20 montage, same linked-mastoid reference) measuring near/far pair correlation, effective rank and PC1 share. THE SWEEP DOES NOT SHARPLY IDENTIFY THE VALUE -- far-pair correlation moves only 0.281 to 0.312 across the whole range against a 0.440 real target -- so 0.35 is taken mid-range: it removes the reported defect (frontal/occipital alpha weight ratio 0.001 to 0.220) and improves effective rank (2.77 to 2.99 against a real 3.09) without the PC1 degradation the top of the range shows (0.503 vs a real 0.534, against 0.485 at 0.60). Bounded, not pinpointed. See Finding 17; prep/reference/t1m1_far_field.py. | all |
+| `topo_sigma_far` | — *(pending T1-M1; runs on 1.2)* | normalized_10_20 | `invented` | hand-chosen; the fitted quantity is topo_far_field_fraction, and the two trade off | all |
 | `topo_sigma_alpha` | — *(pending T1-M1; runs on 0.35)* | normalized_10_20 | `invented` |  | wake_ec |
 | `topo_sigma_beta` | — *(pending T1-M1; runs on 0.4)* | normalized_10_20 | `invented` |  | wake_eo |
 | `topo_sigma_theta` | — *(pending T1-M1; runs on 0.4)* | normalized_10_20 | `invented` |  | n2, rem |
@@ -225,6 +227,10 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 | `topo_sigma_resp_artifact` | 0.9 | normalized_10_20 | `invented` | broad: a mechanical artifact is not focal | all |
 
 **`topo_sigma_background`.** Wider than any oscillation sigma on purpose. Narrow background sources would give channels that are nearly independent, which is the error this project's own rule forbids; wide overlapping ones give graded correlation.
+
+**`topo_far_field_fraction`.** HOW MUCH OF EACH GENERATOR'S TOPOGRAPHY IS VOLUME-CONDUCTED SPREAD rather than local field. Build Plan 3.4 specifies a single Gaussian, and a single Gaussian is wrong in the far field in a way that shows on the trace: at topo_sigma_alpha = 0.35 a posterior alpha source reaches the frontal electrodes at exp(-8) ~ 3e-4, so frontal alpha was absent entirely. Real posterior alpha is plainly visible frontally at reduced amplitude, because a dipole's scalp potential falls off as a power law rather than a Gaussian. IT IS NOT THE SAME CAUSE AS P9, and the sweep refuted that hypothesis. Missing frontal alpha and the far-field correlation shortfall looked like one defect seen from two sides; measured, this row fixes the first and barely touches the second (0.281 to 0.312 against a real 0.440). Worse, effective rank improves toward real while PC1 share moves AWAY from it -- both come from the same eigenspectrum, so its SHAPE is wrong in a way no single tail parameter can repair. P9 therefore STANDS, with sharper evidence: the weights need LPsi^T columns or a SEREEGA lead field, not a heavier tail. A two-Gaussian mixture buys the tail the physics requires without pretending to be a forward model, and the schema is unchanged. The mixture is CONVEX, so it cannot move a generator's peak electrode -- G6's argmax check still tests topo_centre_* against the literature, not this row.
+
+**`topo_sigma_far`.** Width of the far-field Gaussian. Deliberately much larger than the montage (which spans ~2 units), so this term is nearly flat and `topo_far_field_fraction` alone controls the tail. The two are not independently identifiable from a correlation fit -- widening this and lowering the fraction give almost the same weights -- so only the fraction is fitted and this is held.
 
 **`topo_expect_alpha`.** Re-sourced on import, not re-standed. In the source markdown this row read 'clinical convention (posterior dominant rhythm)' — naming neither author/year nor standard, which the registry's own discipline calls a contradiction on its face. It is the row G6 reads and D6 built the gate around its independence, so the violation sat on the load-bearing path. AASM does define the posterior dominant rhythm, so the standard is nameable and the literature standing survives.
 
@@ -335,6 +341,8 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 | `emg_amp_wake` | 5–20 *(uncertainty)* | uV | `invented` | uncited | wake_eo, wake_ec |
 | `emg_rem_level` | 0.05 | — | `literature` | AASM Manual for the Scoring of Sleep and Associated Events — REM atonia staging criterion | rem |
 | `line_freq` | 50 or 60 | Hz | `chosen` | regional mains; selected by deployment, not by a standard this project cites | all |
+| `line_noise_amp` | — *(pending T1-M1; runs on 3)* | uV | `invented` | uncited; mains amplitude depends on electrode impedance, grounding and environment rather than on physiology | all |
+| `line_noise_gain_cv` | — *(pending T1-M1; runs on 0.4)* | — | `invented` | uncited; sets how spatially non-uniform the interference is | all |
 | `line_amp` | 1–10 *(uncertainty)* | uV | `invented` | uncited | all |
 | `notch_q` | 30 | — | `chosen` | notch filter quality factor | all |
 
@@ -345,6 +353,10 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 **`emg_rem_level`.** Source markdown gave 'near zero', which is not machine-readable. Encoded as a fraction of emg_amp_wake.
 
 **`line_freq`.** Re-standed definitional -> chosen: 'regional mains' names no standard.
+
+**`line_noise_amp`.** Peak amplitude of the mains sine, per channel, OFF BY DEFAULT. Build Plan section 1 lists line noise in Tier 0's scope (WP-J) and it was the last of that group unbuilt. IT IS NOT PURELY SHARED. Real mains pickup varies per electrode with impedance, so the generator gives each channel an independent phase and a per-channel gain drawn about this amplitude -- a single identical sine on every channel would be removable by any spatial filter, i.e. exactly the wrong lesson about why line noise is annoying. WHY IT IS A UI TOGGLE RATHER THAN ALWAYS ON: at 60 Hz it sits above every band this project measures, so leaving it on would add a conspicuous artifact that changes no observable and teaches nothing. As a toggle it demonstrates what the notch filter is for.
+
+**`line_noise_gain_cv`.** Per-channel variation in mains pickup. Zero would make the interference a single shared source removable by one spatial component; this makes it inhomogeneous, which is why real line noise needs a notch rather than a reference change.
 
 **`line_amp`.** Added on import.
 
@@ -471,7 +483,7 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 | `definitional` | 11 |
 | `chosen` | 51 |
 | `literature` | 8 |
-| `derived` | 12 |
-| `invented` | 104 |
+| `derived` | 13 |
+| `invented` | 107 |
 | `absent` | 11 |
-| **total** | **197** |
+| **total** | **201** |

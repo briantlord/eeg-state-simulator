@@ -9,7 +9,7 @@
  */
 import { Rng } from '../rng/xoshiro128pp.ts';
 import type { StateId } from '../types/state.ts';
-import { provisionalValue, scalarValue, uncertainty, bandEdges } from '../registry.ts';
+import { provisionalValue, scalarValue, uncertainty, bandEdges, enumValue } from '../registry.ts';
 import { synthesizeAperiodic } from './aperiodic.ts';
 import {
   synthesizeOscillation,
@@ -107,6 +107,13 @@ export interface ComposeOptions {
    * records the suppression rather than leaving it to be inferred from a silent channel.
    */
   readonly suppressGraphoelements?: boolean;
+  /**
+   * Mains interference (WP-J). Off by default: at 60 Hz it sits above every band this project
+   * measures, so leaving it on would add a conspicuous artifact that changes no observable.
+   */
+  readonly lineNoise?: boolean;
+  /** Mains frequency in Hz. Defaults to the first `line_freq` option. */
+  readonly lineFreqHz?: number;
   /** Coefficient-update scheme for the tilt filter. See src/core/filters/tilt.ts. */
   readonly tiltScheme?: 'blockwise' | 'filterbank';
   /**
@@ -378,6 +385,26 @@ export function composeState(
     const rng = Rng.substream(seed, `sensor_noise/${ALL_CHANNELS[c]}`);
     const dst = out[c]!;
     for (let i = 0; i < nSamples; i++) dst[i] = dst[i]! + rng.normal() * sensorRms;
+  }
+
+  // Mains interference (WP-J), off unless asked for.
+  //
+  // PER-CHANNEL PHASE AND GAIN, not one shared sine. Real pickup varies with electrode
+  // impedance and lead routing, and a single identical sine on every channel would be removable
+  // by any spatial filter -- which teaches the opposite of why line noise is a nuisance. Each
+  // channel gets its own substream, so enabling this perturbs nothing else (seam 4).
+  if (opts.lineNoise) {
+    const lineHz = opts.lineFreqHz ?? (enumValue('line_freq')[0] as number);
+    const amp = provisionalValue('line_noise_amp');
+    const cv = provisionalValue('line_noise_gain_cv');
+    const w = (2 * Math.PI * lineHz) / fs;
+    for (let c = 0; c < nCh; c++) {
+      const rng = Rng.substream(seed, `line_noise/${ALL_CHANNELS[c]}`);
+      const phase = rng.uniform(0, 2 * Math.PI);
+      const gain = Math.max(0, amp * (1 + cv * rng.normal()));
+      const dst = out[c]!;
+      for (let i = 0; i < nSamples; i++) dst[i] = dst[i]! + gain * Math.sin(w * i + phase);
+    }
   }
 
   return {

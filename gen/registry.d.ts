@@ -117,6 +117,8 @@ export type ParamKey =
   | 'knee_present'
   | 'line_amp'
   | 'line_freq'
+  | 'line_noise_amp'
+  | 'line_noise_gain_cv'
   | 'lz_band'
   | 'lz_binarize'
   | 'lz_channel_order'
@@ -189,10 +191,12 @@ export type ParamKey =
   | 'topo_expect_kc'
   | 'topo_expect_spindle_fast'
   | 'topo_expect_spindle_slow'
+  | 'topo_far_field_fraction'
   | 'topo_sigma_alpha'
   | 'topo_sigma_background'
   | 'topo_sigma_beta'
   | 'topo_sigma_delta'
+  | 'topo_sigma_far'
   | 'topo_sigma_kc'
   | 'topo_sigma_resp_artifact'
   | 'topo_sigma_spindle_fast'
@@ -318,6 +322,8 @@ export interface ParamKindMap {
   'knee_present': 'ordering';
   'line_amp': 'interval';
   'line_freq': 'enum';
+  'line_noise_amp': 'pending';
+  'line_noise_gain_cv': 'pending';
   'lz_band': 'interval';
   'lz_binarize': 'procedure';
   'lz_channel_order': 'procedure';
@@ -390,10 +396,12 @@ export interface ParamKindMap {
   'topo_expect_kc': 'electrodes';
   'topo_expect_spindle_fast': 'electrodes';
   'topo_expect_spindle_slow': 'electrodes';
+  'topo_far_field_fraction': 'scalar';
   'topo_sigma_alpha': 'pending';
   'topo_sigma_background': 'scalar';
   'topo_sigma_beta': 'pending';
   'topo_sigma_delta': 'pending';
+  'topo_sigma_far': 'pending';
   'topo_sigma_kc': 'pending';
   'topo_sigma_resp_artifact': 'scalar';
   'topo_sigma_spindle_fast': 'pending';
