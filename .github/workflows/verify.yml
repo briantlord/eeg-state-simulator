@@ -18,4 +18,19 @@ jobs:
         with: { python-version: '3.12' }
       - run: npm ci
       - run: pip install -r requirements.txt
+
+      # THE HEAD MODEL IS NOT IN THIS REPOSITORY. The fsaverage lead field is derived from
+      # FreeSurfer and is scrubbed from history rather than redistributed (LICENSE-DATA.md), so CI
+      # fetches it. The projection drift check re-derives data/projection_10_20.json from it, and
+      # without this step that check has nothing to derive from.
+      #
+      # Cached because it is a ~1 GB download and changes only when MNE bumps the dataset.
+      - name: Cache fsaverage
+        uses: actions/cache@v4
+        with:
+          path: ~/mne_data
+          key: mne-fsaverage-${{ hashFiles('requirements.txt') }}
+      - name: Fetch fsaverage if not cached
+        run: python -c "import mne; mne.datasets.fetch_fsaverage(verbose=True)"
+
       - run: npm run verify

@@ -8,3 +8,9 @@ prep/out/
 *.bak
 
 prep/realdata/
+
+# The fsaverage lead field and label mapping, derived from FreeSurfer. NOT redistributed here:
+# scrubbed from history before the first push, because .gitignore alone removes nothing that is
+# already committed. prep/leadfield/make_projection.py regenerates both on first run from MNE's
+# fsaverage dataset. See LICENSE-DATA.md.
+prep/leadfield/cache/

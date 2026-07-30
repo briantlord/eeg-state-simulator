@@ -98,6 +98,7 @@ src/core/                   generators, registry accessors, RNG, types
 src/render/, src/ui/        canvas trace, spectrum, controls
 bin/eegsim-export.mts       headless CLI — the boundary the harness measures
 prep/leadfield/             the forward-model producer and its probes
+                            (its fsaverage cache is gitignored and regenerated — LICENSE-DATA.md)
 prep/reference/             measurement probes; every Finding is reproducible from here
 docs/                       planning documents, decisions, findings, status
 ```
@@ -117,7 +118,8 @@ docs/                       planning documents, decisions, findings, status
   [FreeSurfer](https://surfer.nmr.mgh.harvard.edu/). The projection weights in `data/` are a
   derived work. Portions have been obtained under license from The General Hospital Corporation
   and are subject to the FreeSurfer Software License Agreement — see `LICENSE-DATA.md`.
-  **Clinical applications are neither recommended nor advised.**
+  **Clinical applications are neither recommended nor advised.** The lead field itself is not
+  redistributed here; the producer regenerates it from MNE's fsaverage dataset.
 - **Atlas:** Desikan–Killiany (`aparc`) cortical parcellation.
 - **Reference recordings:** PhysioNet [EEG During Mental Arithmetic Tasks](https://physionet.org/content/eegmat/)
   and the [Haaglanden Medisch Centrum sleep staging database](https://physionet.org/content/hmc-sleep-staging/).

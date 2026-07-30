@@ -49,6 +49,9 @@ sys.path.insert(0, str(_ROOT))
 
 from prep import registry as R  # noqa: E402
 
+# Regenerated on first run, and GITIGNORED. The lead field is derived from FreeSurfer and is not
+# redistributed with this project -- it was scrubbed from history before the first push. See
+# LICENSE-DATA.md. Delete the directory to force a rebuild.
 CACHE = Path(__file__).resolve().parent / 'cache'
 OUT = _ROOT / 'data' / 'projection_10_20.json'
 

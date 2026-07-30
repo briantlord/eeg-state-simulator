@@ -50,21 +50,24 @@ staging database](https://physionet.org/content/hmc-sleep-staging/) — are fetc
 `prep/realdata/fetch_hmc.sh` and are governed by PhysioNet's own terms. No recording, and no
 per-subject derivative of one, is committed here.
 
-## If you would rather not carry the fsaverage files at all
+## The lead field is not in this repository
 
-The lead field cache is committed so that the projection drift check in `npm run verify` works on
-a clean checkout without a ~1 GB anatomical download first. That is an engineering convenience,
-not a requirement.
+`prep/leadfield/cache/fsaverage_leadfield.npz` and `fsaverage_labels.npz` were briefly committed,
+so that the projection drift check in `npm run verify` would work on a clean checkout without a
+~1 GB anatomical download. They have since been **removed from the entire history** with
+`git filter-repo`, before this repository was ever pushed — `.gitignore` alone would not have been
+enough, because ignoring a file that is already committed removes nothing.
 
-To remove it, note that **`.gitignore` is not sufficient**: the files are already in the history
-of commits `9737542` and `99b2543`, and publishing the repository would publish them whatever the
-ignore file says. Removing them means rewriting history —
+So nothing here redistributes the lead field or any anatomical data. What is redistributed is
+`data/projection_10_20.json`, the reduced derivative described above, with the attribution the
+FreeSurfer licence requires embedded in the file itself.
+
+To work on the projection locally, `prep/leadfield/make_projection.py` regenerates both cache
+files on first run from MNE's fsaverage dataset:
 
 ```bash
-git filter-repo --path prep/leadfield/cache --invert-paths
+python -c "import mne; mne.datasets.fetch_fsaverage()"   # once, ~1 GB
+python -m prep.leadfield.make_projection
 ```
 
-— before the first push, and then having CI fetch fsaverage once, cached with `actions/cache`.
-
-`data/projection_10_20.json` stays either way: it is what the runtime loads, and it is the reduced
-derivative described above.
+CI does the same, with `~/mne_data` restored from `actions/cache` so the download happens once.
