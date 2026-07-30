@@ -35,6 +35,16 @@ const STEPS = [
     args: [join(ROOT, 'tools', 'registry', 'emit.mjs'), '--check'],
   },
   {
+    // THE PROJECTION IS GENERATED TOO, and until now nothing checked it had not drifted from the
+    // producer. Under the Gaussian that was a small risk; under a forward model the weights are
+    // the one place the head model reaches the runtime, and a stale file would silently ship a
+    // different head than the one the registry describes.
+    name: 'projection fixed-point',
+    why: 'the weights are the only path the head model takes into the runtime (seam 3)',
+    cmd: PY,
+    args: ['-m', 'prep.leadfield.make_projection', '--check'],
+  },
+  {
     name: 'literal acceptance check',
     why: 'the register\'s top-rated risk: no signal constant may ship outside the registry',
     cmd: process.execPath,
