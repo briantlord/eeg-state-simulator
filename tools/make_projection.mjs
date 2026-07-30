@@ -41,6 +41,29 @@ const GENERATORS = [
   'kc',
 ];
 
+// A BAND RHYTHM GETS SUB-SOURCES; a graphoelement or an artifact does not.
+//
+// Modelling a rhythm as one source made every channel carrying it the same trace: N3 measured
+// effective rank 1.07 against a real 3.09, and the oscillation layer measured rank ~1.1 in EVERY
+// state. It only SHOWED in N3, where delta at 150 uV p-p swamps a background that measures 3.44
+// on its own; elsewhere the background hid it.
+//
+// A RING OF SUB-SOURCES AROUND THE CENTRE WAS TRIED FIRST AND FAILED. Swept from radius 0.30 to
+// 1.30 the family's rank topped out at 1.26, because at `topo_far_field_fraction` = 0.50 every
+// source is half a near-flat pedestal and they all share that term -- no radius beats a component
+// held in common. Measured, the shipped signal moved only 1.07 -> 1.14.
+//
+// So the sub-sources are placed on the SAME SIX REGIONAL CENTRES the aperiodic background uses,
+// which is the basis Finding 11 already measured at 3.44. compose.ts puts
+// `osc_coherent_fraction` of the variance on the registered centre and splits the rest over
+// these. The band keeps its topography from the coherent part; it gains somewhere else to be
+// from the regional part. See prep/reference/t1m1_osc_basis.py.
+//
+// The graphoelements are excluded because they are already spatially and temporally sparse --
+// each event is one occurrence at one place, not a continuous field -- and `resp_artifact` is a
+// single mechanical source by construction.
+const OSCILLATIONS = ['alpha', 'beta', 'theta', 'delta'];
+
 // Scalp electrodes AND the mastoid references. gate_aasm_n3 is referenced to contralateral
 // mastoid and anchors snr_nominal, hence every absolute uV amplitude in the registry -- so
 // without A1/A2 the project's one definitional threshold cannot be computed at all.
@@ -130,6 +153,16 @@ const ffSigma = num('topo_sigma_far');
 const refFf = num('topo_reference_far_field');
 const REF_LABELS = new Set(montage.reference.map((c) => c.label));
 
+// The sub-source count is the regional basis itself, not an independent choice, so it is
+// asserted against the registry rather than read from it -- a mismatch means one of the two
+// moved without the other, and compose.ts divides the amplitude by the registry's number.
+if (num('osc_n_sources') !== BG_CENTRES.length) {
+  throw new Error(
+    `osc_n_sources is ${num('osc_n_sources')} but the regional basis has ${BG_CENTRES.length} ` +
+    'centres; compose.ts would split the band amplitude into the wrong number of shares',
+  );
+}
+
 for (const g of GENERATORS) {
   const cx = num(`topo_centre_${g}_x`);
   const cy = num(`topo_centre_${g}_y`);
@@ -163,6 +196,35 @@ for (const g of GENERATORS) {
       ],
     },
   };
+
+  // Sub-sources on the background's regional centres, at the BAND's own sigma so each keeps the
+  // spatial scale of the rhythm rather than the background's. The parent entry above stays
+  // exactly as it was and remains what G6 checks, so adding these cannot move an argmax the
+  // gate reads.
+  if (OSCILLATIONS.includes(g)) {
+    for (let k = 0; k < BG_CENTRES.length; k++) {
+      const [sx, sy] = BG_CENTRES[k];
+      const w = channels.map((ch) => {
+        const d2 = (ch.x - sx) ** 2 + (ch.y - sy) ** 2;
+        const near = Math.exp(-d2 / (2 * sigma * sigma));
+        const far = Math.exp(-d2 / (2 * ffSigma * ffSigma));
+        const share = REF_LABELS.has(ch.label) ? ffFrac * refFf : ffFrac;
+        return (1 - share) * near + share * far;
+      });
+      const pk = Math.max(...w);
+      projections[`${g}_s${k}`] = {
+        weights: w.map((v) => Number((v / pk).toFixed(6))),
+        provenance: {
+          method: 'oscillation_regional_sub_source',
+          parent: g,
+          centre: [sx, sy],
+          sigma,
+          registry_keys: ['osc_n_sources', `topo_sigma_${g}`,
+            'topo_far_field_fraction', 'topo_sigma_far'],
+        },
+      };
+    }
+  }
 }
 
 const out = {

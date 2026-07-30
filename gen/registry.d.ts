@@ -136,6 +136,8 @@ export type ParamKey =
   | 'nasal_oral_factor'
   | 'notch_q'
   | 'osc_carrier_flatten'
+  | 'osc_coherent_fraction'
+  | 'osc_n_sources'
   | 'reference_channels'
   | 'render_decimation'
   | 'resp_amp_mod_depth'
@@ -350,6 +352,8 @@ export interface ParamKindMap {
   'nasal_oral_factor': 'pending';
   'notch_q': 'scalar';
   'osc_carrier_flatten': 'scalar';
+  'osc_coherent_fraction': 'scalar';
+  'osc_n_sources': 'scalar';
   'reference_channels': 'electrodes';
   'render_decimation': 'enum';
   'resp_amp_mod_depth': 'pending';

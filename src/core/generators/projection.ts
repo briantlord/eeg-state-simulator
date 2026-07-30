@@ -63,6 +63,10 @@ if (projection.channels.length !== ALL_CHANNELS.length ||
 export type GeneratorId =
   | `background_${number}`
   | 'alpha' | 'beta' | 'theta' | 'delta'
+  // Sub-sources of a band rhythm, on a ring about its registered centre. A rhythm modelled as
+  // ONE source made every channel carrying it the same trace -- N3 rank 1.07 against a real 3.09
+  // -- so compose.ts splits its variance across these. See osc_n_sources.
+  | `alpha_s${number}` | `beta_s${number}` | `theta_s${number}` | `delta_s${number}`
   | 'spindle_fast' | 'spindle_slow' | 'kc'
   // Mechanism (a). Its own topography, deliberately unlike any neural generator's, because
   // Build Plan 5.1 requires the three respiratory mechanisms stay separable.

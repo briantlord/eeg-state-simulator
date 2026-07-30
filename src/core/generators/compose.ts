@@ -322,6 +322,26 @@ export function composeState(
   const sourceGain = Math.pow(10, snrDb / 20); // @lit-ok dB-to-linear: 10^(dB/20) is the definition of decibels
 
   const oscTruth: ComposeResult['truth']['oscillations'] = [];
+  // A BAND RHYTHM IS SPLIT ACROSS SOURCES, not projected as one.
+  //
+  // Modelling it as one made every channel carrying it the same trace: N3 measured effective rank
+  // 1.07 against a real 3.09, PC1 at 0.967, median |corr| 0.950 -- while the aperiodic background
+  // ALONE measured 3.44. The ceiling was fine; the layer on top of it was a single dominant
+  // source. That is Finding 11's defect one layer up, and this is Finding 11's fix applied there.
+  //
+  // `osc_coherent_fraction` of the VARIANCE goes to one coherent source at the registered centre
+  // -- which is still the entry G6 checks -- and the rest is split equally between
+  // `osc_n_sources` independent realisations on the SAME SIX REGIONAL CENTRES the aperiodic
+  // background uses. A ring around the band's own centre was tried first and measured: its rank
+  // topped out at 1.26 however wide the ring, because every source is half a shared near-flat
+  // pedestal. The background's basis already measures 3.44, so the bands borrow it.
+  //
+  // Amplitudes divide as sqrt of the variance shares, so the total power is exactly what
+  // `<band>_amp` registers however the fraction is set: coherent sqrt(f), each sub-source
+  // sqrt((1-f)/N).
+  const oscCoherent = scalarValue('osc_coherent_fraction');
+  const oscN = scalarValue('osc_n_sources');
+
   for (const spec of STATE_OSCILLATIONS[state]) {
     const { lo, hi } = bandEdges(spec.bandKey);
     const rmsUv = rmsFromPeakToPeak(spec.ampKey);
@@ -334,10 +354,10 @@ export function composeState(
     // is no fitted damping for them. Giving them alpha's mechanism would assert a resonance
     // nobody has measured.
     // TODO(T1-M1): fit damping per rhythm and decide which, if any, of the others resonate.
-    const s =
+    const makeSource = (streamName: string, componentRms: number): Float64Array =>
       spec.generator === 'alpha'
         ? synthesizeDampedOscillator(
-            Rng.substream(seed, `${spec.generator}/${state}`),
+            Rng.substream(seed, streamName),
             nSamples,
             {
               f0: scalarValue('alpha_peak'),
@@ -348,30 +368,56 @@ export function composeState(
                 triangularity: scalarValue('alpha_shape_triangularity'),
                 riseDecaySymmetry: scalarValue('alpha_shape_rdsym'),
               },
-              rmsUv,
+              rmsUv: componentRms,
             },
             fs,
           )
         : synthesizeOscillation(
-            Rng.substream(seed, `${spec.generator}/${state}`),
+            Rng.substream(seed, streamName),
             nSamples,
             {
               bandLo: lo,
               bandHi: hi,
-              rmsUv,
+              rmsUv: componentRms,
               envelopeDepth: DEFAULT_ENVELOPE_DEPTH,
               envelopeRateHz: DEFAULT_ENVELOPE_RATE_HZ,
             },
             fs,
           );
-    if (sourceGain !== 1) for (let i = 0; i < nSamples; i++) s[i] = s[i]! * sourceGain;
-    // Applied only to bands the high-pass can reach. Modulating alpha's envelope would
-    // put sidebands at 10 +/- 0.25 Hz, which no clinical high-pass removes -- so it would
-    // reproduce exactly the flatness Finding 10 diagnosed.
-    if (ampMod && hi <= 8) { // @lit-ok 8 Hz = alpha floor; amplitude modulation applies only to sub-alpha bands a clinical high-pass reaches (Finding 10)
-      for (let i = 0; i < nSamples; i++) s[i] = s[i]! * ampMod[i]!;
+
+    // The coherent component keeps the ORIGINAL substream name, so a run with
+    // osc_coherent_fraction = 1 reproduces the previous generator's draws exactly. Adding the
+    // sub-sources therefore cannot perturb anything upstream of them (seam 4).
+    const components: { gen: GeneratorId; signal: Float64Array }[] = [];
+    if (oscCoherent > 0) {
+      components.push({
+        gen: spec.generator,
+        signal: makeSource(`${spec.generator}/${state}`, rmsUv * Math.sqrt(oscCoherent)),
+      });
     }
-    projectInto(out, s, spec.generator);
+    const subRms = rmsUv * Math.sqrt(Math.max(0, 1 - oscCoherent) / oscN);
+    if (subRms > 0) {
+      for (let k = 0; k < oscN; k++) {
+        components.push({
+          gen: `${spec.generator}_s${k}` as GeneratorId,
+          signal: makeSource(`${spec.generator}/${state}/s${k}`, subRms),
+        });
+      }
+    }
+    for (const { gen, signal } of components) {
+      if (sourceGain !== 1) {
+        for (let i = 0; i < nSamples; i++) signal[i] = signal[i]! * sourceGain;
+      }
+      // Applied only to bands the high-pass can reach. Modulating alpha's envelope would
+      // put sidebands at 10 +/- 0.25 Hz, which no clinical high-pass removes -- so it would
+      // reproduce exactly the flatness Finding 10 diagnosed.
+      if (ampMod && hi <= 8) { // @lit-ok 8 Hz = alpha floor; amplitude modulation applies only to sub-alpha bands a clinical high-pass reaches (Finding 10)
+        for (let i = 0; i < nSamples; i++) signal[i] = signal[i]! * ampMod[i]!;
+      }
+      projectInto(out, signal, gen);
+    }
+    // Truth records the BAND's total rms, not each component's: the split is an internal
+    // spatial model, and a sidecar reader wants to know how much rhythm was injected.
     oscTruth.push({ generator: spec.generator, band: [lo, hi], rmsUv });
   }
 

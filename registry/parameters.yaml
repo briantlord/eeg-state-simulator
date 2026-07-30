@@ -824,6 +824,68 @@ params:
   # 5. Topography and geometry
   # =====================================================================
 
+  osc_n_sources:
+    value: {kind: scalar, v: 6}
+    units: null
+    standing: derived
+    source:
+      kind: procedure
+      text: >-
+        Not an independent choice: it is the size of the aperiodic background's regional basis,
+        which the band sub-sources reuse. BG_CENTRES in tools/make_projection.mjs has six entries
+        (left/right x frontal/central/posterior), and that tool throws if this row disagrees with
+        it, because compose.ts divides the band amplitude by this number.
+    states: all
+    section: "4. Oscillations"
+    note: >-
+      A BAND RHYTHM IS NOT ONE SOURCE, and modelling it as one is what collapsed N3.
+      Measured before this row existed: N3 effective rank 1.07 against a real 3.09, PC1 carrying
+      0.967 of the variance, median inter-channel |correlation| 0.950 -- every channel the same
+      trace scaled. The aperiodic background alone measured 3.44, so the ceiling was fine and the
+      oscillation layer on top of it was the single dominant source.
+      THIS IS FINDING 11 ONE LAYER UP. That finding fixed exactly this shape for the background
+      (rank 1.14 -> 2.99) by replacing one uniformly-weighted source with six spatially distinct
+      ones. The same argument had simply never been applied to the oscillations.
+      THE SUB-SOURCES ARE NOT A RING, though the first attempt was. A ring of three about the
+      band's own centre was built and measured: the band family's effective rank topped out at
+      1.26 swept from radius 0.30 to 1.30, and the shipped N3 moved only 1.07 -> 1.14. The reason
+      is that at topo_far_field_fraction = 0.50 every source is half a near-flat pedestal and all
+      of them share that term -- no radius beats a component held in common, so the ring was
+      never going to work at any setting. The sub-sources therefore sit on the SAME six regional
+      centres the background uses, which is the basis already measured at 3.44. That makes this
+      row definitional rather than chosen, and retired osc_source_spread.
+
+  osc_coherent_fraction:
+    value: {kind: scalar, v: 0.45}
+    units: null
+    standing: derived
+    source:
+      kind: procedure
+      text: >-
+        Fraction of a band rhythm's VARIANCE carried by one coherent source at its registered
+        centre, the remainder split equally between osc_n_sources sub-sources on the aperiodic
+        background's regional centres. Fitted jointly with topo_sigma_far against PhysioNet
+        EEGMAT resting (linked-mastoid, same montage) on four quantities at once: effective rank,
+        near-pair and far-pair inter-channel correlation, and frontal/occipital alpha prominence.
+        Narrowed analytically in prep/reference/t1m1_osc_basis.py -- the sources are independent
+        by construction so the channel covariance is exactly sum_g var_g w_g w_g^T, making the
+        sweep exact and instant -- then CHOSEN against the generator in
+        prep/reference/t1m1_spatial_joint.py, because the analytic surrogate under-predicts
+        wake_ec rank by ~0.7 and over-predicts far correlation by ~0.13. At (0.45, 1.6) the
+        generator measures near-pair 0.767 against a real 0.767 and alpha frontal/occipital 0.266
+        against a real 0.271. See Finding 19.
+    states: all
+    section: "4. Oscillations"
+    note: >-
+      THE KNOB THAT SETS HOW CORRELATED A RHYTHM IS. At 1.0 the rhythm is one global source and
+      every channel carrying it is the same trace -- the defect this row was added to fix. At 0.0
+      the sub-sources are independent and near-neighbour correlation falls below what volume
+      conduction produces. Real rhythms are neither: coherent over their generator region and
+      not beyond it.
+      Its analogue for the aperiodic background is `background_global_fraction`, and the two are
+      deliberately separate rows -- a rhythm and a broadband background have no reason to share a
+      coherence, and tying them would make one of the two unfittable.
+
   topo_far_field_fraction:
     value: {kind: scalar, v: 0.50}
     units: null
@@ -853,6 +915,15 @@ params:
       this row fixes the first and barely touches the second (0.281 to 0.312 against a real 0.440).
       IT ALSO NEEDED topo_reference_far_field TO WORK AT ALL. On its own the pedestal is common
       mode, and a linked-mastoid reference removes common mode by construction -- see that row.
+      AND THAT PAIRING HAD A COST THAT TOOK ANOTHER MEASUREMENT TO FIND. With topo_sigma_far at
+      its original 2.5 the far Gaussian was near-flat across the montage, so after the mastoids
+      were subtracted every source retained an IDENTICAL residual pedestal of
+      fraction*(1 - reference_far_field) = 0.35. A component identical in every source is a rank-1
+      term nothing downstream can break up: measured, N3 sat at effective rank 1.10 against a real
+      3.09 and no other parameter moved it -- giving each band six regional sub-sources took it
+      only to 1.18. Narrowing topo_sigma_far to 1.6 makes the tail a GRADIENT centred on each
+      source rather than a pedestal they share, which is also closer to what a dipolar far field
+      does, and N3 measured 1.34 with near-pair correlation landing on the real 0.767 exactly.
       Worse, effective rank improves toward real while PC1 share moves AWAY from it -- both come
       from the same eigenspectrum, so its SHAPE is wrong in a way no single tail parameter can
       repair. P9 therefore STANDS, with sharper evidence: the weights need LPsi^T columns or a
@@ -893,7 +964,7 @@ params:
 
   topo_sigma_far:
     value: {kind: pending}
-    provisional: {v: 2.5, basis: "broad enough that the far Gaussian is near-flat across the montage, so the fraction alone sets the tail", expires_at_milestone: T1-M1, constrained_by: "must not be derived from topo_expect_* — G6 compares the two"}
+    provisional: {v: 1.6, basis: "wide enough to carry alpha to the frontal electrodes, narrow enough that the tail is a GRADIENT rather than a pedestal every source shares", expires_at_milestone: T1-M1, constrained_by: "must not be derived from topo_expect_* — G6 compares the two"}
     units: normalized_10_20
     standing: invented
     source: {kind: none, rationale: "hand-chosen; the fitted quantity is topo_far_field_fraction, and the two trade off"}
