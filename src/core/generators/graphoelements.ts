@@ -23,6 +23,8 @@ import {
   argmaxChannel,
   weightsFor,
   type GeneratorId,
+  modesOf,
+  type PatchId,
 } from './projection.ts';
 
 /** Draw uniformly from an `uncertainty` interval. */
@@ -219,14 +221,56 @@ export function synthesizeGraphoelements(
   const events: GeneratedEvent[] = [];
   const used = new Set<GeneratorId>();
 
+  /**
+   * A per-event topography, drawn from its patch's spatial distribution.
+   *
+   * EVERY SLOW WAVE USED TO HAVE THE SAME TOPOGRAPHY, and in N3 that is most of the signal --
+   * visible at a 5 s window as one large wave repeated in all 19 lanes, and worth 0.21 of
+   * effective rank. The first fix picked one of six invented ring positions per event.
+   *
+   * With the patch model it needs no invented positions at all. A patch's channel covariance is
+   * sum_m w_m w_m^T over its eigenmodes, so drawing c_m ~ N(0,1) and forming sum_m c_m w_m is a
+   * sample FROM THAT COVARIANCE: an anatomically admissible field for that patch, different every
+   * time. "Slow waves have variable origins" stops being a parameter and becomes a consequence of
+   * the patch having spatial extent.
+   *
+   * Normalised to unit peak so `<event>_amp` keeps meaning as peak-to-peak at the event's
+   * strongest electrode, and SIGN-PINNED at the patch's dominant channel -- a K-complex has a
+   * defined polarity, and an unpinned Gaussian draw would invert half of them.
+   */
+  const eventSpread = provisionalValue('event_topography_spread');
+  const drawTopography = (rng: Rng, patch: PatchId): number[] => {
+    const ids = modesOf(patch);
+    const w = new Array<number>(nCh).fill(0);
+    for (let m = 0; m < ids.length; m++) {
+      // MODE 0 AT FULL STRENGTH, higher modes admixed. A full N(0,1) draw over every mode is the
+      // exact sample from the patch covariance and was tried first: it varies each event's
+      // amplitude at any fixed electrode so much that G5's positive arm fell from 0.75 to 0.33 of
+      // held-out epochs. Real N3 meets the AASM criterion by definition, so that draw made N3
+      // less like N3. Keeping the dominant mode fixed means every event is recognisably the
+      // patch's field and they still differ.
+      const c = m === 0 ? 1 : eventSpread * rng.normal();
+      const wm = weightsFor(ids[m]!);
+      for (let i = 0; i < nCh; i++) w[i] = w[i]! + c * wm[i]!;
+    }
+    const anchor = weightsFor(patch).reduce(
+      (bi, v, i, a) => (Math.abs(v) > Math.abs(a[bi]!) ? i : bi), 0,
+    );
+    const sign = w[anchor]! < 0 ? -1 : 1;
+    let peak = 0;
+    for (let i = 0; i < nCh; i++) peak = Math.max(peak, Math.abs(w[i]!));
+    if (peak === 0) return weightsFor(patch).slice();
+    return w.map((v) => (sign * v) / peak);
+  };
+
   const add = (
     wave: Float64Array,
     startSample: number,
-    generator: GeneratorId,
+    generator: PatchId,
+    weights: readonly number[],
     perChannelDelay?: Float64Array,
   ) => {
     used.add(generator);
-    const weights = weightsFor(generator);
     for (let c = 0; c < nCh; c++) {
       const w = weights[c]!;
       if (w === 0) continue;
@@ -245,30 +289,20 @@ export function synthesizeGraphoelements(
     const rng = Rng.substream(seed, `slow_osc/${state}`);
     const soFreq = boundOf('so_freq');
     const travel = travelDelaySamples(fs);
-    // EACH WAVE GETS ITS OWN ORIGIN. Projecting every slow oscillation through the one `delta`
-    // topography made each event identical across all 19 channels -- the dominant visible defect
-    // in N3, and worth 0.21 of effective rank. See so_origin_coherent_fraction.
-    const originCoherent = scalarValue('so_origin_coherent_fraction');
-    const nSub = scalarValue('osc_n_sources');
+
     for (const onset of scheduleOnsets(rng, durationS, 60 * soFreq * 0.55)) { // @lit-ok seconds per minute; 0.55 = invented SO occurrence-rate factor, TODO(T1-M1)
       const period = 1 / rng.uniform(soFreq * 0.6, soFreq); // @lit-ok invented SO period lower-draw factor; TODO(T1-M1) register+fit
       const nEv = Math.round(period * fs);
       const amp = draw(rng, 'so_amp') / 2; // p-p to peak
       const wave = slowOscWaveform(nEv, amp, scalarValue('so_rdsym'));
       const start = Math.round(onset * fs);
-      // Drawn per event, so the sidecar records the origin this wave actually used rather than a
-      // nominal one -- a reader checking topography against the events needs the real generator.
-      const origin: GeneratorId =
-        rng.nextFloat() < originCoherent
-          ? 'delta'
-          : (`delta_s${Math.floor(rng.nextFloat() * nSub)}` as GeneratorId);
-      add(wave, start, origin, travel);
+      add(wave, start, 'delta', drawTopography(rng, 'delta'), travel);
       soTimes.push(onset);
       events.push(
         makeEvent('slow_oscillation', 'slow_osc', onset, period, amp, rng, state, seed, {
           periodS: period,
           travelVelocityMps: scalarValue('so_travel_v_used'),
-        }, origin),
+        }, 'delta'),
       );
     }
   }
@@ -284,7 +318,7 @@ export function synthesizeGraphoelements(
       const nEv = Math.round(dur * fs);
       const amp = draw(rng, 'kc_amp') / 2;
       const wave = kComplexWaveform(nEv, fs, amp, sharpW, slowW, ratio);
-      add(wave, Math.round(onset * fs), 'kc');
+      add(wave, Math.round(onset * fs), 'kc', drawTopography(rng, 'kc'));
       events.push(
         makeEvent('kcomplex', 'kcomplex', onset, dur, amp, rng, state, seed, {}, 'kc'),
       );
@@ -323,7 +357,7 @@ export function synthesizeGraphoelements(
       const nEv = Math.round(dur * fs);
       const amp = draw(rng, 'spindle_amp') / 2;
       const wave = spindleWaveform(rng, nEv, fs, freq, amp);
-      add(wave, Math.round(onset * fs), gen);
+      add(wave, Math.round(onset * fs), gen, drawTopography(rng, gen));
       events.push(
         makeEvent(
           fast ? 'spindle_fast' : 'spindle_slow',

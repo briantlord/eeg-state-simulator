@@ -85,7 +85,21 @@ parameter is a consistency check, not evidence of realism.
 
 ## What is wrong, in priority order
 
-### 1. The spatial model is separable, so its metrics counterbalance by construction — D19
+### 1. ~~The spatial model is separable~~ — RESOLVED, D19 implemented (Finding 21)
+
+The Gaussian mixture is gone. Topographies come from an fsaverage 3-shell BEM forward solution over
+Desikan-Killiany patches, each contributing the eigenmodes of its own channel covariance.
+**31 invented rows deleted, 4 added.** Under average reference — the comparison that invents
+nothing — wake_ec now measures effective rank **5.43 against a real 5.36** with mean relative error
+**0.107**, against 0.250 for the 31-row mixture under its own fitted reference. Rank was not
+fitted. N3 went 1.07 → 1.97.
+
+G6 is now a real test rather than one satisfied by construction, and it failed twice on the way,
+catching a patch definition that was a poor reading of the literature.
+
+What remains open below is what the lead field was never going to fix.
+
+### 2. The spatial model is separable, so its metrics counterbalance by construction — D19
 
 Each source contributes `s_g(t) · w_g(channel)`: an outer product, **rank 1 in space × time**. The
 channel covariance is therefore exactly `Σ_g var_g w_g w_gᵀ`. Two consequences, both measured:
@@ -130,7 +144,7 @@ Two errors of the same class were found alongside it and are now rules or pendin
   band. 0.29 against 0.99 is largely two different quantities being compared, and Build Plan 3.7
   already warned about it. **Do not move the knee to close that gap.**
 
-### 2. The shipped χ modulation is marginal against its own detection floor
+### 3. The shipped χ modulation is marginal against its own detection floor
 
 G4 found this while being built (D14, Finding 13): at `chi_mod_depth` = 0.15 the recovered line
 was **1.02× its own null**, so the gate injects 13× that depth to have anything to attribute.
@@ -148,7 +162,7 @@ against a provisional depth of 0.15, a margin of ~3×. Demo 1's (c) row still re
 fitted at T1-M1 or the record length is raised — and the latter is now the cheaper lever, since the
 estimator is no longer the limit.
 
-### 3. Narrowband χ cannot resolve the spacing between states
+### 4. Narrowband χ cannot resolve the spacing between states
 
 G1b's null measures the fixed-mode estimator's noise floor at **sd 0.18–0.23** over 30–45 Hz on
 a 300 s record. The χ difference between adjacent states in the registry is 0.30. So **no state
@@ -170,12 +184,18 @@ decision is to delete them.
 
 | standing | rows | meaning |
 |---|---|---|
-| `invented` | 112 | not empirically constrained — the T1-M1 work plan |
-| `chosen` | 54 | deliberate convention; **not** Tier 1 work |
-| `derived` | 16 | computed from a stated procedure |
+| `invented` | 86 | not empirically constrained — the T1-M1 work plan |
+| `chosen` | 55 | deliberate convention; **not** Tier 1 work |
+| `derived` | 12 | computed from a stated procedure |
 | `definitional` | 11 | fixed by AASM or a named standard |
 | `absent` | 11 | deliberately unset, and why |
 | `literature` | 9 | published, author and year recorded |
+
+**184 rows, down from 213: the lead field deleted 31 invented spatial rows and added 4.** The
+topography section went from 35 rows (27 `invented`, 5 `literature`) to **11 rows (4 `invented`,
+5 `literature`, 2 `chosen`)** — and the five literature rows are no longer only G6's expectations,
+because the patches themselves are now named Desikan-Killiany regions rather than normalized
+coordinates.
 
 213 rows. **41** are `pending`: they hold **no value**, only a provisional number reachable solely
 through `provisionalValue()`, so a placeholder cannot silently become the value of record.
@@ -183,11 +203,11 @@ through `provisionalValue()`, so a placeholder cannot silently become the value 
 Milestones: **104 rows** route to T1-M1 (corpus fitting), **4** to T1-M2 (estimator
 characterization), **4** to T1-M5 (cardiac).
 
-**The spatial subset is the sharpest concentration of invented values in the project, and D19
-decided to delete it rather than fit it.** 37 generative spatial rows, **31 `invented`**; the only
-literature-standing spatial rows are the four `topo_expect_*` — which are G6's *tests* — and
-`so_travel_v`, a velocity. **No topography in this project has external provenance.** A published
-lead field replaces those 31 numbers with source locations plus one data file.
+~~**The spatial subset is the sharpest concentration of invented values in the project.**~~
+**Done (Finding 21).** It was 37 generative spatial rows, 31 `invented`, with no topography having
+external provenance. It is now a published head model plus anatomical patch definitions, and the
+four numbers that remain are a cortical coherence length, a mode-truncation tolerance, an
+independent per-channel share and an event-topography spread.
 
 ---
 
@@ -199,7 +219,7 @@ lead field replaces those 31 numbers with source locations plus one data file.
 | `PARAMETERS.md` | **generated** from `registry/parameters.yaml`; never edit |
 | `DECISIONS.md` | D1–D19 (D19 amended as D19.1) and pending P1–P16, append-only |
 | `Execution-Scheme.md` | the plan: gate ledger, work packages, build order |
-| `Tier0-Estimator-Probe.md` | Findings 1–20 (Finding 17 was never written; the number is skipped, not lost), every one reproducible from `prep/reference/` or `prep/leadfield/` |
+| `Tier0-Estimator-Probe.md` | Findings 1–21 (Finding 17 was never written; the number is skipped, not lost), every one reproducible from `prep/reference/` or `prep/leadfield/` |
 | `STATUS.md` | this file |
 
 Corrections are marked in place rather than rewritten: Finding 2 carries a correction block

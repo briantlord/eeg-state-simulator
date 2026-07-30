@@ -453,7 +453,7 @@ params:
     milestone: T1-M1
 
   alpha_amp:
-    value: {kind: interval, lo: 20, hi: 50, meaning: uncertainty}
+    value: {kind: interval, lo: 10.29, hi: 25.71, meaning: uncertainty}
     units: uV_pp
     standing: invented
     source: {kind: none, rationale: "textbook range, not a measurement under a known pipeline"}
@@ -701,59 +701,8 @@ params:
     section: "4. Oscillations"
     milestone: T1-M1
 
-  background_global_fraction:
-    value: {kind: scalar, v: 0.35}
-    units: null
-    standing: invented
-    source: {kind: none, rationale: "fraction of background variance carried by a spatially uniform common mode, the rest by regional sources"}
-    states: all
-    section: "4. Oscillations"
-    milestone: T1-M1
-    note: >-
-      FITTED AGAINST REAL DATA, and still `invented` because n = 8 subjects from one lab is
-      not a corpus. PhysioNet EEGMAT resting, linked-ear reference, gives median |correlation|
-      of 0.767 for near electrode pairs and 0.440 for far ones. Regional sources ALONE cannot
-      reach the far value: widening topo_sigma_background peaks it at 0.29 and then decreases
-      it, because independent realizations average out rather than sharing anything. Real
-      scalp EEG has a genuinely common mode, and this sets how much of the background it
-      carries. T1-M1 must refit against a staged corpus.
-
-  background_n_sources:
-    value: {kind: scalar, v: 6}
-    units: null
-    standing: invented
-    source: {kind: none, rationale: "number of spatially distinct aperiodic background sources"}
-    states: all
-    section: "4. Oscillations"
-    milestone: T1-M1
-    note: >-
-      MEASURED DEFECT THIS FIXES. With ONE background source at uniform scalp weighting the
-      generated channels had an effective rank of 1.14 -- PC1 carried 93% of all variance and
-      the median inter-channel correlation was 0.988. Every channel was the same trace scaled.
-      Build Plan 3.1 forbids per-channel independent signals because that "is instantly wrong
-      to anyone who has looked at EEG"; a single shared source is the opposite error and is
-      equally visible in a covariance matrix.
-      Several sources with distinct topographies give correlation that falls with distance,
-      which is what volume conduction produces. The COUNT is invented: it trades effective
-      rank against the risk of asserting spatial structure nobody fitted. T1-M1 should replace
-      these with fitted topographies, or with eigenmode columns through the same projection
-      file -- the schema already supports it.
-
-  topo_sigma_background:
-    value: {kind: scalar, v: 0.55}
-    units: normalized_10_20
-    standing: invented
-    source: {kind: none, rationale: "spatial extent of each background source; wide, because aperiodic activity is not focal"}
-    states: all
-    section: "5. Topography and geometry"
-    milestone: T1-M1
-    note: >-
-      Wider than any oscillation sigma on purpose. Narrow background sources would give
-      channels that are nearly independent, which is the error this project's own rule forbids;
-      wide overlapping ones give graded correlation.
-
   background_rms_uv:
-    value: {kind: interval, lo: 15, hi: 25, meaning: uncertainty}
+    value: {kind: interval, lo: 6, hi: 10, meaning: uncertainty}
     units: uV
     standing: invented
     source: {kind: none, rationale: "broadband RMS of the aperiodic background"}
@@ -824,217 +773,89 @@ params:
   # 5. Topography and geometry
   # =====================================================================
 
-  osc_n_sources:
-    value: {kind: scalar, v: 6}
-    units: null
-    standing: derived
-    source:
-      kind: procedure
-      text: >-
-        Not an independent choice: it is the size of the aperiodic background's regional basis,
-        which the band sub-sources reuse. BG_CENTRES in tools/make_projection.mjs has six entries
-        (left/right x frontal/central/posterior), and that tool throws if this row disagrees with
-        it, because compose.ts divides the band amplitude by this number.
-    states: all
-    section: "4. Oscillations"
-    note: >-
-      A BAND RHYTHM IS NOT ONE SOURCE, and modelling it as one is what collapsed N3.
-      Measured before this row existed: N3 effective rank 1.07 against a real 3.09, PC1 carrying
-      0.967 of the variance, median inter-channel |correlation| 0.950 -- every channel the same
-      trace scaled. The aperiodic background alone measured 3.44, so the ceiling was fine and the
-      oscillation layer on top of it was the single dominant source.
-      THIS IS FINDING 11 ONE LAYER UP. That finding fixed exactly this shape for the background
-      (rank 1.14 -> 2.99) by replacing one uniformly-weighted source with six spatially distinct
-      ones. The same argument had simply never been applied to the oscillations.
-      THE SUB-SOURCES ARE NOT A RING, though the first attempt was. A ring of three about the
-      band's own centre was built and measured: the band family's effective rank topped out at
-      1.26 swept from radius 0.30 to 1.30, and the shipped N3 moved only 1.07 -> 1.14. The reason
-      is that at topo_far_field_fraction = 0.50 every source is half a near-flat pedestal and all
-      of them share that term -- no radius beats a component held in common, so the ring was
-      never going to work at any setting. The sub-sources therefore sit on the SAME six regional
-      centres the background uses, which is the basis already measured at 3.44. That makes this
-      row definitional rather than chosen, and retired osc_source_spread.
-
-  so_origin_coherent_fraction:
-    value: {kind: scalar, v: 0.45}
-    units: null
-    standing: invented
-    source: {kind: none, rationale: "no measured distribution of slow-wave origin sites at 10-20 resolution was available; set equal to osc_coherent_fraction so the event layer and the continuous layer make the same spatial assumption until one of them is fitted. TODO(T1-M1)"}
-    states: [n3]
-    section: "4. Oscillations"
-    milestone: T1-M1
-    note: >-
-      EVERY SLOW WAVE HAD THE SAME TOPOGRAPHY, and in N3 that is most of the signal.
-      Slow oscillations project through the `delta` generator, so each event landed on all 19
-      channels in one fixed spatial pattern -- visible directly on the trace at a 5 s window as
-      the same large wave in every lane with only the fine detail differing. The per-channel
-      travel delay did not hide it: at 1 Hz a 100 ms anterior-posterior lag is 36 degrees, so the
-      delayed copy still correlates at about 0.8.
-      Measured, the event layer cost N3 0.21 of effective rank (1.53 without graphoelements,
-      1.32 with them) on top of an oscillation layer that was itself low.
-      This row is the probability that a slow wave originates at the registered delta centre. The
-      rest originate at one of the osc_n_sources regional sub-sources, so successive waves have
-      DIFFERENT topographies and the channels decorrelate across events while any single wave
-      still looks like a proper slow wave. Real slow waves do have variable origins with a frontal
-      predominance, which is the shape this reproduces, though the fraction itself is invented.
-      IT CANNOT GO TOO LOW WITHOUT BREAKING G5. The AASM N3 criterion is measured on frontal
-      derivations, so sending too many waves elsewhere would reduce the fraction of each epoch
-      meeting the 75 uV threshold -- gate, not guess: verify after changing it.
-
-  osc_coherent_fraction:
-    value: {kind: scalar, v: 0.45}
-    units: null
-    standing: derived
-    source:
-      kind: procedure
-      text: >-
-        Fraction of a band rhythm's VARIANCE carried by one coherent source at its registered
-        centre, the remainder split equally between osc_n_sources sub-sources on the aperiodic
-        background's regional centres. Fitted jointly with topo_sigma_far against PhysioNet
-        EEGMAT resting (linked-mastoid, same montage) on four quantities at once: effective rank,
-        near-pair and far-pair inter-channel correlation, and frontal/occipital alpha prominence.
-        Narrowed analytically in prep/reference/t1m1_osc_basis.py -- the sources are independent
-        by construction so the channel covariance is exactly sum_g var_g w_g w_g^T, making the
-        sweep exact and instant -- then CHOSEN against the generator in
-        prep/reference/t1m1_spatial_joint.py, because the analytic surrogate under-predicts
-        wake_ec rank by ~0.7 and over-predicts far correlation by ~0.13. At (0.45, 1.6) the
-        generator measures near-pair 0.767 against a real 0.767 and alpha frontal/occipital 0.266
-        against a real 0.271. See Finding 19.
-    states: all
-    section: "4. Oscillations"
-    note: >-
-      THE KNOB THAT SETS HOW CORRELATED A RHYTHM IS. At 1.0 the rhythm is one global source and
-      every channel carrying it is the same trace -- the defect this row was added to fix. At 0.0
-      the sub-sources are independent and near-neighbour correlation falls below what volume
-      conduction produces. Real rhythms are neither: coherent over their generator region and
-      not beyond it.
-      Its analogue for the aperiodic background is `background_global_fraction`, and the two are
-      deliberately separate rows -- a rhythm and a broadband background have no reason to share a
-      coherence, and tying them would make one of the two unfittable.
-
-  topo_far_field_fraction:
-    value: {kind: scalar, v: 0.50}
-    units: null
-    standing: derived
-    source:
-      kind: procedure
-      text: >-
-        Fitted jointly with topo_sigma_far and topo_reference_far_field against frontal/occipital
-        ALPHA PROMINENCE in PhysioNet EEGMAT (n = 8, same montage, same linked-mastoid reference):
-        the real excess ratio is 0.271, and (0.50, 2.5, 0.30) measures 0.296. Prominence is the
-        height of the 8-12 Hz bump above each channel's own aperiodic fit -- the quantity that
-        makes a rhythm visible -- and it replaced an earlier fit against far-pair CORRELATION,
-        which reported a healthy-looking band-power ratio of 0.225 while referenced frontal alpha
-        was actually -0.015. Band power cannot tell "there is a rhythm here" from "there is
-        broadband activity here". See Finding 18; prep/reference/t1m1_alpha_spread.py.
-    states: all
-    section: "5. Topography and geometry"
-    note: >-
-      HOW MUCH OF EACH GENERATOR'S TOPOGRAPHY IS VOLUME-CONDUCTED SPREAD rather than local
-      field. Build Plan 3.4 specifies a single Gaussian, and a single Gaussian is wrong in the far
-      field in a way that shows on the trace: at topo_sigma_alpha = 0.35 a posterior alpha source
-      reaches the frontal electrodes at exp(-8) ~ 3e-4, so frontal alpha was absent entirely. Real
-      posterior alpha is plainly visible frontally at reduced amplitude, because a dipole's scalp
-      potential falls off as a power law rather than a Gaussian.
-      IT IS NOT THE SAME CAUSE AS P9, and the sweep refuted that hypothesis. Missing frontal alpha
-      and the far-field correlation shortfall looked like one defect seen from two sides; measured,
-      this row fixes the first and barely touches the second (0.281 to 0.312 against a real 0.440).
-      IT ALSO NEEDED topo_reference_far_field TO WORK AT ALL. On its own the pedestal is common
-      mode, and a linked-mastoid reference removes common mode by construction -- see that row.
-      AND THAT PAIRING HAD A COST THAT TOOK ANOTHER MEASUREMENT TO FIND. With topo_sigma_far at
-      its original 2.5 the far Gaussian was near-flat across the montage, so after the mastoids
-      were subtracted every source retained an IDENTICAL residual pedestal of
-      fraction*(1 - reference_far_field) = 0.35. A component identical in every source is a rank-1
-      term nothing downstream can break up: measured, N3 sat at effective rank 1.10 against a real
-      3.09 and no other parameter moved it -- giving each band six regional sub-sources took it
-      only to 1.18. Narrowing topo_sigma_far to 1.6 makes the tail a GRADIENT centred on each
-      source rather than a pedestal they share, which is also closer to what a dipolar far field
-      does, and N3 measured 1.34 with near-pair correlation landing on the real 0.767 exactly.
-      Worse, effective rank improves toward real while PC1 share moves AWAY from it -- both come
-      from the same eigenspectrum, so its SHAPE is wrong in a way no single tail parameter can
-      repair. P9 therefore STANDS, with sharper evidence: the weights need LPsi^T columns or a
-      SEREEGA lead field, not a heavier tail. A two-Gaussian mixture buys the tail the physics
-      requires without pretending to be a forward model, and the schema is unchanged.
-      The mixture is CONVEX, so it cannot move a generator's peak electrode -- G6's argmax check
-      still tests topo_centre_* against the literature, not this row.
-
-  topo_reference_far_field:
-    value: {kind: scalar, v: 0.30}
-    units: null
-    standing: derived
-    source:
-      kind: procedure
-      text: >-
-        Fraction of the volume-conducted pedestal reaching A1/A2. Fitted with
-        topo_far_field_fraction and topo_sigma_far against frontal/occipital ALPHA PROMINENCE
-        (height of the 8-12 Hz bump above each channel's own aperiodic fit) in PhysioNet EEGMAT,
-        which measures 6.51x frontal against 22.86x occipital, an excess ratio of 0.271. Measured
-        under the same linked-mastoid reference. See Finding 18;
-        prep/reference/t1m1_alpha_spread.py.
-    states: all
-    section: "5. Topography and geometry"
-    note: >-
-      THE REFERENCE ELECTRODES ARE NOT SCALP OVER CORTEX. A1/A2 sit behind the ear over bone with
-      no cortex beneath, which is the reason an ear or mastoid reference is usable at all -- it is
-      relatively inactive. Without modelling that, the far-field pedestal was self-defeating: the
-      mastoids sit at (+-1.12, 0.08), CLOSER to an occipital source than Fp1, so an isotropic
-      pedestal gave them more alpha (0.211) than the frontal mean (0.196), and linked-mastoid
-      referencing left referenced frontal alpha at -0.015 -- zero and inverted.
-      A COMMON-MODE PEDESTAL IS EXACTLY WHAT A LINKED REFERENCE REMOVES, so no value of the
-      fraction or the width could have produced frontal alpha. The model needed the reference
-      sites to differ in KIND, not in degree. That is a fact about references worth having in the
-      generator rather than only in a textbook.
-      IT MOVES snr_nominal. G5's AASM criterion is evaluated on a contralateral-mastoid
-      derivation, so attenuating the mastoids increases the referenced amplitude and the
-      calibration must be re-solved; that is a procedure, not a tuning step (D5).
-
-  topo_sigma_far:
+  event_topography_spread:
     value: {kind: pending}
-    provisional: {v: 1.6, basis: "wide enough to carry alpha to the frontal electrodes, narrow enough that the tail is a GRADIENT rather than a pedestal every source shares", expires_at_milestone: T1-M1, constrained_by: "must not be derived from topo_expect_* — G6 compares the two"}
-    units: normalized_10_20
+    provisional: {v: 0.5, basis: "how much of a patch's HIGHER spatial modes each discrete event admixes with its dominant mode; 0 makes every event identical, 1 is a full sample from the patch covariance", expires_at_milestone: T1-M1, constrained_by: "must not be set from gate_aasm_n3 — G5 measures the amplitude this affects, and tuning it until G5 passes is the circularity D5 exists to prevent"}
+    units: null
     standing: invented
-    source: {kind: none, rationale: "hand-chosen; the fitted quantity is topo_far_field_fraction, and the two trade off"}
+    source: {kind: none, rationale: "no source consulted quantifies how much slow-wave or spindle topography varies event to event at 10-20 resolution"}
+    states: [n2, n3]
+    section: "5. Topography and geometry"
+    milestone: T1-M1
+    note: >-
+      EVERY SLOW WAVE USED TO HAVE THE SAME TOPOGRAPHY, and in N3 that is most of the signal --
+      visible at a 5 s window as one large wave repeated in all 19 lanes, worth 0.21 of effective
+      rank. Real slow waves originate at varying cortical sites, so the events should differ.
+      A patch's channel covariance is sum_m w_m w_m^T over its eigenmodes, so drawing c_m ~ N(0,1)
+      and forming sum_m c_m w_m samples an anatomically admissible field for that patch. Doing
+      exactly that, however, varies each event's amplitude at any FIXED electrode a great deal,
+      and the AASM criterion is measured at one derivation: G5's positive arm fell from 0.75 to
+      0.33 of held-out epochs. Real N3 meets that criterion by definition, so an unconstrained
+      draw makes N3 less like N3, not more.
+      This row keeps the dominant mode at full strength and admixes the higher ones: every event
+      is recognisably the patch's field, and they differ. At 0 the behaviour is exactly the single
+      fixed topography this replaced, which makes the cost of the variability measurable rather
+      than assumed.
+      IT TRADES AGAINST G5 AND MUST NOT BE FITTED TO IT. The trade is reported in Finding 21.
+
+  cortical_coherence_mm:
+    value: {kind: pending}
+    provisional: {v: 40.0, basis: "spatial scale over which cortical activity within a patch stays coherent; swept 10-80 mm against PhysioNet EEGMAT under average reference, where 20-40 mm bracketed the real near-pair correlation", expires_at_milestone: T1-M1, constrained_by: "must not be derived from topo_expect_* — G6 compares the projection file against those"}
+    units: mm
+    standing: invented
+    source: {kind: none, rationale: "no source consulted gives a cortical coherence length for a specific rhythm at this resolution; it is the ONE spatial shape parameter left after the lead field replaced 31"}
     states: all
     section: "5. Topography and geometry"
     milestone: T1-M1
     note: >-
-      Width of the far-field Gaussian. Deliberately much larger than the montage (which spans
-      ~2 units), so this term is nearly flat and `topo_far_field_fraction` alone controls the
-      tail. The two are not independently identifiable from a correlation fit -- widening this
-      and lowering the fraction give almost the same weights -- so only the fraction is fitted
-      and this is held.
+      THE ONLY REMAINING FREE PARAMETER OF THE SPATIAL MODEL, and that is the point of D19.
+      It sets the source covariance inside a patch, C_s(i,j) = exp(-d(i,j)/this), so it decides how
+      many spatial eigenmodes a patch has and therefore how many dimensions a rhythm occupies. At
+      0 every dipole is independent and the patch spans as many modes as the montage can resolve;
+      at infinity the patch collapses to one mode and the model is separable again -- which is the
+      defect Finding 19 measured.
+      Distances are Euclidean rather than geodesic, which makes coherence slightly too high across
+      a sulcus. Registered as a known approximation, not silently.
 
-  topo_sigma_alpha:         {value: {kind: pending}, provisional: {v: 0.35, basis: "hand-tuned; posterior centre", expires_at_milestone: T1-M1, constrained_by: "must not be derived from topo_expect_* — G6 compares the two"}, units: normalized_10_20, standing: invented, source: {kind: none, rationale: ""}, states: [wake_ec], section: "5. Topography and geometry", milestone: T1-M1}
-  topo_sigma_beta:          {value: {kind: pending}, provisional: {v: 0.40, basis: "hand-tuned; frontocentral centre", expires_at_milestone: T1-M1, constrained_by: "must not be derived from topo_expect_*"}, units: normalized_10_20, standing: invented, source: {kind: none, rationale: ""}, states: [wake_eo], section: "5. Topography and geometry", milestone: T1-M1}
-  topo_sigma_theta:         {value: {kind: pending}, provisional: {v: 0.40, basis: "hand-tuned; central/frontal centre", expires_at_milestone: T1-M1, constrained_by: "must not be derived from topo_expect_*"}, units: normalized_10_20, standing: invented, source: {kind: none, rationale: ""}, states: [n2, rem], section: "5. Topography and geometry", milestone: T1-M1}
-  topo_sigma_delta:         {value: {kind: pending}, provisional: {v: 0.45, basis: "hand-tuned; frontal centre", expires_at_milestone: T1-M1, constrained_by: "must not be derived from topo_expect_*"}, units: normalized_10_20, standing: invented, source: {kind: none, rationale: ""}, states: [n3], section: "5. Topography and geometry", milestone: T1-M1}
-  topo_sigma_spindle_fast:  {value: {kind: pending}, provisional: {v: 0.30, basis: "hand-tuned; central-parietal centre", expires_at_milestone: T1-M1, constrained_by: "must not be derived from topo_expect_*"}, units: normalized_10_20, standing: invented, source: {kind: none, rationale: ""}, states: [n2], section: "5. Topography and geometry", milestone: T1-M1}
-  topo_sigma_spindle_slow:  {value: {kind: pending}, provisional: {v: 0.30, basis: "hand-tuned; frontal centre", expires_at_milestone: T1-M1, constrained_by: "must not be derived from topo_expect_*"}, units: normalized_10_20, standing: invented, source: {kind: none, rationale: ""}, states: [n2], section: "5. Topography and geometry", milestone: T1-M1}
-  topo_sigma_kc:            {value: {kind: pending}, provisional: {v: 0.35, basis: "hand-tuned; frontal centre", expires_at_milestone: T1-M1, constrained_by: "must not be derived from topo_expect_*"}, units: normalized_10_20, standing: invented, source: {kind: none, rationale: ""}, states: [n2], section: "5. Topography and geometry", milestone: T1-M1}
+  patch_mode_variance:
+    value: {kind: scalar, v: 0.99}
+    units: null
+    standing: chosen
+    source: {kind: none, rationale: "how much of a patch's spatial variance the retained eigenmodes must carry; a truncation tolerance, not a physical quantity"}
+    states: all
+    section: "5. Topography and geometry"
+    note: >-
+      Sets how many modes each patch contributes: enough to carry this fraction of its covariance
+      trace. It is a numerical tolerance and belongs to the file format rather than to the head --
+      raising it adds modes that carry almost no variance, lowering it discards real structure.
+      NOT a knob for tuning effective rank. Rank is a PREDICTION of the forward model under D19,
+      and adjusting this until the rank matched would restore exactly the circularity D19 forbids.
 
-  # Gaussian centres on the projected 10-20 coordinates, in the same unit-circle frame as
-  # data/montage_10_20.json (+x right, +y anterior). Registered rather than hard-coded in the
-  # projection-file generator, because a number in a tool is still a number the acceptance
-  # check must authorize.
-  #
-  # These are the file's TIER 0 CONTENTS, not its schema. Seam 3's upgrade path replaces the
-  # contents with eigenmode columns or a SEREEGA lead field and never touches the loader.
-  # They must NOT be derived from topo_expect_*, which is the independent expectation G6
-  # tests the resulting file against.
-  topo_centre_alpha_x:         {value: {kind: scalar, v: 0.0},   units: normalized_10_20, standing: invented, source: {kind: none, rationale: "posterior centre"}, states: [wake_ec], section: "5. Topography and geometry", milestone: T1-M1}
-  topo_centre_alpha_y:         {value: {kind: scalar, v: -0.75}, units: normalized_10_20, standing: invented, source: {kind: none, rationale: "posterior centre"}, states: [wake_ec], section: "5. Topography and geometry", milestone: T1-M1}
-  topo_centre_beta_x:          {value: {kind: scalar, v: 0.0},   units: normalized_10_20, standing: invented, source: {kind: none, rationale: "frontocentral centre"}, states: [wake_eo], section: "5. Topography and geometry", milestone: T1-M1}
-  topo_centre_beta_y:          {value: {kind: scalar, v: 0.30},  units: normalized_10_20, standing: invented, source: {kind: none, rationale: "frontocentral centre"}, states: [wake_eo], section: "5. Topography and geometry", milestone: T1-M1}
-  topo_centre_theta_x:         {value: {kind: scalar, v: 0.0},   units: normalized_10_20, standing: invented, source: {kind: none, rationale: "central/frontal centre"}, states: [n2, rem], section: "5. Topography and geometry", milestone: T1-M1}
-  topo_centre_theta_y:         {value: {kind: scalar, v: 0.25},  units: normalized_10_20, standing: invented, source: {kind: none, rationale: "central/frontal centre"}, states: [n2, rem], section: "5. Topography and geometry", milestone: T1-M1}
-  topo_centre_delta_x:         {value: {kind: scalar, v: 0.0},   units: normalized_10_20, standing: invented, source: {kind: none, rationale: "frontal centre"}, states: [n3], section: "5. Topography and geometry", milestone: T1-M1}
-  topo_centre_delta_y:         {value: {kind: scalar, v: 0.50},  units: normalized_10_20, standing: invented, source: {kind: none, rationale: "frontal centre"}, states: [n3], section: "5. Topography and geometry", milestone: T1-M1}
-  topo_centre_spindle_fast_x:  {value: {kind: scalar, v: 0.0},   units: normalized_10_20, standing: invented, source: {kind: none, rationale: "central-parietal centre"}, states: [n2], section: "5. Topography and geometry", milestone: T1-M1}
-  topo_centre_spindle_fast_y:  {value: {kind: scalar, v: -0.15}, units: normalized_10_20, standing: invented, source: {kind: none, rationale: "central-parietal centre"}, states: [n2], section: "5. Topography and geometry", milestone: T1-M1}
-  topo_centre_spindle_slow_x:  {value: {kind: scalar, v: 0.0},   units: normalized_10_20, standing: invented, source: {kind: none, rationale: "frontal centre"}, states: [n2], section: "5. Topography and geometry", milestone: T1-M1}
-  topo_centre_spindle_slow_y:  {value: {kind: scalar, v: 0.50},  units: normalized_10_20, standing: invented, source: {kind: none, rationale: "frontal centre"}, states: [n2], section: "5. Topography and geometry", milestone: T1-M1}
-  topo_centre_kc_x:            {value: {kind: scalar, v: 0.0},   units: normalized_10_20, standing: invented, source: {kind: none, rationale: "frontal centre"}, states: [n2], section: "5. Topography and geometry", milestone: T1-M1}
-  topo_centre_kc_y:            {value: {kind: scalar, v: 0.50},  units: normalized_10_20, standing: invented, source: {kind: none, rationale: "frontal centre"}, states: [n2], section: "5. Topography and geometry", milestone: T1-M1}
+  channel_local_share:
+    value: {kind: pending}
+    provisional: {v: 0.20, basis: "fraction of per-channel variance that is spatially INDEPENDENT; fitted against PhysioNet EEGMAT under average reference, where the lead field alone gives near-pair 0.553 against a real 0.413 and only per-electrode independent signal can lower it", expires_at_milestone: T1-M1, constrained_by: "must be fitted under average reference — a linked-ear comparison depends on modelled reference electrodes"}
+    units: null
+    standing: invented
+    source: {kind: none, rationale: "an independent-EQUIVALENT share under this model, not a measured physiological quantity; part of it is certainly model mismatch"}
+    states: all
+    section: "5. Topography and geometry"
+    milestone: T1-M1
+    note: >-
+      REAL EEG IS LESS SPATIALLY CORRELATED THAN A LEAD FIELD PREDICTS, and nothing in the source
+      model can produce that. Coherence between sources only ever RAISES inter-channel correlation;
+      only signal that is independent per electrode lowers it. Measured under average reference:
+      the parameter-free lead field gives near-pair 0.553 and far-pair 0.376 against a real 0.413
+      and 0.257, and a 0.20 independent share brings them to 0.403 and 0.302 -- mean relative error
+      0.125 against 0.250 for the 31-row Gaussian mixture it replaces (Finding 20).
+      NOT AMPLIFIER NOISE. `sensor_noise_rms` is 1.5 uV against a 20 uV background, 0.56% of
+      variance. This is the non-neural signal a real scalp recording carries independently at each
+      site: local muscle tone, skin potential, electrode drift, contact impedance.
+      IT CARRIES THE BACKGROUND'S APERIODIC EXPONENT rather than being white. White noise at 20% of
+      variance would flatten the measured spectrum and move chi, turning a spatial fix into a
+      spectral defect.
+      HONESTY ABOUT THE NUMBER: it is what the montage needs given fsaverage as a template head, a
+      2-D near/far split, and a white-cortex source model. Some of it is model mismatch rather than
+      scalp physiology, and it must not be cited as the latter.
 
   ap_axis_span:
     value: {kind: scalar, v: 180}
@@ -1248,38 +1069,6 @@ params:
       0.5-1 Hz high-pass removes it essentially completely. That is the filter working
       correctly, and it is half the lesson: high-pass filtering trades a known artifact for a
       known distortion.
-
-  topo_centre_resp_artifact_x:
-    value: {kind: scalar, v: 0.0}
-    units: normalized_10_20
-    standing: invented
-    source: {kind: none, rationale: "mechanical artifact, broadly frontal where head movement couples most"}
-    states: all
-    section: "5. Topography and geometry"
-    milestone: T1-M1
-
-  topo_centre_resp_artifact_y:
-    value: {kind: scalar, v: 0.65}
-    units: normalized_10_20
-    standing: invented
-    source: {kind: none, rationale: "frontal centre"}
-    states: all
-    section: "5. Topography and geometry"
-    milestone: T1-M1
-
-  topo_sigma_resp_artifact:
-    value: {kind: scalar, v: 0.9}
-    units: normalized_10_20
-    standing: invented
-    source: {kind: none, rationale: "broad: a mechanical artifact is not focal"}
-    states: all
-    section: "5. Topography and geometry"
-    milestone: T1-M1
-    note: >-
-      Deliberately a DIFFERENT topography from any neural generator. Build Plan 5.1 insists the
-      three respiratory mechanisms be kept separate because they have "different origins,
-      different topographies, different implications. Conflating them is the standard error in
-      this literature." A shared topography would make them inseparable by any spatial method.
 
   resp_amp_mod_depth:
     value: {kind: pending}

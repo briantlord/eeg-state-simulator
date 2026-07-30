@@ -31,7 +31,7 @@ import {
 } from '../src/io/epoch_dir.ts';
 import { scalarValue, electrodeSet, STATES } from '../src/core/registry.ts';
 import { composeState } from '../src/core/generators/compose.ts';
-import { ALL_CHANNELS, weightsFor } from '../src/core/generators/projection.ts';
+import { ALL_CHANNELS, weightsFor, modesOf, type PatchId } from '../src/core/generators/projection.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -163,10 +163,12 @@ function main(): void {
     independentChiModFreq: respOpts.independentChiModFreq ?? null,
     projectionWeights: Object.fromEntries(
       [
-        // One entry per background source, since there are now several with distinct
-        // topographies rather than one uniform one.
-        ...Array.from({ length: scalarValue('background_n_sources') }, (_, i) => `background_${i}`),
-        ...composed.truth.oscillations.map((o) => o.generator),
+        // One entry per background MODE. The count comes from the projection file rather than a
+        // registry row: it is a property of the head model and `patch_mode_variance`, and a row
+        // could disagree with the weights that were actually applied.
+        ...modesOf('background'),
+        // ...and every mode of each oscillation the state ran.
+        ...composed.truth.oscillations.flatMap((o) => modesOf(o.generator as PatchId)),
         // Graphoelement generators, DERIVED FROM THE EVENT LIST rather than listed for every
         // state. G6 needs these weights, and the temptation was to add spindle/kc
         // unconditionally so the gate always finds them — but this field means "weights

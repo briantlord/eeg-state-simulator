@@ -13,12 +13,13 @@
     "build": "vite build",
     "registry:emit": "node tools/registry/emit.mjs",
     "registry:check": "node tools/registry/emit.mjs --check",
-    "projection:emit": "node tools/make_projection.mjs",
+    "projection:emit": "python -m prep.leadfield.make_projection",
     "calibrate": "node --experimental-strip-types --no-warnings bin/eegsim-calibrate.mts",
     "export": "node --experimental-strip-types --no-warnings bin/eegsim-export.mts",
     "test": "node --test --experimental-strip-types \"test/**/*.test.ts\"",
     "typecheck": "tsc --noEmit",
-    "verify": "node tools/verify.mjs"
+    "verify": "node tools/verify.mjs",
+    "projection:check": "python -m prep.leadfield.make_projection --check"
   },
   "devDependencies": {
     "@types/node": "^22.20.1",

@@ -23,14 +23,13 @@ export type ParamKey =
   | 'analysis_window'
   | 'ap_axis_span'
   | 'aperiodic_model'
-  | 'background_global_fraction'
-  | 'background_n_sources'
   | 'background_rms_uv'
   | 'beta_amp'
   | 'beta_band'
   | 'blink_amp'
   | 'blink_dur'
   | 'blink_rate'
+  | 'channel_local_share'
   | 'chi_direction'
   | 'chi_est_band'
   | 'chi_est_mdd_resp'
@@ -46,6 +45,7 @@ export type ParamKey =
   | 'chi_rem'
   | 'chi_wake_ec'
   | 'chi_wake_eo'
+  | 'cortical_coherence_mm'
   | 'delta_amp'
   | 'delta_band'
   | 'display_buffer_s'
@@ -60,6 +60,7 @@ export type ParamKey =
   | 'emg_band'
   | 'emg_rem_level'
   | 'epoch_display'
+  | 'event_topography_spread'
   | 'export_schema_version'
   | 'filter_order'
   | 'filter_order_options'
@@ -136,8 +137,7 @@ export type ParamKey =
   | 'nasal_oral_factor'
   | 'notch_q'
   | 'osc_carrier_flatten'
-  | 'osc_coherent_fraction'
-  | 'osc_n_sources'
+  | 'patch_mode_variance'
   | 'reference_channels'
   | 'render_decimation'
   | 'resp_amp_mod_depth'
@@ -159,7 +159,6 @@ export type ParamKey =
   | 'snr_range_ui'
   | 'so_amp'
   | 'so_freq'
-  | 'so_origin_coherent_fraction'
   | 'so_rdsym'
   | 'so_spindle_pref_phase'
   | 'so_spindle_strength'
@@ -182,38 +181,10 @@ export type ParamKey =
   | 'tilt_mod_settling_ratio'
   | 'tilt_n_poles'
   | 'tilt_pole_spacing'
-  | 'topo_centre_alpha_x'
-  | 'topo_centre_alpha_y'
-  | 'topo_centre_beta_x'
-  | 'topo_centre_beta_y'
-  | 'topo_centre_delta_x'
-  | 'topo_centre_delta_y'
-  | 'topo_centre_kc_x'
-  | 'topo_centre_kc_y'
-  | 'topo_centre_resp_artifact_x'
-  | 'topo_centre_resp_artifact_y'
-  | 'topo_centre_spindle_fast_x'
-  | 'topo_centre_spindle_fast_y'
-  | 'topo_centre_spindle_slow_x'
-  | 'topo_centre_spindle_slow_y'
-  | 'topo_centre_theta_x'
-  | 'topo_centre_theta_y'
   | 'topo_expect_alpha'
   | 'topo_expect_kc'
   | 'topo_expect_spindle_fast'
   | 'topo_expect_spindle_slow'
-  | 'topo_far_field_fraction'
-  | 'topo_reference_far_field'
-  | 'topo_sigma_alpha'
-  | 'topo_sigma_background'
-  | 'topo_sigma_beta'
-  | 'topo_sigma_delta'
-  | 'topo_sigma_far'
-  | 'topo_sigma_kc'
-  | 'topo_sigma_resp_artifact'
-  | 'topo_sigma_spindle_fast'
-  | 'topo_sigma_spindle_slow'
-  | 'topo_sigma_theta'
   | 'welch_noverlap'
   | 'welch_nperseg'
   | 'welch_window';
@@ -240,14 +211,13 @@ export interface ParamKindMap {
   'analysis_window': 'scalar';
   'ap_axis_span': 'scalar';
   'aperiodic_model': 'procedure';
-  'background_global_fraction': 'scalar';
-  'background_n_sources': 'scalar';
   'background_rms_uv': 'interval';
   'beta_amp': 'interval';
   'beta_band': 'interval';
   'blink_amp': 'interval';
   'blink_dur': 'interval';
   'blink_rate': 'interval';
+  'channel_local_share': 'pending';
   'chi_direction': 'ordering';
   'chi_est_band': 'interval';
   'chi_est_mdd_resp': 'scalar';
@@ -263,6 +233,7 @@ export interface ParamKindMap {
   'chi_rem': 'pending';
   'chi_wake_ec': 'pending';
   'chi_wake_eo': 'pending';
+  'cortical_coherence_mm': 'pending';
   'delta_amp': 'interval';
   'delta_band': 'interval';
   'display_buffer_s': 'scalar';
@@ -277,6 +248,7 @@ export interface ParamKindMap {
   'emg_band': 'bound';
   'emg_rem_level': 'scalar';
   'epoch_display': 'scalar';
+  'event_topography_spread': 'pending';
   'export_schema_version': 'scalar';
   'filter_order': 'scalar';
   'filter_order_options': 'enum';
@@ -353,8 +325,7 @@ export interface ParamKindMap {
   'nasal_oral_factor': 'pending';
   'notch_q': 'scalar';
   'osc_carrier_flatten': 'scalar';
-  'osc_coherent_fraction': 'scalar';
-  'osc_n_sources': 'scalar';
+  'patch_mode_variance': 'scalar';
   'reference_channels': 'electrodes';
   'render_decimation': 'enum';
   'resp_amp_mod_depth': 'pending';
@@ -376,7 +347,6 @@ export interface ParamKindMap {
   'snr_range_ui': 'interval';
   'so_amp': 'interval';
   'so_freq': 'bound';
-  'so_origin_coherent_fraction': 'scalar';
   'so_rdsym': 'scalar';
   'so_spindle_pref_phase': 'pending';
   'so_spindle_strength': 'pending';
@@ -399,38 +369,10 @@ export interface ParamKindMap {
   'tilt_mod_settling_ratio': 'absent';
   'tilt_n_poles': 'scalar';
   'tilt_pole_spacing': 'procedure';
-  'topo_centre_alpha_x': 'scalar';
-  'topo_centre_alpha_y': 'scalar';
-  'topo_centre_beta_x': 'scalar';
-  'topo_centre_beta_y': 'scalar';
-  'topo_centre_delta_x': 'scalar';
-  'topo_centre_delta_y': 'scalar';
-  'topo_centre_kc_x': 'scalar';
-  'topo_centre_kc_y': 'scalar';
-  'topo_centre_resp_artifact_x': 'scalar';
-  'topo_centre_resp_artifact_y': 'scalar';
-  'topo_centre_spindle_fast_x': 'scalar';
-  'topo_centre_spindle_fast_y': 'scalar';
-  'topo_centre_spindle_slow_x': 'scalar';
-  'topo_centre_spindle_slow_y': 'scalar';
-  'topo_centre_theta_x': 'scalar';
-  'topo_centre_theta_y': 'scalar';
   'topo_expect_alpha': 'electrodes';
   'topo_expect_kc': 'electrodes';
   'topo_expect_spindle_fast': 'electrodes';
   'topo_expect_spindle_slow': 'electrodes';
-  'topo_far_field_fraction': 'scalar';
-  'topo_reference_far_field': 'scalar';
-  'topo_sigma_alpha': 'pending';
-  'topo_sigma_background': 'scalar';
-  'topo_sigma_beta': 'pending';
-  'topo_sigma_delta': 'pending';
-  'topo_sigma_far': 'pending';
-  'topo_sigma_kc': 'pending';
-  'topo_sigma_resp_artifact': 'scalar';
-  'topo_sigma_spindle_fast': 'pending';
-  'topo_sigma_spindle_slow': 'pending';
-  'topo_sigma_theta': 'pending';
   'welch_noverlap': 'scalar';
   'welch_nperseg': 'scalar';
   'welch_window': 'enum';

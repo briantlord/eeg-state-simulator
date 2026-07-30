@@ -1705,3 +1705,93 @@ forward model; spatial metrics must be compared under **average reference**; and
 per-channel component is now a required part of the design rather than an afterthought.
 
 Reproduce: `prep/leadfield/probe_leadfield_gono.py`, `prep/leadfield/probe_real_farfield_origin.py`.
+
+---
+
+# Finding 21 — the lead-field generator, and the four things it broke on the way `[D19 IMPLEMENTED]`
+
+The Gaussian-mixture projection is gone. Topographies now come from an fsaverage 3-shell BEM
+forward solution over Desikan-Killiany cortical patches, with each patch contributing the leading
+eigenmodes of its own channel covariance.
+
+**31 invented registry rows deleted. 4 added.** `cortical_coherence_mm`, `patch_mode_variance`,
+`channel_local_share`, `event_topography_spread`.
+
+## The result, under the reference that invents nothing (D19.1)
+
+| wake_ec, average reference | rank | PC1 | near | far | mean rel. err |
+|---|---|---|---|---|---|
+| real (EEGMAT) | 5.36 | 0.369 | 0.413 | 0.257 | — |
+| **lead-field generator** | **5.43** | 0.298 | 0.450 | 0.291 | **0.107** |
+| *Gaussian mixture, 31 rows, under its own fitted reference* | — | — | — | — | *0.250* |
+
+**Effective rank 5.43 against a real 5.36, and rank was not fitted** — only `channel_local_share`
+was, jointly against all four. Under linked mastoid the same signal reads 0.349, and that gap is
+reported rather than closed: real recordings used interconnected earlobes, which sit further from
+cortex than the modelled mastoids, and D19.1 forbids fitting against a reference whose electrode
+pickup is a modelling choice.
+
+N3 improved from **1.07 → 1.97** (linked mastoid) across the whole arc of Findings 19–21.
+
+## G6 became a real test, and immediately failed twice
+
+Under the Gaussian, G6's argmax expectations were satisfied **by construction** — the peak was
+wherever `topo_centre_*` had been written. Under a forward model the peak is a consequence of
+anatomy and volume conduction, so the gate can fail. It did, for `spindle_fast`, on two successive
+patch definitions.
+
+Measured rather than argued, the peak turned out to depend on one region:
+
+| spindle_fast patch | scalp peak | G6 |
+|---|---|---|
+| precentral + postcentral + paracentral | C3, C4, Cz | PASS |
+| precentral + postcentral | C4, C3, Cz | PASS |
+| paracentral alone | C4, C3, Cz | PASS |
+| ... + superiorparietal | Pz, P3, P4 | FAIL |
+| postcentral + superiorparietal + supramarginal | P3, P4, Pz | FAIL |
+
+Every strictly sensorimotor reading agrees with the literature electrodes; every reading including
+the DK `superiorparietal` label — large, extending well posterior — disagrees. The disagreement was
+never about the head model. Including that label makes the **generator** parietal, a stronger claim
+than the literature makes: fast spindles are sensorimotor with a field that *spreads*
+centro-parietally, and the spread is an output of the forward model rather than a region to add.
+
+**The sequence is recorded because it matters:** the gate failed first, and the patch was
+re-examined afterwards. The revision is defensible without reference to the gate, and the
+sensitivity table is published so a reader can judge that claim rather than take it.
+
+## Four things broke, and each was a hidden assumption surfacing
+
+**1. Amplitude, by a factor of three.** Referenced Pz RMS went 10.0 → 32.6 µV against a real 14.8.
+Neither amplitude row changed. Under the Gaussian the mastoids saw the volume-conducted pedestal,
+so a linked reference had been subtracting much of alpha along with it — alpha was being cancelled
+by its own reference, which is Finding 18's defect seen from the other side, and
+`topo_reference_far_field` was invented to fight it. With real electrodes over bone the reference
+stops destroying the signal.
+
+**2. Fitting the background alone could not fix it.** Driving `background_rms_uv` to 0.1 µV still
+left Pz at 16.7 µV: in wake_ec, Pz is *alpha's own peak electrode*. Refitted as a pair against two
+observables that pull in different directions — Pz RMS and alpha-above-its-own-aperiodic — giving
+`background_rms_uv` 8 µV and `alpha_amp` 18 µV p-p, and Pz RMS 13.9 with prominence 11.95, inside
+the real IQR.
+
+**3. `snr_nominal` twice.** It is the mix at which N3 meets the AASM criterion, measured against
+exactly the referenced amplitude that moved. −3.0765 → −4.0666 → −2.7559 dB.
+
+**4. G5 fell from 0.75 to 0.33 of held-out epochs.** Per-event topographies were first drawn as an
+exact sample from the patch covariance, `sum_m c_m w_m` with `c_m ~ N(0,1)`. That is the correct
+sample, and it varies each event's amplitude at any *fixed* electrode so much that N3 stopped
+reliably meeting a criterion real N3 meets by definition. `event_topography_spread` keeps mode 0 at
+full strength and admixes the higher modes; G5 recovered to 0.583. **The parameter trades against
+G5 and must not be fitted to it** — its registry note says so, and 0.5 is invented pending T1-M1.
+
+## What this does not fix
+
+`chi` over 1–20 Hz is unchanged at 0.31 against a real 0.99, because it was never a spatial
+problem: it is P13, two different quantities being compared. Far-field correlation under *linked
+mastoid* remains low, which is now attributable to the earlobe-versus-mastoid difference rather
+than to the source model. N3 has no real target in this corpus and its column remains a sanity
+bound.
+
+Reproduce: `prep/leadfield/make_projection.py`, `check_projection_stats.py`,
+`check_generated_spatial.py`, `fit_amplitude.py`, `prep/reference/compare_real.py`.

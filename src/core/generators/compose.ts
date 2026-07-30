@@ -17,7 +17,13 @@ import {
   DEFAULT_ENVELOPE_DEPTH,
   DEFAULT_ENVELOPE_RATE_HZ,
 } from './oscillations.ts';
-import { ALL_CHANNELS, projectInto, type GeneratorId } from './projection.ts';
+import {
+  ALL_CHANNELS,
+  projectInto,
+  modesOf,
+  type GeneratorId,
+  type PatchId,
+} from './projection.ts';
 import { synthesizeGraphoelements } from './graphoelements.ts';
 import { synthesizeEcg } from './cardiac.ts';
 import {
@@ -32,7 +38,8 @@ import type { GeneratedEvent } from '../types/event.ts';
 
 /** Which oscillations each state carries, and which registry rows describe them. */
 interface OscSpec {
-  generator: GeneratorId;
+  // A band rhythm owns a PATCH, so its modes can be enumerated. `resp_artifact` is not one.
+  generator: PatchId;
   bandKey: 'alpha_band' | 'beta_band' | 'theta_band' | 'delta_band';
   ampKey: 'alpha_amp' | 'beta_amp' | 'theta_amp' | 'delta_amp';
 }
@@ -268,18 +275,42 @@ export function composeState(
   // Independent realizations at overlapping scalp locations give correlation that falls off
   // with distance, which is what volume conduction produces. Each carries 1/sqrt(N) of the
   // amplitude so the total background variance is unchanged.
-  const nBg = scalarValue('background_n_sources');
-  const bgSources: Float64Array[] = [];
-  for (let i = 0; i < nBg; i++) {
-    bgSources.push(
-      synthesizeAperiodic(
-        Rng.substream(seed, `background_${i}/${state}`),
-        nSamples,
-        { chi, k: knee, rmsUv: backgroundRms / Math.sqrt(nBg) },
-        fs,
-      ),
-    );
-  }
+  //
+  // THE SOURCES ARE NOW SPATIAL EIGENMODES OF THE WHOLE CORTEX, projected through an fsaverage
+  // forward model (D19). Six invented centres and a chosen count are gone; the number of modes is
+  // whatever the head model and `patch_mode_variance` produce, read from the projection file.
+  //
+  // Each mode is driven at the SAME rms and the weights carry the variance split, because the
+  // producer normalised each family so the root-sum-square across its modes peaks at 1. Total
+  // variance at the peak electrode is therefore backgroundRms^2, exactly as when a single
+  // peak-1 Gaussian carried it -- `background_rms_uv` keeps its meaning across the change.
+  const bgModes = modesOf('background');
+  const bgSources: Float64Array[] = bgModes.map((_, i) =>
+    synthesizeAperiodic(
+      Rng.substream(seed, `background_${i}/${state}`),
+      nSamples,
+      { chi, k: knee, rmsUv: backgroundRms },
+      fs,
+    ),
+  );
+
+  // WHAT A LEAD FIELD CANNOT PRODUCE, and the reason it needed measuring separately.
+  //
+  // Real EEG is LESS spatially correlated than any forward model predicts: under average
+  // reference the parameter-free lead field gives near-pair 0.553 against a real 0.413. No source
+  // model closes that, because coherence between sources only ever RAISES inter-channel
+  // correlation. Only signal independent per electrode lowers it, and `sensor_noise_rms` supplies
+  // 0.56% of variance where the fit wants ~28% (Finding 20).
+  //
+  // It carries the background's OWN aperiodic exponent rather than being white: 28% of variance
+  // as white noise would flatten the measured spectrum and move chi, turning a spatial correction
+  // into a spectral defect.
+  const localShare = provisionalValue('channel_local_share');
+  // `localShare` is a share of TOTAL channel variance, so the independent part stands in ratio
+  // share/(1 - share) to the cortical part. The guard is a division-by-zero floor, not a
+  // parameter: at share = 1 there is no cortical signal left to scale against.
+  const localRms =
+    backgroundRms * Math.sqrt(localShare / Math.max(1e-9, 1 - localShare)); // @lit-ok 1e-9 is a divide-by-zero floor for share -> 1, not a scientific quantity
 
   // Respiration-phase modulation of the aperiodic exponent (§5.2 mechanism c) — "the
   // best-supported scalp-visible effect and the one the filter demo depends on".
@@ -314,7 +345,22 @@ export function composeState(
   }
 
   for (let i = 0; i < bgSources.length; i++) {
-    projectInto(out, bgSources[i]!, `background_${i}` as GeneratorId);
+    projectInto(out, bgSources[i]!, bgModes[i]!);
+  }
+
+  // Added AFTER the tilt so it is not itself tilted: it is not cortical activity and has no
+  // reason to follow a respiration-driven exponent.
+  if (localShare > 0) {
+    for (let c = 0; c < nCh; c++) {
+      const local = synthesizeAperiodic(
+        Rng.substream(seed, `channel_local/${state}/${ALL_CHANNELS[c]!}`),
+        nSamples,
+        { chi, k: knee, rmsUv: localRms },
+        fs,
+      );
+      const dst = out[c]!;
+      for (let i = 0; i < nSamples; i++) dst[i] = dst[i]! + local[i]!;
+    }
   }
 
   // Seam 5: the mix is explicit. Background is the reference and is never scaled.
@@ -322,26 +368,24 @@ export function composeState(
   const sourceGain = Math.pow(10, snrDb / 20); // @lit-ok dB-to-linear: 10^(dB/20) is the definition of decibels
 
   const oscTruth: ComposeResult['truth']['oscillations'] = [];
-  // A BAND RHYTHM IS SPLIT ACROSS SOURCES, not projected as one.
+  // A BAND RHYTHM OCCUPIES A CORTICAL PATCH, and a patch has more than one spatial mode.
   //
-  // Modelling it as one made every channel carrying it the same trace: N3 measured effective rank
-  // 1.07 against a real 3.09, PC1 at 0.967, median |corr| 0.950 -- while the aperiodic background
-  // ALONE measured 3.44. The ceiling was fine; the layer on top of it was a single dominant
-  // source. That is Finding 11's defect one layer up, and this is Finding 11's fix applied there.
+  // Modelling a rhythm as one source made every channel carrying it the same trace: N3 measured
+  // effective rank 1.07 against a real 3.09, PC1 0.967, median |corr| 0.950, while the background
+  // alone measured 3.44. Two fixes were built and refuted before this one -- a ring of sub-sources
+  // (rank capped at 1.26 at ANY radius) and the background's regional centres (1.10 -> 1.18) --
+  // because both shared a near-flat far-field pedestal that no arrangement of sources can break
+  // up. See Findings 19 and 20.
   //
-  // `osc_coherent_fraction` of the VARIANCE goes to one coherent source at the registered centre
-  // -- which is still the entry G6 checks -- and the rest is split equally between
-  // `osc_n_sources` independent realisations on the SAME SIX REGIONAL CENTRES the aperiodic
-  // background uses. A ring around the band's own centre was tried first and measured: its rank
-  // topped out at 1.26 however wide the ring, because every source is half a shared near-flat
-  // pedestal. The background's basis already measures 3.44, so the bands borrow it.
+  // Now each rhythm is an anatomical patch in the Desikan-Killiany atlas, projected through an
+  // fsaverage forward model, and the projection file carries the leading eigenmodes of that
+  // patch's channel covariance. Each mode gets an INDEPENDENT realisation at the SAME rms; the
+  // weights carry the variance split, because the producer normalised each family so the
+  // root-sum-square across its modes peaks at 1. `<band>_amp` therefore still means peak-to-peak
+  // at the band's strongest electrode, which is what keeps snr_nominal and G5 interpretable.
   //
-  // Amplitudes divide as sqrt of the variance shares, so the total power is exactly what
-  // `<band>_amp` registers however the fraction is set: coherent sqrt(f), each sub-source
-  // sqrt((1-f)/N).
-  const oscCoherent = scalarValue('osc_coherent_fraction');
-  const oscN = scalarValue('osc_n_sources');
-
+  // No coherent/spread fraction survives: `osc_coherent_fraction`, `osc_n_sources` and
+  // `osc_source_spread` were all consequences of having to invent a spatial basis.
   for (const spec of STATE_OSCILLATIONS[state]) {
     const { lo, hi } = bandEdges(spec.bandKey);
     const rmsUv = rmsFromPeakToPeak(spec.ampKey);
@@ -385,25 +429,13 @@ export function composeState(
             fs,
           );
 
-    // The coherent component keeps the ORIGINAL substream name, so a run with
-    // osc_coherent_fraction = 1 reproduces the previous generator's draws exactly. Adding the
-    // sub-sources therefore cannot perturb anything upstream of them (seam 4).
-    const components: { gen: GeneratorId; signal: Float64Array }[] = [];
-    if (oscCoherent > 0) {
-      components.push({
-        gen: spec.generator,
-        signal: makeSource(`${spec.generator}/${state}`, rmsUv * Math.sqrt(oscCoherent)),
-      });
-    }
-    const subRms = rmsUv * Math.sqrt(Math.max(0, 1 - oscCoherent) / oscN);
-    if (subRms > 0) {
-      for (let k = 0; k < oscN; k++) {
-        components.push({
-          gen: `${spec.generator}_s${k}` as GeneratorId,
-          signal: makeSource(`${spec.generator}/${state}/s${k}`, subRms),
-        });
-      }
-    }
+    // Mode 0 keeps the ORIGINAL substream name, so seam 4 holds: the modes added beside it do
+    // not perturb the draws of anything that existed before them.
+    const components = modesOf(spec.generator).map((gen, k) => ({
+      gen,
+      signal: makeSource(k === 0 ? `${spec.generator}/${state}`
+                                 : `${spec.generator}/${state}/m${k}`, rmsUv),
+    }));
     for (const { gen, signal } of components) {
       if (sourceGain !== 1) {
         for (let i = 0; i < nSamples; i++) signal[i] = signal[i]! * sourceGain;

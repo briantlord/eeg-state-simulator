@@ -60,16 +60,22 @@ if (projection.channels.length !== ALL_CHANNELS.length ||
   );
 }
 
-export type GeneratorId =
-  | `background_${number}`
+/** A generator that owns a cortical patch in the projection file. */
+export type PatchId =
+  | 'background'
   | 'alpha' | 'beta' | 'theta' | 'delta'
-  // Sub-sources of a band rhythm, on a ring about its registered centre. A rhythm modelled as
-  // ONE source made every channel carrying it the same trace -- N3 rank 1.07 against a real 3.09
-  // -- so compose.ts splits its variance across these. See osc_n_sources.
-  | `alpha_s${number}` | `beta_s${number}` | `theta_s${number}` | `delta_s${number}`
-  | 'spindle_fast' | 'spindle_slow' | 'kc'
-  // Mechanism (a). Its own topography, deliberately unlike any neural generator's, because
-  // Build Plan 5.1 requires the three respiratory mechanisms stay separable.
+  | 'spindle_fast' | 'spindle_slow' | 'kc';
+
+export type GeneratorId =
+  | PatchId
+  // SPATIAL EIGENMODES of the same cortical patch, `<patch>_m<k>` for k >= 1 (k = 0 is the patch
+  // id itself). A patch is many dipoles with graded coherence, so its channel covariance
+  // L C_s L^T has a spectrum; these are its leading modes. Driving them independently is what
+  // gives a rhythm more than one spatial dimension -- seven point dipoles through a real lead
+  // field would still be rank <= 7 and still separable (D19, Finding 20).
+  | `${PatchId}_m${number}`
+  // Mechanism (a). Deliberately NOT cortical: electrode movement and impedance change with the
+  // chest, so a forward model is the wrong instrument. The sole non-anatomical topography.
   | 'resp_artifact';
 
 /** Weight vector for a generator, indexed by `CHANNELS` order. */
@@ -79,6 +85,23 @@ export function weightsFor(generator: GeneratorId): readonly number[] {
     throw new Error(`projection file has no generator '${generator}'`);
   }
   return entry.weights;
+}
+
+/**
+ * Every mode id of a patch, mode 0 first. Empty patches are a build error, not a silent zero.
+ *
+ * The COUNT IS READ FROM THE FILE rather than registered, because it is a property of the head
+ * model and `patch_mode_variance`, not an independent choice. A registry row for it could
+ * disagree with the projection, and the weights would win silently.
+ */
+export function modesOf(patch: PatchId): GeneratorId[] {
+  const ids: GeneratorId[] = [patch];
+  for (let k = 1; ; k++) {
+    const id = `${patch}_m${k}` as GeneratorId;
+    if (!projection.generators[id]) break;
+    ids.push(id);
+  }
+  return ids;
 }
 
 /** Channel with the largest weight. G6's quantity — structural, no tolerance needed. */
