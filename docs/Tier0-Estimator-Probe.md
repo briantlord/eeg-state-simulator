@@ -1973,3 +1973,63 @@ referral population**, not healthy sleepers. Four derivations cannot constrain e
 or near/far correlation, so nothing spatial is anchored here.
 
 Reproduce: `prep/realdata/fetch_hmc.sh 20`, then `prep/reference/t1m1_sleep_corpus.py`.
+
+---
+
+# Finding 24 — the first sleep rows with an empirical basis, and my prediction about them was wrong
+
+Finding 23 returned MOVE for `chi_n2` and `chi_n3`. This inverts them, and the direction is the
+opposite of what Finding 23 predicted.
+
+| row | was | now | output achieved | corpus target |
+|---|---|---|---|---|
+| `chi_n2` | 1.70 | **1.9** | 2.017 | 2.08 [1.96–2.38] |
+| `chi_n3` | 1.66 | **3.4** | 2.630 | 2.59 [2.32–2.84] |
+| `knee_freq_n2` | 10.0 | 1.0 | 1.68 Hz | 2.29 Hz |
+| `knee_freq_n3` | 0.5 | 1.0 | none in band | 1.74 Hz |
+
+**These are the first sleep parameters in this project with any empirical basis at all.**
+
+## The prediction, and why it was wrong
+
+Finding 23 stated it plainly: *"the generator is TOO STEEP and the row must come DOWN."* Both rows
+go **up**, `chi_n3` by more than double.
+
+The reasoning was half right. `chi_*` is a source parameter and 2.08 is an output of a referenced,
+spatially mixed signal, so they cannot be equated — that part holds, and it is why this was an
+inversion rather than an assignment. The error was **extrapolating the source→output factor across
+pipelines.** Finding 22 measured it under a *nineteen-channel average reference*: source 0.85 →
+output 1.574, a factor of 1.85, output steeper than source. Applying that here gave "1.70 already
+produces ~3.1, so come down."
+
+Measured under HMC's own pipeline — four derivations against the contralateral mastoid — the factor
+is not 1.85 and **does not even have the same sign of effect**: source 3.4 → output 2.63, output
+*shallower* than source. Average referencing across 19 channels removes the spatially common
+low-frequency part and steepens the residual; a bipolar mastoid derivation does not.
+
+So the factor is a property of the montage and reference, not of the generator, and **no factor
+measured under one pipeline transfers to another.** That is D19.1's own rule, broken in the
+paragraph that restated it. Fourth crossing of a parameter with an observable in this project;
+the first three were caught by measurement, and so was this one.
+
+## The ordering is corrected
+
+`chi_n3` (3.4) is now above `chi_n2` (1.9), matching the corpus, where N3 measures the steepest of
+all five stages. The Build Plan 7 "small reversal in N3" that the old value encoded does not
+survive 18 subjects.
+
+## One residual, left standing
+
+**N3's knee never appears in the output at any source setting tried**, while the corpus found one
+at 1.74 Hz in 15 of 18 subjects. The search was extended twice — an optimum on a grid boundary is
+the grid failing, not an answer — and `chi_n3` = 3.4 is interior, but the knee residual is not a
+search problem. It is a real disagreement between the model and the data, and it is recorded rather
+than fitted away.
+
+## Scope
+
+19 nights, clinical referral population, four derivations. This anchors the aperiodic exponent for
+N2 and N3 and nothing else — not amplitudes, not spindle or slow-wave statistics, and nothing
+spatial.
+
+Reproduce: `prep/reference/t1m1_chi_invert_sleep.py`.

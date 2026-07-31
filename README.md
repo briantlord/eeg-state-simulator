@@ -51,7 +51,7 @@ Measured against real resting recordings under average reference, effective rank
 This is a research instrument in progress, and the documentation is written to be checkable rather
 than persuasive.
 
-- **86 of 184 registry rows are `invented`** — not empirically constrained. Every one is marked as
+- **89 of 190 registry rows are `invented`** — not empirically constrained. Every one is marked as
   such and routed to a milestone. A slider labelled "not empirically constrained" is more honest
   than a hidden literal.
 - **Four of six arousal states have thin empirical support.** The reference corpus for wake is

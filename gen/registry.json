@@ -538,21 +538,22 @@
       },
       "provisional": {
         "v": 0.85,
-        "basis": "SOLVED (P10), not assigned. The registry stores a SOURCE exponent; the real 0.850 is an OUTPUT of a 19-channel average-referenced scalp signal, and setting one equal to the other assumes the montage is transparent. Swept source (chi, knee) and measured the generated signal through the identical pipeline the real recordings went through. Knee matches (output 10.32 Hz vs real 9.87); output chi is 1.574 against a real median 0.850 whose per-subject IQR is 0.373-1.300 -- see Finding 22 for the floor that prevents a closer match",
+        "basis": "SOLVED by inversion (P10, Finding 22), then CORROBORATED on an independent corpus (Finding 23)",
         "expires_at_milestone": "T1-M1",
         "constrained_by": "must not be set from any gate threshold"
       },
       "units": null,
-      "standing": "invented",
+      "standing": "derived",
       "source": {
-        "kind": "none",
-        "rationale": ""
+        "kind": "procedure",
+        "text": "Swept as a SOURCE parameter and chosen by the OUTPUT it produces, not assigned from a measurement: the generated signal is passed through the same pipeline the reference recordings went through (19 channels, average reference, knee-mode specparam over 1-20 Hz) and the source pair whose output matches is kept. Assigning the measured value directly was tried first and was wrong by a factor of ~1.85, because the registry stores a source exponent while the corpus reports a property of a referenced, spatially mixed scalp signal. See Finding 22; prep/reference/t1m1_chi_invert.py."
       },
       "states": [
         "wake_ec"
       ],
       "section": "3. Aperiodic background",
-      "milestone": "T1-M1"
+      "milestone": "T1-M1",
+      "note": "THE FIRST QUANTITY IN THIS PROJECT CONFIRMED RATHER THAN FITTED, which is why this row is `derived` and not `invented`. It was solved against PhysioNet EEGMAT -- 8 subjects, 19 channels, average reference, resting wake -- and then measured independently on 19 scored HMC nights, 4 derivations, contralateral mastoid, a different population: 0.83 [IQR 0.65-1.25] over 1-30 Hz and 0.82 over 1-40, against this row's 0.85 (Finding 23). Different corpus, montage, reference and population, agreeing to two decimal places. IT REMAINS `pending`, because the value that agrees is a provisional and the milestone that would promote it has not run. `derived` describes how it was obtained; `pending` describes what may be read from it. The two are not the same claim. THE KNEE IS THE WEAK HALF OF THE PAIR. knee_freq_wake_ec is solved by the same inversion, but Finding 23 measured NO detectable knee in waking HMC spectra at all -- every subject returned a negative knee parameter over 1-30 Hz, which makes knee_freq complex. Nothing corroborates that row."
     },
     "chi_n1": {
       "value": {
@@ -582,8 +583,8 @@
         "kind": "pending"
       },
       "provisional": {
-        "v": 1.7,
-        "basis": "MUST MOVE, and DOWN not up (Finding 23, P17). 19 HMC nights measure an OUTPUT chi of 2.08 [IQR 1.96-2.38] over 1-30 Hz and 2.26 [1.88-2.59] over 1-40, against this row at 1.70. But this row is a SOURCE parameter and that is an output: Finding 22 measured the mapping for wake, where source 0.85 gave output 1.574, a factor of ~1.85. At 1.70 this row already produces an output near 3.1 against a measured 2.08, so the generator is TOO STEEP and the row must come down. Pending inversion against the HMC pipeline; assigning the corpus number is the error Finding 22 exists to name",
+        "v": 1.9,
+        "basis": "SOLVED by inversion against 19 scored HMC nights (P17, Findings 23-24): the SOURCE value whose output, measured through HMC own pipeline of four derivations to contralateral mastoid over 1-30 Hz, reproduces the corpus median of 2.08 [IQR 1.96-2.38]. Achieved 2.017. Raised from 1.70; a prediction that it would FALL was recorded and refuted, because the source-to-output factor was extrapolated from a 19-channel average reference where it runs the other way",
         "expires_at_milestone": "T1-M1",
         "constrained_by": "must not be set from any gate threshold"
       },
@@ -604,8 +605,8 @@
         "kind": "pending"
       },
       "provisional": {
-        "v": 1.66,
-        "basis": "MUST MOVE, and DOWN not up (Finding 23, P17). 19 HMC nights measure an OUTPUT chi of 2.59 [IQR 2.32-2.84] over 1-30 Hz and 2.64 [2.34-2.83] over 1-40, across 18 subjects. THE REVERSAL THIS ROW ENCODES IS REFUTED: it was set below chi_n2 on Build Plan 7, and N3 measures the STEEPEST of all five stages at both fit bands. Source-versus-output as for chi_n2; pending inversion",
+        "v": 3.4,
+        "basis": "SOLVED by inversion against 19 scored HMC nights (P17, Findings 23-24): the SOURCE value whose output reproduces the corpus median of 2.59 [IQR 2.32-2.84] under HMC four-derivation contralateral-mastoid pipeline over 1-30 Hz. Achieved 2.630. Raised from 1.66, which had been set BELOW chi_n2 on Build Plan 7 small-reversal claim -- N3 measures the steepest of all five stages and the ordering n3 > n2 now matches the corpus. The knee is NOT matched: no source setting produces a detectable knee in band while the corpus found one at 1.74 Hz in 15 of 18 subjects, and that disagreement is left standing",
         "expires_at_milestone": "T1-M1",
         "constrained_by": "must not be set from any gate threshold"
       },
@@ -785,7 +786,7 @@
         "kind": "pending"
       },
       "provisional": {
-        "v": 10,
+        "v": 1,
         "basis": "attenuated per knee_present",
         "expires_at_milestone": "T1-M1",
         "constrained_by": "must not be tuned to hit a target G1b bias"
@@ -807,7 +808,7 @@
         "kind": "pending"
       },
       "provisional": {
-        "v": 0.5,
+        "v": 1,
         "basis": "knee effectively ABSENT in N3, i.e. below fit_band_broad's lower edge",
         "expires_at_milestone": "T1-M1",
         "constrained_by": "must not be tuned to hit a target G1b bias"
@@ -917,7 +918,7 @@
         "kind": "pending"
       },
       "provisional": {
-        "v": 50.1187,
+        "v": 1,
         "basis": "k = knee_freq_n2 ** chi_n2 = 10.0 ** 1.70",
         "expires_at_milestone": "T1-M1",
         "constrained_by": "must follow from the knee frequency"
@@ -939,7 +940,7 @@
         "kind": "pending"
       },
       "provisional": {
-        "v": 0.3164,
+        "v": 1,
         "basis": "k = knee_freq_n3 ** chi_n3 = 0.5 ** 1.66; knee below the fit band, i.e. absent",
         "expires_at_milestone": "T1-M1",
         "constrained_by": "must follow from the knee frequency"

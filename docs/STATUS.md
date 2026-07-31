@@ -184,14 +184,14 @@ decision is to delete them.
 
 | standing | rows | meaning |
 |---|---|---|
-| `invented` | 86 | not empirically constrained — the T1-M1 work plan |
-| `chosen` | 55 | deliberate convention; **not** Tier 1 work |
-| `derived` | 12 | computed from a stated procedure |
+| `invented` | 89 | not empirically constrained — the T1-M1 work plan |
+| `chosen` | 56 | deliberate convention; **not** Tier 1 work |
+| `derived` | 14 | computed from a stated procedure |
 | `definitional` | 11 | fixed by AASM or a named standard |
 | `absent` | 11 | deliberately unset, and why |
 | `literature` | 9 | published, author and year recorded |
 
-**184 rows, down from 213: the lead field deleted 31 invented spatial rows and added 4.** The
+**190 rows, down from 213: the lead field deleted 31 invented spatial rows and added 4.** The
 topography section went from 35 rows (27 `invented`, 5 `literature`) to **11 rows (4 `invented`,
 5 `literature`, 2 `chosen`)** — and the five literature rows are no longer only G6's expectations,
 because the patches themselves are now named Desikan-Killiany regions rather than normalized

@@ -97,10 +97,10 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 | `chi_inband_band` | 1–20 *(band_edges)* | Hz | `derived` | The only band in which the reference corpus is usable. PhysioNet EEGMAT carries an acquisition low-pass around 30-45 Hz: local slope 6.7 over 20-30 Hz, a 50 Hz mains notch and a flat instrument floor above 80 Hz, so a fit above ~20 Hz measures their filter and not their cortex. See compare_real.py. | all |
 | `chi_direction` | wake flattest < N1 < N2 ~ N3 < REM steepest | — | `literature` | Lendner et al. 2020, *eLife* — NSRR replication, final analytic sample N=10,255 | all |
 | `chi_wake_eo` | — *(pending T1-M1; runs on 0.9)* | — | `invented` |  | wake_eo |
-| `chi_wake_ec` | — *(pending T1-M1; runs on 0.85)* | — | `invented` |  | wake_ec |
+| `chi_wake_ec` | — *(pending T1-M1; runs on 0.85)* | — | `derived` | Swept as a SOURCE parameter and chosen by the OUTPUT it produces, not assigned from a measurement: the generated signal is passed through the same pipeline the reference recordings went through (19 channels, average reference, knee-mode specparam over 1-20 Hz) and the source pair whose output matches is kept. Assigning the measured value directly was tried first and was wrong by a factor of ~1.85, because the registry stores a source exponent while the corpus reports a property of a referenced, spatially mixed scalp signal. See Finding 22; prep/reference/t1m1_chi_invert.py. | wake_ec |
 | `chi_n1` | — *(pending T1-M1; runs on 1.4)* | — | `invented` |  | n1 |
-| `chi_n2` | — *(pending T1-M1; runs on 1.7)* | — | `invented` |  | n2 |
-| `chi_n3` | — *(pending T1-M1; runs on 1.66)* | — | `invented` |  | n3 |
+| `chi_n2` | — *(pending T1-M1; runs on 1.9)* | — | `invented` |  | n2 |
+| `chi_n3` | — *(pending T1-M1; runs on 3.4)* | — | `invented` |  | n3 |
 | `chi_rem` | — *(pending T1-M1; runs on 2.1)* | — | `invented` |  | rem |
 | `knee_modelled` | the ~20 Hz knee only | — | `chosen` | see DECISIONS D3 | all |
 | `knee_freq_low` | 20 | Hz | `invented` | approximate location reported in a 2024 J Neurosci intrinsic-timescales paper; author not recorded, value not read out under a known pipeline | all |
@@ -109,14 +109,14 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 | `knee_freq_wake_eo` | — *(pending T1-M1; runs on 12)* | Hz | `invented` |  | wake_eo |
 | `knee_freq_wake_ec` | — *(pending T1-M1; runs on 3)* | Hz | `invented` |  | wake_ec |
 | `knee_freq_n1` | — *(pending T1-M1; runs on 12)* | Hz | `invented` |  | n1 |
-| `knee_freq_n2` | — *(pending T1-M1; runs on 10)* | Hz | `invented` |  | n2 |
-| `knee_freq_n3` | — *(pending T1-M1; runs on 0.5)* | Hz | `invented` |  | n3 |
+| `knee_freq_n2` | — *(pending T1-M1; runs on 1)* | Hz | `invented` |  | n2 |
+| `knee_freq_n3` | — *(pending T1-M1; runs on 1)* | Hz | `invented` |  | n3 |
 | `knee_freq_rem` | — *(pending T1-M1; runs on 20)* | Hz | `invented` |  | rem |
 | `k_wake_eo` | — *(pending T1-M1; runs on 9.3597)* | — | `invented` |  | wake_eo |
 | `k_wake_ec` | — *(pending T1-M1; runs on 2.5442)* | — | `invented` |  | wake_ec |
 | `k_n1` | — *(pending T1-M1; runs on 32.423)* | — | `invented` |  | n1 |
-| `k_n2` | — *(pending T1-M1; runs on 50.1187)* | — | `invented` |  | n2 |
-| `k_n3` | — *(pending T1-M1; runs on 0.3164)* | — | `invented` |  | n3 |
+| `k_n2` | — *(pending T1-M1; runs on 1)* | — | `invented` |  | n2 |
+| `k_n3` | — *(pending T1-M1; runs on 1)* | — | `invented` |  | n3 |
 | `k_rem` | — *(pending T1-M1; runs on 539.7131)* | — | `invented` |  | rem |
 | `fit_band_broad` | 1–45 *(band_edges)* | Hz | `chosen` | one of eleven bands in use in the literature; ours by choice | all |
 | `fit_band_narrow` | 30–45 *(band_edges)* | Hz | `literature` | Lendner et al. 2020, *eLife* | all |
@@ -126,6 +126,8 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 **`chi_inband_band`.** A CORPUS PROPERTY, not a choice about EEG. Change the corpus and this changes with it, which is why chi_inband_slope is derived rather than stored: the derived quantity is only meaningful beside the band it was derived over.
 
 **`chi_direction`.** Deliberately NOT a total order. N2 and N3 are related to REM but not to each other: Build Plan 3.2 records N1-N3 correlate r~0.7 and are poorly separated by slope alone, 7 notes a small N3 reversal, and 10 instructs that a clean monotonic ladder be treated as a bug. A strictly monotone encoding would contradict all three. MEASURED AGAINST 19 SCORED HMC NIGHTS, and two parts of this order do not survive in the quantity a reader gets: wake 0.83 < n1 1.37 < rem 1.95 < n2 2.08 < n3 2.59 over 1-30 Hz. N3 is registered BELOW N2 on 7's small reversal, and measures the STEEPEST of all five stages at both fit bands. REM is registered steepest and measures third. REM IS NOT REFUTED BY THIS, because this corpus cannot test it: chi_rem cites Lendner et al. 2020, whose result is a 30-45 Hz slope, and HMC's acquisition low-pass makes that band unusable -- a fit there measures the filter. See Finding 23. In any case no state ordering may be claimed from a band-limited slope; see chi_inband_slope.
+
+**`chi_wake_ec`.** THE FIRST QUANTITY IN THIS PROJECT CONFIRMED RATHER THAN FITTED, which is why this row is `derived` and not `invented`. It was solved against PhysioNet EEGMAT -- 8 subjects, 19 channels, average reference, resting wake -- and then measured independently on 19 scored HMC nights, 4 derivations, contralateral mastoid, a different population: 0.83 [IQR 0.65-1.25] over 1-30 Hz and 0.82 over 1-40, against this row's 0.85 (Finding 23). Different corpus, montage, reference and population, agreeing to two decimal places. IT REMAINS `pending`, because the value that agrees is a provisional and the milestone that would promote it has not run. `derived` describes how it was obtained; `pending` describes what may be read from it. The two are not the same claim. THE KNEE IS THE WEAK HALF OF THE PAIR. knee_freq_wake_ec is solved by the same inversion, but Finding 23 measured NO detectable knee in waking HMC spectra at all -- every subject returned a negative knee parameter over 1-30 Hz, which makes knee_freq complex. Nothing corroborates that row.
 
 **`chi_n1`.** Absent from the source markdown although chi_direction and knee_present both reference N1.
 
@@ -499,7 +501,7 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 | `definitional` | 11 |
 | `chosen` | 56 |
 | `literature` | 9 |
-| `derived` | 14 |
-| `invented` | 89 |
+| `derived` | 15 |
+| `invented` | 88 |
 | `absent` | 11 |
 | **total** | **190** |
