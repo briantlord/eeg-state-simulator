@@ -38,6 +38,31 @@ visitor sees.
 model, the parameter registry, all signal generation — is compiled into that one JavaScript file.
 It works offline and it sends nothing anywhere.
 
+**It runs entirely on the visitor's computer, and this is checkable.** Against the built bundle:
+
+| checked for | found |
+|---|---|
+| external URLs (CDNs, fonts, analytics) | none — the one `https://` string is the FreeSurfer licence *reference* in the attribution text, which nothing requests |
+| `fetch` / `XMLHttpRequest` / `WebSocket` / `EventSource` | one `fetch`, Vite's own preloader for this page's script and stylesheet, same origin |
+| `localStorage` / `sessionStorage` / `cookies` / `indexedDB` | none |
+| `navigator.sendBeacon` (silent analytics) | none |
+| external stylesheet or font links | none — the only `<link>` is the relative one to your own copy |
+
+So the only network traffic is your server sending the page, exactly as it would for a static
+HTML file. After that the browser generates every sample, runs every filter and computes every
+readout locally. It works with the network unplugged.
+
+Reproduce it yourself after any build:
+
+```bash
+grep -oaE "https?://[^\"' ]+" dist/assets/*.js dist/index.html
+grep -oaF "localStorage" dist/assets/*.js
+```
+
+One thing this does **not** cover: your web host's own logs. Any server records which files were
+requested, from which IP, like any website. That is your hosting setup rather than anything this
+page does, but it is the honest boundary of the claim.
+
 **No special server settings.** Any host that can serve static files will do: shared hosting,
 Netlify, S3, a folder on a VPS. No PHP, no Node, no build step on the server.
 
