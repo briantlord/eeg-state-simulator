@@ -247,13 +247,25 @@ function drawLane(
   const end = Math.min(start + count, data.length);
   ctx.beginPath();
 
+  // NON-FINITE SAMPLES BREAK THE PATH RATHER THAN BEING DRAWN THROUGH.
+  //
+  // The display window is padded with NaN wherever it reaches back before the stream started, so
+  // the pen draws onto blank paper for the first window and never again. Canvas treats lineTo with
+  // a non-finite coordinate as a no-op, which is NOT the same as skipping it: the path would stay
+  // open and the first real sample would be joined to the last one before the gap, drawing a line
+  // straight across the blank region. `open` has to be cleared explicitly.
   if (count < plotW * 2) {
     let open = false;
     for (let i = start; i < end; i++) {
+      const v = data[i]!;
+      if (!Number.isFinite(v)) {
+        open = false;
+        continue;
+      }
       const px = left + ((i - start) / count) * plotW;
-      if (open) ctx.lineTo(px, y(data[i]!));
+      if (open) ctx.lineTo(px, y(v));
       else {
-        ctx.moveTo(px, y(data[i]!));
+        ctx.moveTo(px, y(v));
         open = true;
       }
     }
@@ -269,10 +281,16 @@ function drawLane(
     let hi = -Infinity;
     for (let i = i0; i < i1 && i < end; i++) {
       const v = data[i]!;
+      // A single NaN would poison the whole column's min and max.
+      if (!Number.isFinite(v)) continue;
       if (v < lo) lo = v;
       if (v > hi) hi = v;
     }
-    if (lo === Infinity) continue;
+    // An all-blank column ends the path, for the same reason as above.
+    if (lo === Infinity) {
+      open = false;
+      continue;
+    }
     const x = left + px + 0.5;
     // Continue the path from the previous column rather than starting a new stroke, so the
     // envelope reads as one line even where a column spans a single sample.

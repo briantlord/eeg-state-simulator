@@ -36,6 +36,16 @@ export class SignalStream {
   private segIndex = 0;
   private current: ComposeResult;
   private next: ComposeResult | null = null;
+  /**
+   * The segment before `current`, kept so the display window can span a segment join.
+   *
+   * WITHOUT IT THE TRACE FREEZES FOR A FULL WINDOW AT EVERY BOUNDARY. `positionS` wraps to ~0 at
+   * a roll, and app.ts clamped the window start at zero, so for `windowS` seconds afterwards the
+   * window stopped moving and the picture stood still -- reported as "the scroll stops after
+   * about 90 s", which is exactly `display_buffer_s`. Holding one segment of history lets the
+   * window keep sliding across the join instead of being pinned to the start of the new segment.
+   */
+  private prev: ComposeResult | null = null;
 
   /** Seconds elapsed since the stream started. Monotonic; never wraps. */
   private elapsed = 0;
@@ -97,6 +107,16 @@ export class SignalStream {
     return this.elapsed;
   }
 
+  /** Index of the segment on screen. Used as a cache key by the display. */
+  get segmentIndex(): number {
+    return this.segIndex;
+  }
+
+  /** The previous segment, or null before the first roll. */
+  get previous(): ComposeResult | null {
+    return this.prev;
+  }
+
   /** Advance the playhead by `dt` seconds, rolling to the next segment when due. */
   advance(dt: number): void {
     const before = Math.floor(this.elapsed / this.segmentS);
@@ -109,6 +129,7 @@ export class SignalStream {
     }
     if (after !== before) {
       this.segIndex = after;
+      this.prev = this.current;
       this.current = this.next ?? this.generate(after);
       this.next = null;
       this.crossfadeIn();
@@ -151,6 +172,9 @@ export class SignalStream {
     this.segIndex = 0;
     this.elapsed = 0;
     this.next = null;
+    // History goes too. Keeping it would splice signal from before the reset into the left of the
+    // first window -- the old seed's trace bleeding into the new one's.
+    this.prev = null;
     this.current = this.generate(0);
   }
 }

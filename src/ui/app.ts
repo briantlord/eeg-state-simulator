@@ -27,6 +27,7 @@ import { broadbandExponent, narrowbandExponent } from '../analysis/psd.ts';
 import { lempelZiv } from '../analysis/lz.ts';
 import { formatExponent } from '../core/types/exponent.ts';
 import { Rng } from '../core/rng/xoshiro128pp.ts';
+import type { ComposeResult } from '../core/generators/compose.ts';
 import { drawTrace } from '../render/trace.ts';
 import { SignalStream } from './stream.ts';
 import {
@@ -129,6 +130,8 @@ interface Processed {
 }
 let processed: Processed | null = null;
 let processedKey = '';
+/** Processed segments by (spec, segment index). Holds at most the two the window can span. */
+const segCache = new Map<string, Processed>();
 
 /** The filter as the panel currently describes it. */
 function currentSpec(): FilterSpec {
@@ -138,6 +141,48 @@ function currentSpec(): FilterSpec {
     type: ui.ftype,
     order: ui.forder,
   };
+}
+
+/**
+ * Filter and reference ONE segment. Cached per segment index, because the display now needs the
+ * previous segment as well as the current one and filtering is far too expensive per frame.
+ *
+ * The filter runs on the WHOLE segment, never on the visible window. Filtering a sliding window
+ * would put fresh edge transients into the trace on every frame -- the filter's own ringing,
+ * moving with the playhead, which is precisely the artefact Demo 3 exists to point at.
+ */
+function processSegment(seg: ComposeResult, key: string): Processed {
+  const hit = segCache.get(key);
+  if (hit) return hit;
+  const spec = currentSpec();
+  const hp = seg.channels.map((c) => applyFilterChain(c, spec, FS));
+  const ref = applyReference(hp, ui.reference);
+  const rank = effectiveRank(ref.channels);
+  const channels = [...ref.channels];
+  const labels = [...ref.labels];
+  if (ui.showReference) {
+    for (const label of REFERENCE_LABELS) {
+      const i = ALL_CHANNELS.indexOf(label);
+      if (i >= 0) {
+        channels.push(hp[i]!);
+        labels.push(`${label}*`);
+      }
+    }
+  }
+  const rawRef = ui.showRaw ? applyReference([...seg.channels], ui.reference) : null;
+  const out: Processed = { channels, labels, rank, raw: rawRef?.channels ?? null };
+  segCache.set(key, out);
+  // Two segments are all the display can show at once; anything older is dead weight.
+  while (segCache.size > 2) segCache.delete(segCache.keys().next().value as string);
+  return out;
+}
+
+/** Settings that change the processed signal. Part of every segment cache key. */
+function specKey(): string {
+  return (
+    `${ui.hpEnabled}|${ui.hpHz}|${ui.lpEnabled}|${ui.lpHz}|${ui.forder}|${ui.ftype}|` +
+    `${ui.reference}|${ui.showReference}|${ui.showRaw}`
+  );
 }
 
 function ensureProcessed(): Processed {
@@ -188,15 +233,55 @@ function chan(p: Processed, label: string): Float64Array {
 
 // --------------------------------------------------------------------- trace
 
+/**
+ * The visible window, spliced across a segment join and left-padded with silence at the start.
+ *
+ * TWO DEFECTS CAME FROM CLAMPING THE WINDOW START AT ZERO INSTEAD, and they were the same defect.
+ * At a segment roll `positionS` wraps to ~0, so `max(0, tEnd - windowS)` pinned the window's left
+ * edge for a full `windowS` afterwards and the trace stood still -- "the scroll stops after about
+ * 90 s", which is `display_buffer_s` exactly. At startup the same clamp made the window open
+ * already full of signal instead of filling in.
+ *
+ * Here the window is always [tEnd - windowS, tEnd] in stream time. Samples earlier than the
+ * stream's start are left as NaN, which `trace.ts` skips, so the pen genuinely draws onto blank
+ * paper for the first `windowS` seconds and never again.
+ */
+function windowed(
+  cur: readonly Float64Array[],
+  prv: readonly Float64Array[] | null,
+  tEndS: number,
+  segS: number,
+): Float64Array[] {
+  const n = Math.round(ui.windowS * FS);
+  const endIdx = Math.round(tEndS * FS);
+  const segN = Math.round(segS * FS);
+  return cur.map((c, ch) => {
+    const out = new Float64Array(n).fill(NaN);
+    for (let i = 0; i < n; i++) {
+      const idx = endIdx - n + i;
+      if (idx >= 0) out[i] = c[idx] ?? NaN;
+      else if (prv) out[i] = prv[ch]?.[segN + idx] ?? NaN;
+    }
+    return out;
+  });
+}
+
 function drawFrame(): void {
   const p = ensureProcessed();
-  const data = p.channels;
+  const spec = specKey();
+  const prevSeg = stream.previous;
+  const prevProc = prevSeg ? processSegment(prevSeg, `${spec}|${stream.segmentIndex - 1}`) : null;
+
+  const tEnd = stream.positionS;
+  /** Window start in the CURRENT segment's time base. Negative means it reaches into `prev`. */
+  const winStart = tEnd - ui.windowS;
+  const data = windowed(p.channels, prevProc?.channels ?? null, tEnd, stream.segmentSeconds);
   const labels = p.labels;
 
-  // The playhead sits at the RIGHT edge, as on a paper chart: new signal arrives at the pen
-  // and older signal scrolls left out of view.
-  const tEnd = stream.positionS;
-  const tStart = Math.max(0, tEnd - ui.windowS);
+  // The playhead sits at the RIGHT edge, as on a paper chart: new signal arrives at the pen and
+  // older signal scrolls left out of view. The window array IS the window, so its own start is
+  // the offset the renderer draws from.
+  const tStart = 0;
 
   drawTrace($<HTMLCanvasElement>('trace'), {
     channels: data,
@@ -204,16 +289,30 @@ function drawFrame(): void {
     fs: FS,
     sensitivityUvPerMm: ui.sensitivity,
     pxPerMm: scalarValue('display_px_per_mm'),
-    events: stream.events.map((e) => ({
-      onset: e.onset,
-      duration: e.duration,
-      type: e.type,
-    })),
-    raw: p.raw ?? [],
+    // EVERY LANE AND EVERY EVENT MOVES INTO WINDOW TIME, not just the montage. The window now
+    // spans a segment join, so anything still expressed in segment time would sit at the wrong
+    // place on the screen -- an event band a whole segment adrift from the wave it marks.
+    events: [
+      ...(prevSeg?.events ?? []).map((e) => ({ ...e, onset: e.onset - stream.segmentSeconds })),
+      ...stream.events,
+    ]
+      .map((e) => ({ onset: e.onset - winStart, duration: e.duration, type: e.type }))
+      .filter((e) => e.onset + e.duration > 0 && e.onset < ui.windowS),
+    raw: p.raw ? windowed(p.raw, prevProc?.raw ?? null, tEnd, stream.segmentSeconds) : [],
     aux: ui.showAux
       ? [
-          { label: 'Resp', data: stream.respirationBelt, unit: 'a.u.' },
-          { label: 'ECG', data: stream.ecg, unit: 'µV' },
+          {
+            label: 'Resp',
+            data: windowed([stream.respirationBelt],
+              prevSeg ? [prevSeg.respirationBelt] : null, tEnd, stream.segmentSeconds)[0]!,
+            unit: 'a.u.',
+          },
+          {
+            label: 'ECG',
+            data: windowed([stream.ecg], prevSeg ? [prevSeg.ecg] : null, tEnd,
+              stream.segmentSeconds)[0]!,
+            unit: 'µV',
+          },
         ]
       : [],
     windowS: ui.windowS,
@@ -225,13 +324,37 @@ function drawFrame(): void {
     `${ui.sensitivity} µV/mm   ·   ${labels.length} ch`;
 }
 
-/** Exposed so a non-compositing environment can step the display deterministically. */
+/**
+ * Exposed so a non-compositing environment can step the display deterministically.
+ *
+ * `window` reports what `windowed()` produced for the current playhead WITHOUT needing the canvas
+ * to paint, which is the only way to check the display in a headless or hidden tab -- there,
+ * requestAnimationFrame never runs, the canvas is never sized, and every pixel assertion is
+ * vacuous. It reports the leading blank because that is the whole contract of the fix: blank for
+ * the first window and never again, including across a segment join.
+ */
 (globalThis as Record<string, unknown>)['__eegsim'] = {
   step: (dt: number) => {
     stream.advance(dt);
     updateObservables();
   },
   position: () => stream.positionS,
+  elapsed: () => stream.elapsedS,
+  window: () => {
+    const p = ensureProcessed();
+    const prevSeg = stream.previous;
+    const prevProc = prevSeg
+      ? processSegment(prevSeg, `${specKey()}|${stream.segmentIndex - 1}`)
+      : null;
+    const w = windowed(
+      p.channels, prevProc?.channels ?? null, stream.positionS, stream.segmentSeconds,
+    )[0]!;
+    let lead = 0;
+    while (lead < w.length && !Number.isFinite(w[lead]!)) lead++;
+    let gaps = 0;
+    for (let i = lead; i < w.length; i++) if (!Number.isFinite(w[i]!)) gaps++;
+    return { samples: w.length, leadingBlank: lead, blankAfterSignal: gaps };
+  },
 };
 
 let last = performance.now();
@@ -628,10 +751,12 @@ function restart(): void {
     seed: ui.seed, state: ui.state,
     lineNoise: ui.lineNoise, lineFreqHz: ui.lineFreqHz,
   });
-  // Prime the playhead by one window, so the chart opens full rather than filling in over the
-  // first 30 seconds. A paper chart is already written on when you walk up to it.
-  stream.advance(ui.windowS);
+  // THE PLAYHEAD IS NO LONGER PRIMED. It used to be advanced by one window so the chart opened
+  // already full -- "a paper chart is already written on when you walk up to it". Reversed on
+  // request: the pen now starts at the left of blank paper and the trace fills in as it is
+  // generated, which is what a recording actually looks like starting up.
   processedKey = '';
+  segCache.clear();
   updateObservables();
 }
 
@@ -658,6 +783,14 @@ function mount(): void {
   // than being a spinner on the number. Every parameter is unchanged; only the draws differ.
   // The value stays visible and typeable so a seed can be written down and returned to --
   // determinism is only useful if the reader can act on it (G2).
+  // RESET, NOT RELOAD. Same seed, same state, same controls -- back to t = 0 with the paper
+  // blank again. It exists because the stream is deterministic: rewinding to the start of a known
+  // seed and watching the same signal a second time is a thing a reader will want, and reloading
+  // the page would also throw away the montage, filter and sensitivity they had set up.
+  $<HTMLButtonElement>('reset').addEventListener('click', () => {
+    restart();
+  });
+
   $<HTMLButtonElement>('newseed').addEventListener('click', () => {
     ui.seed = Math.floor(Math.random() * 2_000_000_000); // @lit-ok seed range, an arbitrary large integer
     seedInput.value = String(ui.seed);
@@ -757,7 +890,9 @@ function mount(): void {
   $('version').textContent = `generator v${GENERATOR_VERSION}`;
 
   renderInvented();
-  stream.advance(ui.windowS);
+  // NOT PRIMED. mount() advanced the playhead by one window here as well as in restart(), so
+  // removing it from restart() alone left the page still opening on a full chart. The trace now
+  // starts at t = 0 on blank paper in both paths.
   updateObservables();
   setInterval(() => {
     updateObservables();
