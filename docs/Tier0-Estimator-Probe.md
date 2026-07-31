@@ -1881,3 +1881,95 @@ is a dataset decision, not a fitting one.
 cross-check is the registry doing exactly the job it exists for.
 
 Reproduce: `prep/reference/t1m1_chi_knee_fit.py`, `prep/reference/t1m1_chi_invert.py`.
+
+---
+
+# Finding 23 — nineteen scored nights: two rows must move, and the naive direction is backwards `[P17]`
+
+Four of six arousal states were validated against nothing. This is the first real measurement:
+**19 HMC nights, AASM-scored, 4 EEG derivations at 256 Hz, fitted per subject.** The criterion was
+fixed before the numbers were seen — MOVE if the registry provisional falls outside the
+interquartile range across subjects, with floors of 20 epochs per subject and 8 subjects.
+
+| stage | n | med. epochs | χ median [IQR] 1–30 Hz | χ median [IQR] 1–40 Hz | registry | verdict |
+|---|---|---|---|---|---|---|
+| wake | 19 | 149 | 0.83 [0.65–1.25] | 0.82 [0.65–1.19] | 0.85 | **HOLD** |
+| n1 | 18 | 87 | 1.37 [1.20–1.59] | 1.48 [1.29–1.86] | 1.40 | **HOLD** |
+| n2 | 19 | 350 | 2.08 [1.96–2.38] | 2.26 [1.88–2.59] | 1.70 | **MOVE** |
+| n3 | 18 | 157 | 2.59 [2.32–2.84] | 2.64 [2.34–2.83] | 1.66 | **MOVE** |
+| rem | 19 | 152 | 1.95 [1.79–2.10] | 2.30 [1.98–2.62] | 2.10 | band-dependent → **HOLD** |
+
+## wake and n1 hold, and wake's agreement is worth more than a hold
+
+`chi_wake_ec` = 0.85 was fitted from **EEGMAT** — 8 subjects, 19 channels, average reference,
+resting wake. It lands at 0.83 / 0.82 in **HMC** — 19 subjects, 4 derivations, contralateral
+mastoid, scored wake epochs from whole-night recordings. Different corpus, different montage,
+different reference, different population. That is the first quantity in this project confirmed by
+an independent corpus rather than fitted to one.
+
+## REM is band-dependent, so the rule says hold
+
+MOVE at 1–30 Hz (1.95, registry 2.10 just outside), HOLD at 1–40 Hz (2.30, registry inside). By
+the pre-registered rule that is a fact about the fit band, not about REM.
+
+**And the claim REM's row rests on cannot be tested here at all.** `chi_rem` = 2.1 cites Lendner
+et al. 2020, whose result is a **30–45 Hz** slope. HMC's acquisition low-pass makes that band
+unusable — measured, the local slope runs `25–35: −0.33 | 35–45: 2.09 | 45–60: 3.85`, which is a
+filter, not cortex. Nothing here confirms or refutes Lendner; the corpus simply cannot reach it.
+
+## The n3 < n2 reversal is refuted
+
+`chi_n3` (1.66) was set deliberately **below** `chi_n2` (1.70), citing Build Plan 7's "small
+reversal in N3". Measured, N3 is the steepest of all five stages and clearly steeper than N2 —
+2.59 vs 2.08 at 1–30 Hz, 2.64 vs 2.26 at 1–40 Hz, across 18 and 19 subjects with hundreds of
+epochs each. The ordering claim does not survive.
+
+Measured ordering: **wake 0.83 < n1 1.37 < rem 1.95 < n2 2.08 < n3 2.59.**
+Registry ordering: wake 0.85 < n1 1.40 < n3 1.66 < n2 1.70 < rem 2.10.
+
+## THE DIRECTION OF THE FIX IS THE OPPOSITE OF THE OBVIOUS ONE
+
+The table reads "registry 1.70, corpus 2.08, so raise `chi_n2`." **That would make it worse.**
+
+`chi_*` is a SOURCE parameter; the corpus number is an OUTPUT of a referenced, spatially-mixed
+scalp signal. Finding 22 measured that mapping for wake: source 0.85 produced an output of 1.574,
+a factor of about 1.85. Applying it, `chi_n2` at 1.70 is already producing an output near 3.1
+against a measured 2.08 — **the generator is too steep, and the row must come DOWN, not up.**
+
+This is the third time this project has crossed a parameter with an observable, and the second
+time inside the work that documented the error. Assigning the measured values here would be the
+same mistake with better data behind it.
+
+So the rows are **not edited to the corpus values.** They are marked as requiring inversion against
+the HMC pipeline — compose N2/N3, reference to contralateral mastoid on four derivations, measure,
+and solve for the source pair whose output matches — exactly as `snr_nominal` and `chi_wake_ec`
+were solved.
+
+## The knee: wake and N1 have none, and the probe lied about it once
+
+| stage | subjects with a usable knee | knee median [IQR] |
+|---|---|---|
+| wake | **1** of 19 | unusable |
+| n1 | 3 of 18 | unusable |
+| n2 | 14 of 19 | 2.29 [1.15–2.86] |
+| n3 | 15 of 18 | 1.74 [0.88–2.60] |
+| rem | 13 of 19 | 1.83 [1.44–2.58] |
+
+Waking spectra over 1–30 Hz return a **negative** knee parameter — sampled directly, every subject
+gave k between −0.90 and −1.00, which makes `knee_freq = k^(1/χ)` complex. That is not a solver
+hiccup; it means there is no knee in the band to fit. The registry gives waking states knees at
+12 Hz, and that is the sharpest disagreement in this finding.
+
+**The first run of this probe reported wake's knee as "3.45 [3.45–3.45]".** It discarded the
+unphysical fits as NaN and then took a median over what survived — which was one subject — and
+printed it beside an IQR of zero width, reading as tight corpus-wide agreement. The probe now
+prints the surviving count next to every knee, and refuses to show a median below `MIN_SUBJECTS`.
+A number with no n beside it is how a sample of one passes for a corpus.
+
+## Scope
+
+19 nights, not 20 — SN014 failed to fetch and is not retried silently. HMC is a **clinical
+referral population**, not healthy sleepers. Four derivations cannot constrain effective rank, PC1
+or near/far correlation, so nothing spatial is anchored here.
+
+Reproduce: `prep/realdata/fetch_hmc.sh 20`, then `prep/reference/t1m1_sleep_corpus.py`.

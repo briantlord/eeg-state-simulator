@@ -508,7 +508,7 @@
       },
       "states": "all",
       "section": "3. Aperiodic background",
-      "note": "Deliberately NOT a total order. N2 and N3 are related to REM but not to each other: Build Plan 3.2 records N1-N3 correlate r~0.7 and are poorly separated by slope alone, 7 notes a small N3 reversal, and 10 instructs that a clean monotonic ladder be treated as a bug. A strictly monotone encoding would contradict all three."
+      "note": "Deliberately NOT a total order. N2 and N3 are related to REM but not to each other: Build Plan 3.2 records N1-N3 correlate r~0.7 and are poorly separated by slope alone, 7 notes a small N3 reversal, and 10 instructs that a clean monotonic ladder be treated as a bug. A strictly monotone encoding would contradict all three. MEASURED AGAINST 19 SCORED HMC NIGHTS, and two parts of this order do not survive in the quantity a reader gets: wake 0.83 < n1 1.37 < rem 1.95 < n2 2.08 < n3 2.59 over 1-30 Hz. N3 is registered BELOW N2 on 7's small reversal, and measures the STEEPEST of all five stages at both fit bands. REM is registered steepest and measures third. REM IS NOT REFUTED BY THIS, because this corpus cannot test it: chi_rem cites Lendner et al. 2020, whose result is a 30-45 Hz slope, and HMC's acquisition low-pass makes that band unusable -- a fit there measures the filter. See Finding 23. In any case no state ordering may be claimed from a band-limited slope; see chi_inband_slope."
     },
     "chi_wake_eo": {
       "value": {
@@ -583,7 +583,7 @@
       },
       "provisional": {
         "v": 1.7,
-        "basis": "steeper than wake; poorly separated from N3 by design",
+        "basis": "MUST MOVE, and DOWN not up (Finding 23, P17). 19 HMC nights measure an OUTPUT chi of 2.08 [IQR 1.96-2.38] over 1-30 Hz and 2.26 [1.88-2.59] over 1-40, against this row at 1.70. But this row is a SOURCE parameter and that is an output: Finding 22 measured the mapping for wake, where source 0.85 gave output 1.574, a factor of ~1.85. At 1.70 this row already produces an output near 3.1 against a measured 2.08, so the generator is TOO STEEP and the row must come down. Pending inversion against the HMC pipeline; assigning the corpus number is the error Finding 22 exists to name",
         "expires_at_milestone": "T1-M1",
         "constrained_by": "must not be set from any gate threshold"
       },
@@ -605,7 +605,7 @@
       },
       "provisional": {
         "v": 1.66,
-        "basis": "BELOW chi_n2: Build Plan 7 documents that narrowband slope steepens across sleep stages WITH A SMALL REVERSAL IN N3, and 3.2 records that N1-N3 correlate r~0.7 and are poorly separated by slope alone. A value above chi_n2 would encode a clean ladder, which 7 says to treat as a bug",
+        "basis": "MUST MOVE, and DOWN not up (Finding 23, P17). 19 HMC nights measure an OUTPUT chi of 2.59 [IQR 2.32-2.84] over 1-30 Hz and 2.64 [2.34-2.83] over 1-40, across 18 subjects. THE REVERSAL THIS ROW ENCODES IS REFUTED: it was set below chi_n2 on Build Plan 7, and N3 measures the STEEPEST of all five stages at both fit bands. Source-versus-output as for chi_n2; pending inversion",
         "expires_at_milestone": "T1-M1",
         "constrained_by": "must not be set from any gate threshold"
       },
