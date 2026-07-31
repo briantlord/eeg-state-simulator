@@ -50,21 +50,43 @@ const ANALYSIS_HZ = scalarValue('analysis_update');
 
 const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T;
 
+/**
+ * Like `$`, but honest when the element is absent.
+ *
+ * Four panels -- Demo 1, Demo 3, Observables and Parameters in use -- were taken off the page and
+ * their markup kept verbatim in `docs/archived-panels.html`. The code that fills them is left
+ * intact rather than deleted, because deleting it would mean rewriting it to bring the panels
+ * back. Each of those renderers now begins by asking for its host element through this and
+ * returning if it is not there.
+ *
+ * `$` stays as it is for elements the page cannot work without: a missing #trace or #state is a
+ * bug and should throw at the point of use, not be quietly tolerated.
+ */
+const $opt = (id: string): HTMLElement | null => document.getElementById(id);
+
 const ui = {
-  state: 'n3' as StateId,
+  // WAKE, EYES CLOSED is the opening state: it is the one condition this project has a real
+  // corpus for, and its alpha is the feature a first-time reader can recognise without being
+  // told what to look at. N3 opened here previously and led with the least typical trace.
+  state: 'wake_ec' as StateId,
   seed: scalarValue('snr_calibration_seed'),
-  // The filter is now a SPEC rather than a single cutoff: two independently switchable ends, an
-  // order, and a phase mode. `hpf_options`' first entry seeds the high-pass so the panel opens
-  // where the old single-cutoff control did.
+  // BOTH ENDS ON, BOTH WIDE OPEN. The filter is a SPEC -- two independently switchable ends, an
+  // order and a phase mode -- and it opens with both ends enabled at the extremes of
+  // `filter_ui_range`, so the panel shows its full travel and the first drag of either handle
+  // narrows the passband rather than switching something on. Read from the registry's own UI
+  // domain rather than written as numbers, so the handles cannot start outside their range.
   hpEnabled: true,
-  hpHz: enumValue('hpf_options')[0] as number,
-  lpEnabled: false,
-  lpHz: scalarValue('lpf_default'),
+  hpHz: uiDomain('filter_ui_range').lo,
+  lpEnabled: true,
+  lpHz: uiDomain('filter_ui_range').hi,
   forder: scalarValue('filter_order'),
   ftype: 'zeroPhase' as FilterType,
   showRaw: false,
-  windowS: 30, // @lit-ok initial display window (s); user-selectable, 30 s = the AASM scoring epoch
-  sensitivity: scalarValue('display_sensitivity'),
+  windowS: 15, // @lit-ok initial display window (s); user-selectable from display_window_options
+  // Opens at 15 uV/mm rather than the registry's 7. `display_sensitivity` is the value the
+  // amplitude claims are stated at and is left alone; this is only where the control starts, and
+  // a coarser scale keeps waking alpha and N3 delta on the same screen without clipping.
+  sensitivity: 15, // @lit-ok initial display sensitivity (uV/mm); one of display_sensitivity_options
   running: true,
   /** Scalp only, or scalp plus the mastoid references the AASM criterion needs. */
   showReference: false,
@@ -224,6 +246,9 @@ function loop(now: number): void {
 // -------------------------------------------------------------- observables
 
 function updateObservables(): void {
+  // Panel archived out of index.html; see $opt. Restoring the markup re-enables this with no
+  // other change.
+  if (!$opt('c-chi')) return;
   const p = ensureProcessed();
   // Analyse the window on screen, not the whole buffer: the readout should describe what the
   // reader is looking at.
@@ -333,6 +358,9 @@ const DEMO3_FEATURE: Record<StateId, { types: string[]; label: string } | null> 
 };
 
 function renderDemo3(): void {
+  // Panel archived out of index.html; see $opt. Restoring the markup re-enables this with no
+  // other change.
+  if (!$opt('demo3')) return;
   const canvas = $<HTMLCanvasElement>('demo3');
   const dpr = window.devicePixelRatio || 1;
   if (canvas.clientWidth === 0) return;
@@ -573,6 +601,9 @@ function select(id: string, values: readonly (string | number)[], current: strin
 }
 
 function renderInvented(): void {
+  // Panel archived out of index.html; see $opt. Restoring the markup re-enables this with no
+  // other change.
+  if (!$opt('invented-list')) return;
   const keys = inventedKeys();
   const host = $('invented-list');
   host.innerHTML = '';

@@ -40,9 +40,14 @@
       .clock { margin-left: auto; font-family: var(--font-mono); font-size: var(--size-xs);
         color: var(--ink-faint); }
       #scrub { width: 100%; margin: 4px 0 0; }
-      /* The event-band swatch, matching what trace.ts paints. CSS, not an inline style, so the
-         literal lives where the linter expects presentation values. */
-      .swatch-event { background: var(--pen-event); opacity: 0.28; padding: 0 0.6em; }
+      /* The event-band swatch. It names the colour trace.ts paints, but it is a LABEL rather than
+         a sample: at the canvas's own 0.28 alpha the words sat on a wash too pale to read.
+         Darkened to the full pen colour -- and the text set to PAPER, not ink. Ink on the solid
+         pen measured 2.62:1, below WCAG AA's 4.5 and worse than the pale wash it replaced;
+         paper on the same background measures 6.6:1. Darkening a background without moving the
+         text off it makes the label less legible, not more. */
+      .swatch-event { background: var(--pen-event); color: var(--paper);
+        padding: 0 0.6em; border-radius: 2px; }
     </style>
   </head>
   <body>
@@ -80,9 +85,8 @@
           <p class="note">
             The <span class="swatch-event">pink bands</span> mark <strong>injected events</strong> — the ground-truth
             spindles, K-complexes and slow oscillations, at the exact times the generator placed
-            them. Knowing where they are is the thing no real recording can give you, which is
-            what the gates use them for. <strong>mains</strong> adds 60 Hz interference with a
-            per-channel phase and gain, so it cannot be removed by changing the reference.
+            them. <strong>Mains</strong> adds 60 Hz interference with a per-channel phase and
+            gain, so it cannot be removed by changing the reference.
           </p>
           <p class="note">
             Below the heavier rule sit <strong>respiration</strong> (belt displacement) and
@@ -93,17 +97,6 @@
             respiratory phase that drives the EEG coupling in Demo 1.
           </p>
 
-          <div class="panel">
-            <h2>Demo 3 — ringing the filter invented</h2>
-            <canvas id="demo3"></canvas>
-            <p class="note" id="demo3-note"></p>
-            <p class="note">
-              The state's sharpest transient, before and after the high-pass above. The red trace
-              is the <em>difference</em>: deflections that exist only because of the filter. Some
-              sit at spindle-like frequencies. With real data you could not label these, because
-              you never had the unfiltered signal.
-            </p>
-          </div>
         </div>
 
         <div>
@@ -183,78 +176,8 @@
             </p>
           </div>
 
-          <div class="panel">
-            <h2>Demo 1 — what the filter removes</h2>
-            <p class="note">
-              Raise the high-pass cutoff past the respiratory rate and watch
-              <strong>(a)</strong> collapse while <strong>(c)</strong> holds.
-            </p>
-            <table class="readout-table">
-              <tr><th>(a) movement artifact</th><td class="derived" id="c-rec">—</td></tr>
-              <tr><th>&nbsp;&nbsp;of injected</th><td id="c-ret">—</td></tr>
-              <tr><th>&nbsp;&nbsp;noise floor</th><td class="derived" id="c-floor">—</td></tr>
-              <tr><th>(c) physiological</th><td class="derived" id="c-chi">—</td></tr>
-            </table>
-            <p class="note">
-              <strong>A naive coupling number is mostly artifact.</strong> The filter removes it,
-              correctly — (a) <em>is</em> an artifact. The physiological coupling (c) was never
-              what the number was reporting.
-            </p>
-            <p class="note" id="c-window"></p>
-            <details>
-              <summary class="note" style="cursor:pointer">How each row is computed</summary>
-              <p class="note">
-                <strong>(a)</strong> is the component locked to respiratory phase, in µV.
-                “of injected” compares it against ground truth <em>at the electrode</em> — the
-                source amplitude times the gain of projection and of the reference you picked,
-                both linear and both known exactly. Charging that geometry to the filter would be
-                the same conflation this demo is about.
-              </p>
-              <p class="note">
-                <strong>Noise floor</strong> is the same estimator run off-resonance, where
-                nothing was injected. It is not zero, so compare (a) against the floor rather
-                than against zero.
-              </p>
-              <p class="note">
-                <strong>(c)</strong> is named by mechanism, not quantity. It reads χ̂ at the
-                respiratory rate, where both halves of mechanism (c) can appear, in true χ units.
-                It is a control that does not move with the filter — not a clean measurement of
-                exponent modulation, since the shipped depth sits only ~3× above the floor.
-              </p>
-              <p class="note">
-                Ground truth exists here only because the generator injected it; no real dataset
-                can show this comparison. G4 runs it on a 300 s record because a 30 s window
-                cannot separate the modulation from its sidebands.
-              </p>
-            </details>
-          </div>
 
-          <div class="panel">
-            <h2>Observables</h2>
-            <table class="readout-table">
-              <tr><th>χ 1–45 Hz knee</th><td id="o-broad">—</td></tr>
-              <tr><th>χ 30–45 Hz fixed</th><td id="o-narrow">—</td></tr>
-              <tr><th>LZc normalized</th><td id="o-lz">—</td></tr>
-              <tr><th>effective rank</th><td id="o-rank">—</td></tr>
-            </table>
-            <p class="note" id="lz-null"></p>
-            <p class="note">
-              <strong>Effective rank</strong> is the participation ratio of the channel
-              covariance — a threshold-free count of how many independent things 19 electrodes
-              are actually carrying. It is far below 19, and it should be: volume conduction
-              guarantees that. But a value near 1 would mean every channel is the same trace
-              scaled, which no recording looks like.
-            </p>
-            <p class="note">
-              The two exponents are <em>different quantities</em>, not two estimates of one.
-              Comparing them is a type error in the source.
-            </p>
-          </div>
 
-          <div class="panel" id="invented-panel">
-            <h2>Parameters in use</h2>
-            <div id="invented-list"></div>
-          </div>
         </div>
       </div>
     </main>
