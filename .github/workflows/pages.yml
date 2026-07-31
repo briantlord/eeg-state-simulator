@@ -14,6 +14,10 @@ on:
     branches: [main, master]
   workflow_dispatch:
 
+# NOTE: while the repository is private and without a Pages entitlement, this workflow FAILS at
+# configure-pages with "Not Found". That is expected and is left visible rather than papered over
+# -- a green tick on a workflow that published nothing would be worse than a red one that says why.
+
 permissions:
   contents: read
   pages: write
@@ -28,6 +32,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # Enables Pages via the API on first run rather than requiring it to be switched on by hand.
+      # On a PRIVATE repo without a Pages entitlement this step fails with "Not Found", which is
+      # the correct outcome: the workflow is not silently skipped, it reports that the repository
+      # cannot publish yet. Flipping the repo to public makes it succeed with no edit here.
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - uses: actions/setup-node@v4
         with:
           node-version: '22'

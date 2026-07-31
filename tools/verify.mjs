@@ -17,10 +17,28 @@ import { fileURLToPath } from 'node:url';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 /** The project venv, wherever this is running. */
+/**
+ * The Python that has this project's dependencies. Prefers the local venv; falls back to one on
+ * PATH.
+ *
+ * THE FALLBACK EXISTS BECAUSE CI HAS NO VENV. actions/setup-python installs interpreter and
+ * requirements system-wide, so a venv-only lookup returned null there, every Python step reported
+ * "no .venv found", and the runner counts a skipped check as a failure -- correctly, since a check
+ * that did not run has not passed. The projection step then passed that null straight to
+ * spawnSync and the build died with ERR_INVALID_ARG_TYPE before printing which step it was in.
+ *
+ * Returning a name rather than a path is deliberate: spawn resolves it on PATH, and if that
+ * interpreter lacks the dependencies the failure is an ImportError naming the module, which is a
+ * better error than a silent skip.
+ */
 function venvPython() {
   for (const rel of ['.venv/Scripts/python.exe', '.venv/bin/python']) {
     const p = join(ROOT, rel);
     if (existsSync(p)) return p;
+  }
+  for (const name of ['python3', 'python']) {
+    const r = spawnSync(name, ['-c', 'import sys'], { stdio: 'ignore', shell: false });
+    if (r.status === 0) return name;
   }
   return null;
 }
@@ -43,6 +61,7 @@ const STEPS = [
     why: 'the weights are the only path the head model takes into the runtime (seam 3)',
     cmd: PY,
     args: ['-m', 'prep.leadfield.make_projection', '--check'],
+    skipIf: () => (PY ? null : 'no Python found — run: python -m venv .venv'),
   },
   {
     name: 'literal acceptance check',
