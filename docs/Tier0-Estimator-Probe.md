@@ -2033,3 +2033,100 @@ N2 and N3 and nothing else — not amplitudes, not spindle or slow-wave statisti
 spatial.
 
 Reproduce: `prep/reference/t1m1_chi_invert_sleep.py`.
+
+---
+
+# Finding 25 — Phase 0 for the analysis demo: the estimator is class V, and half my premise was wrong
+
+The planned connectivity panel rested on one claim: every source here is projected
+**instantaneously** through the lead field, so inter-channel coupling is zero-lag volume
+conduction — exactly what the weighted phase lag index is built to reject. Coherence and dwPLI
+side by side, one glowing and one dark, *"with ground truth saying there is no true connectivity
+here except the travelling slow wave."*
+
+Measured before anything was designed around it, because this project has twice recently predicted
+a direction and been wrong. Half of it held.
+
+## The estimator behaves as designed
+
+Constructed pairs whose answer follows from trigonometry rather than from any model:
+
+| pair | coherence | dwPLI² |
+|---|---|---|
+| identical (0°) | 0.619 | **0.000** |
+| quadrature (90°) | 0.622 | **0.681** |
+| anti-phase (180°) | 0.604 | **0.001** |
+| independent | 0.178 | 0.050 |
+
+The anti-phase row is the one that mattered. [Vinck et al. (2011)](https://www.sciencedirect.com/science/article/abs/pii/S1053811911000917)
+weight each phase difference by its distance from the **real axis**, so ±180° is rejected as
+firmly as 0°. A dipolar field projects with opposite sign either side of its source, and plain
+coherence reports that as near-perfect coupling — 0.604 above. dwPLI reports 0.001.
+
+## It agrees exactly with an external implementation
+
+| metric | ours | `mne_connectivity` | \|diff\| |
+|---|---|---|---|
+| coherence | 0.622 | 0.622 | **0.000** |
+| `wpli2_debiased` | 0.681 | 0.681 | **0.000** |
+
+Independently authored and published, so connectivity enters the demo as **class V** rather than
+class C. Debiased throughout, and not as a detail: Vinck shows the direct estimator is positively
+biased by sample size, and [Haartsen et al. (2020)](https://www.nature.com/articles/s41598-020-68981-5)
+found dbWPLI more reliable across many short epochs while plain PLI is confounded by segment
+count. A sliding real-time window **is** many short epochs, so a biased estimator would make
+connectivity appear to *grow as the buffer fills* — an artefact indistinguishable from a finding.
+
+## The centrepiece holds, strongly
+
+Average reference, 300 s, 19 channels:
+
+| state | band | coherence median | coherence max | dwPLI median | dwPLI max |
+|---|---|---|---|---|---|
+| wake_ec | alpha | 0.410 | 0.744 | 0.004 | 0.021 |
+| n3 | delta | 0.538 | 0.877 | 0.008 | 0.061 |
+| n3 | theta | 0.313 | 0.637 | 0.016 | 0.164 |
+
+Roughly a **hundredfold** separation. The panel works.
+
+## And the other half is refuted
+
+*"Except the travelling slow wave"* does not survive. The strongest dwPLI pairs in N3 are `Fp1–F3`
+and `Fp2–F4` — **adjacent frontal** pairs, which is not what an anterior–posterior travelling wave
+predicts. Tested directly against AP separation in the delta band:
+
+| AP separation | pairs | dwPLI median |
+|---|---|---|
+| near (< 0.4) | 40 | 0.0045 |
+| mid (0.4–0.9) | 62 | 0.0119 |
+| far (> 0.9) | 69 | 0.0091 |
+
+correlation(dwPLI, AP separation) = **+0.315**
+
+So the travel leaves a faint statistical trace — near-pairs sit at half the value of mid-pairs —
+but it is **non-monotonic and ~50× below what a genuine 90° lag produces**. A viewer would see
+nothing. The arithmetic says why: a wave crossing ~0.20 m at `so_travel_v` ≈ 4 m/s lags ~50 ms,
+which at 1 Hz is only ~18°, and slow oscillations are sparse events embedded in a far larger
+*instantaneous* delta background that dilutes them.
+
+## What that changes
+
+**The demo is better for it, and more honest.** The claim was going to be "dwPLI is dark except
+where coupling is real". The measured claim is stronger and more useful:
+
+> dwPLI is dark **everywhere — including where the coupling IS real**, because that coupling is
+> sparse and its lag is small.
+
+That is the lesson practitioners actually need, and it lines up with the literature: PLI-family
+measures [underestimate at small lags and low SNR, and discard genuine zero-lag synchrony
+altogether](https://pmc.ncbi.nlm.nih.gov/articles/PMC12603661/).
+
+**If a visible "true connectivity" contrast is wanted**, the generator needs an explicit lagged
+source pair — a registered, deliberate feature, not a fudge. That is a design decision, not a bug
+fix, and it should be taken openly.
+
+**Still outstanding from Phase 0:** the per-hop cost in an actual Web Worker. The numpy timings
+here say nothing about JS, and the incremental running-sum scheme is unproven until the worker
+exists.
+
+Reproduce: `prep/reference/t2m1_connectivity_probe.py`.

@@ -9,3 +9,4 @@ yasa==0.7.0
 # depend on it, but prep/leadfield/make_projection.py does, and the projection
 # drift check in `npm run verify` re-derives the weights.
 nibabel==5.4.2
+mne-connectivity==0.8.1
