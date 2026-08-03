@@ -2130,3 +2130,90 @@ here say nothing about JS, and the incremental running-sum scheme is unproven un
 exists.
 
 Reproduce: `prep/reference/t2m1_connectivity_probe.py`.
+
+---
+
+# Finding 26 — real EEG has lagged connectivity, the generator has none, and it is not where I aimed
+
+Step 0 for coupled sources, run before building because it could have cancelled the work. It did
+not cancel it — it redirected it, and killed the topology the plan was built around.
+
+## Real resting EEG does have lagged connectivity
+
+PhysioNet EEGMAT, 8 subjects, average reference, 2 s epochs, against a matched surrogate — each
+channel circularly shifted independently, which destroys between-channel phase while preserving
+every channel's own spectrum exactly.
+
+| band | coherence | dwPLI | surrogate | obs/null | homotopic | other pairs | **ours** |
+|---|---|---|---|---|---|---|---|
+| delta | 0.266 | 0.0100 | 0.0048 | 2.07 | 0.0066 | 0.0101 | 0.0020 |
+| theta | 0.319 | 0.0151 | 0.0054 | 2.82 | 0.0093 | 0.0155 | 0.0020 |
+| **alpha** | 0.440 | **0.0678** | 0.0060 | **11.28** | 0.0294 | 0.0694 | **0.0040** |
+| beta | 0.324 | 0.0131 | 0.0060 | 2.20 | 0.0101 | 0.0133 | 0.0040 |
+
+**Every band exceeds its surrogate, and alpha does so by 11×.** So the answer to "is real dwPLI
+also near zero" is no. The measure is not merely returning nothing when pointed at volume
+conduction; there is real lagged structure and it is largest in alpha.
+
+**Our generator produces essentially none of it.** At 0.0040, alpha dwPLI in the simulator sits
+*below* the real surrogate level of 0.0060 — indistinguishable from uncoupled channels, which is
+exactly what Finding 25 predicted from instantaneous projection. The gap against real is **17×**.
+
+That is a genuine, measured discrepancy, and it justifies coupled sources.
+
+## But the target is not homotopic, and that was the whole design
+
+The plan was to split every rhythm's patch by hemisphere and couple left-right twins across the
+corpus callosum — the strongest connections in any structural connectome, with delays that carry
+real literature.
+
+**Homotopic pairs measure 0.0294 against 0.0694 for everything else.** They are less than half the
+rest. Splitting patches by hemisphere and coupling homotopically would have been building toward
+the wrong structure, at the cost of re-fitting every spatial parameter.
+
+Obvious in hindsight, and worth stating because it generalises: homotopic electrodes sit
+symmetrically about the midline, so a midline source reaches both with the **same sign and no
+lag** — precisely what wPLI discards. The pairs where volume conduction is most perfectly zero-lag
+are the pairs where wPLI is guaranteed to find least, whatever the anatomy underneath is doing.
+
+## And the structure is not geometric at all
+
+Strongest alpha pairs, median across subjects:
+
+| rank | pair | dwPLI | AP sep | LR sep | distance |
+|---|---|---|---|---|---|
+| 1 | F4–T5 | 0.1533 | 1.10 | 1.26 | 1.67 |
+| 2 | Fp2–T5 | 0.1513 | 1.54 | 1.12 | 1.90 |
+| 3 | Fz–T5 | 0.1344 | 1.09 | 0.81 | 1.36 |
+| 4 | F7–O2 | 0.1313 | 1.54 | 1.12 | 1.90 |
+| 5 | F3–Pz | 0.1309 | 1.01 | 0.45 | 1.11 |
+| 6 | C4–P4 | 0.1276 | 0.51 | 0.05 | 0.51 |
+| 7 | Pz–O1 | 0.1211 | 0.45 | 0.31 | 0.55 |
+| 8 | T5–P3 | 0.1181 | 0.08 | 0.36 | 0.37 |
+
+correlation with anterior–posterior separation **+0.131**, with left–right **−0.190**, with scalp
+distance **−0.104**.
+
+**All three are near zero.** The structure is not "distant pairs", not "front-to-back", not
+"across the midline". Long fronto-temporal diagonals sit beside short posterior pairs at nearly the
+same strength. A distance rule cannot produce this; it would have to come from anatomy.
+
+## What this does to the plan
+
+**C is justified** — the 17× gap is real and measured.
+
+**Its topology is not.** A source-coupling model now needs an actual structural connectome mapped
+onto the Desikan–Killiany parcellation we already use, rather than a geometric rule or a homotopic
+assumption. Such connectomes are published, so this is sourceable — but it is a dataset
+dependency, not a formula.
+
+**And 8 subjects cannot pin it.** `T5` appears in four of the top eight pairs, which is as
+consistent with one channel behaving oddly across a small cohort as with a real network. Per-pair
+estimates from n = 8 are not a topology. Fitting a connection-by-connection model to them would be
+fitting noise.
+
+So the honest position is that the *magnitude* to reproduce is well measured (alpha dwPLI ≈ 0.068
+against a 0.006 floor) while the *pattern* is not, and a first implementation should target the
+former without claiming the latter.
+
+Reproduce: `prep/reference/t2m1_real_connectivity.py`.
