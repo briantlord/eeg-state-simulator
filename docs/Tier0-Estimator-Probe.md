@@ -2292,3 +2292,65 @@ a signal and its quadrature — which alpha nearly has for free, being a damped 
 state includes velocity. **3–5 days**, against the 2+ weeks the homotopic design implied.
 
 Reproduce: `prep/leadfield/probe_travelling_wave.py`.
+
+---
+
+# Finding 28 — direction variability destroys the effect, and that is itself evidence
+
+Finding 27 closed by proposing a fix: propagation direction should vary, because a plane wave along
+a fixed axis reaches homotopic pairs at identical phase and suppressed them 50× against a real 2.4×.
+The literature agreed — direction is documented as task-dependent, and rotating waves organise
+spindles.
+
+Measured, the fix is wrong, and wrong in a way that teaches something.
+
+| direction | v (m/s) | dwPLI | homo/other | r(AP) | r(LR) | r(dist) | err |
+|---|---|---|---|---|---|---|---|
+| **real (EEGMAT)** | | **0.0678** | **0.42** | **+0.131** | **−0.190** | **−0.104** | |
+| **fixed anterior-posterior** | **0.5** | **0.0744** | **0.40** | −0.020 | −0.209 | −0.198 | **0.083** |
+| fixed AP | 1.4 | 0.1973 | 0.03 | +0.227 | −0.304 | −0.055 | 0.618 |
+| AP-biased, σ ≈ 0.9 rad | 0.5 | 0.0029 | 0.73 | −0.077 | +0.139 | +0.057 | 0.474 |
+| rotating | 0.5 | 0.0032 | 1.30 | +0.058 | +0.099 | +0.144 | 0.725 |
+| uniform random | 0.5 | 0.0032 | 1.22 | +0.046 | +0.204 | +0.215 | 0.724 |
+
+**Every varying-direction mode collapses dwPLI to ~0.003** — the uncoupled floor, indistinguishable
+from the generator as it stands today. The proposed fix would have removed the entire effect it was
+meant to refine.
+
+## Why, and it is the definition of the measure
+
+dwPLI averages `Im(S_ij)` across epochs and asks whether the lag is **consistent**. With a fixed
+direction, `Im(S_ij) = a_i b_j − b_i a_j` keeps the same sign in every epoch and the average
+survives. Reverse the wave and the sign reverses with it, so a direction that varies over the
+recording averages its own lag away — exactly what wPLI is built to do to inconsistent phase.
+
+This is the same class of error as Findings 22 and 24: reasoning about a parameter without
+following it through the estimator that measures it.
+
+## The inference worth keeping
+
+Real resting EEG **does** show consistent dwPLI — 0.068, eleven times its surrogate. If cortical
+propagation direction varied at rest the way the task literature describes, that consistency could
+not survive the averaging.
+
+So the measurement implies **propagation direction is substantially consistent during resting
+EEG**, and the documented variability is task modulation rather than resting-state randomness. That
+is a claim the data here supports, and it is the opposite of what I assumed from the literature.
+
+## The earlier worry was a misread
+
+Finding 27 reported 50× homotopic suppression and called it a design flaw. That was the **v = 1.4
+row**. At 0.5 m/s — the speed that fits everything else — the homotopic ratio is **0.40 against a
+real 0.42**. There was nothing to fix.
+
+## Where it stands
+
+`fixed-ap` at **0.5 m/s**, mean relative error **0.083**, is the best configuration found and needs
+no new mechanism: one direction, one speed, both inside published ranges.
+
+**The r(AP) residual survives**: −0.020 against a real +0.131, the one statistic that misses, and
+now known not to be a direction-variability artefact. The obvious next test is the direction
+*angle* — this probe only ever tried posterior→anterior, and a lateral or oblique axis would move
+r(AP) and r(LR) together. Untested, and recorded as open rather than assumed.
+
+Reproduce: `prep/leadfield/probe_travelling_wave.py`.

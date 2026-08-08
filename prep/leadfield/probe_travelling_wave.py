@@ -150,43 +150,109 @@ def main() -> int:
           f"{REAL_OTHER:>8.4f}{0.131:>8.3f}{-0.190:>8.3f}{-0.104:>9.3f}")
     print(f"  {'ours now':>8}{'':>12}{OURS_NOW:>11.4f}")
 
-    khat = np.array([0.0, 1.0, 0.0])            # posterior -> anterior
-    for v in SPEEDS:
-        k = 2 * np.pi * f0 / (v * 1000.0)       # rad/mm
-        ph = (pp @ khat) * k
-        Wc = (Lp * (A * np.cos(ph))).sum(1)
-        Ws = (Lp * (A * np.sin(ph))).sum(1)
-        nrm = np.sqrt(Wc ** 2 + Ws ** 2).max()
-        Wc, Ws = Wc / nrm, Ws / nrm
+    # DIRECTION IS NOT ONE AXIS. A plane wave along a fixed axis reaches left and right twins at
+    # IDENTICAL phase, so Im(S) = a_i b_j - b_i a_j vanishes for every homotopic pair by
+    # construction -- 50x suppression against 2.4x in the real recordings. Propagation direction is
+    # documented as variable and task-dependent, and rotating waves organise sleep spindles, so the
+    # variability is better supported than the fixed axis was.
+    #
+    # Anchors every `DIR_BLOCK_S` seconds with smooth interpolation between them, rather than
+    # jumps: a discontinuity in the weights is a broadband click, and dwPLI would read it as
+    # structure.
+    DIR_BLOCK_S = 3.0
 
-        x = (np.outer(Wc, s) + np.outer(Ws, shat)) * alpha_rms
-        x += (bgw @ bg) * bg_rms / np.sqrt(6)
-        loc = rng.normal(0, 1, (len(chan), n))
-        x += loc * bg_rms * np.sqrt(share / max(1e-9, 1 - share))
-        xr = Ravg @ x
+    def direction_series(mode: str, rng) -> np.ndarray:
+        """(n_samples, 3) unit vectors, smoothly varying."""
+        n_anchor = int(np.ceil(dur / DIR_BLOCK_S)) + 2
+        if mode == 'fixed-ap':
+            anch = np.tile([0.0, 1.0, 0.0], (n_anchor, 1))
+        elif mode == 'rotating':
+            # Constant-rate rotation in the axial plane: the spindle literature's rotating wave.
+            th = np.linspace(0, 2 * np.pi * (dur / 30.0), n_anchor)
+            anch = np.stack([np.sin(th), np.cos(th), np.zeros_like(th)], axis=1)
+        elif mode == 'ap-biased':
+            # Predominantly anterior-posterior with spread, which is what the literature reports:
+            # PA and AP dominate, but direction is not fixed.
+            th = rng.normal(0, 0.9, n_anchor)
+            anch = np.stack([np.sin(th), np.cos(th) * rng.choice([-1, 1], n_anchor),
+                             np.zeros(n_anchor)], axis=1)
+        else:                                            # 'uniform'
+            anch = rng.normal(0, 1, (n_anchor, 3))
+            anch[:, 2] *= 0.3                            # cortex is flatter than it is tall
+        anch /= np.linalg.norm(anch, axis=1, keepdims=True)
+        t_anchor = np.arange(n_anchor) * DIR_BLOCK_S * fs
+        out = np.empty((n, 3))
+        for d in range(3):
+            out[:, d] = np.interp(np.arange(n), t_anchor, anch[:, d])
+        out /= np.linalg.norm(out, axis=1, keepdims=True)
+        return out
 
-        spec, freqs = epoch_spectra(xr, fs, EPOCH_S)
-        _, dw = connectivity(spec)
-        db = band_mean(dw, freqs, 8, 13)
-        iu = np.triu_indices(ns, 1)
-        hv = [db[idx[p], idx[q]] for p, q in HOMOTOPIC]
-        mask = np.ones_like(db, dtype=bool)
-        for p, q in HOMOTOPIC:
-            mask[idx[p], idx[q]] = mask[idx[q], idx[p]] = False
-        aps, lrs, ds, vs = [], [], [], []
-        for i in range(ns):
-            for j in range(i + 1, ns):
-                A_, B_ = PROD_SCALP[i], PROD_SCALP[j]
-                aps.append(abs(P[A_][1] - P[B_][1]))
-                lrs.append(abs(P[A_][0] - P[B_][0]))
-                ds.append(float(np.hypot(P[A_][0] - P[B_][0], P[A_][1] - P[B_][1])))
-                vs.append(db[i, j])
-        vs = np.asarray(vs)
-        span = float(ph.ptp())
-        print(f"  {v:>8.1f}{span:>12.2f}{np.median(db[iu]):>11.4f}{np.median(hv):>11.4f}"
-              f"{np.median(db[np.triu(mask, 1)]):>8.4f}"
-              f"{np.corrcoef(aps, vs)[0, 1]:>8.3f}{np.corrcoef(lrs, vs)[0, 1]:>8.3f}"
-              f"{np.corrcoef(ds, vs)[0, 1]:>9.3f}")
+    print(f"  {'direction':<12}{'v':>5}{'dwPLI':>9}{'homo':>8}{'other':>8}{'h/o':>7}"
+          f"{'r(AP)':>8}{'r(LR)':>8}{'r(dist)':>9}{'err':>7}")
+    print('  ' + '-' * 79)
+    print(f"  {'REAL':<12}{'':>5}{REAL_ALPHA_DWPLI:>9.4f}{REAL_HOMOTOPIC:>8.4f}"
+          f"{REAL_OTHER:>8.4f}{REAL_HOMOTOPIC / REAL_OTHER:>7.2f}"
+          f"{0.131:>8.3f}{-0.190:>8.3f}{-0.104:>9.3f}")
+
+    best = None
+    for mode in ('fixed-ap', 'ap-biased', 'rotating', 'uniform'):
+        khat_t = direction_series(mode, np.random.default_rng(3))
+        for v in (0.5, 0.7, 1.0, 1.4, 2.1):
+            kmag = 2 * np.pi * f0 / (v * 1000.0)
+            # Per-sample weights: the wave's direction at that instant. Computed by projecting the
+            # patch onto the current direction, which is a (n_src,) dot product per sample -- so it
+            # is done on the ANCHOR directions and interpolated, not per sample.
+            n_anchor = int(np.ceil(dur / DIR_BLOCK_S)) + 2
+            t_anchor = np.arange(n_anchor) * DIR_BLOCK_S * fs
+            anch = khat_t[np.clip(t_anchor.astype(int), 0, n - 1)]
+            Wc_a = np.stack([(Lp * (A * np.cos((pp @ kh) * kmag))).sum(1) for kh in anch])
+            Ws_a = np.stack([(Lp * (A * np.sin((pp @ kh) * kmag))).sum(1) for kh in anch])
+            nrm = np.sqrt(Wc_a ** 2 + Ws_a ** 2).max()
+            Wc_a, Ws_a = Wc_a / nrm, Ws_a / nrm
+            Wc_t = np.stack([np.interp(np.arange(n), t_anchor, Wc_a[:, c])
+                             for c in range(len(chan))])
+            Ws_t = np.stack([np.interp(np.arange(n), t_anchor, Ws_a[:, c])
+                             for c in range(len(chan))])
+
+            x = (Wc_t * s + Ws_t * shat) * alpha_rms
+            x += (bgw @ bg) * bg_rms / np.sqrt(6)
+            x += np.random.default_rng(9).normal(0, 1, (len(chan), n)) * bg_rms * np.sqrt(
+                share / max(1e-9, 1 - share))
+            xr = Ravg @ x
+
+            spec, freqs = epoch_spectra(xr, fs, EPOCH_S)
+            _, dw = connectivity(spec)
+            db = band_mean(dw, freqs, 8, 13)
+            iu = np.triu_indices(ns, 1)
+            hv = [db[idx[q1], idx[q2]] for q1, q2 in HOMOTOPIC]
+            mask = np.ones_like(db, dtype=bool)
+            for q1, q2 in HOMOTOPIC:
+                mask[idx[q1], idx[q2]] = mask[idx[q2], idx[q1]] = False
+            aps, lrs, ds, vs = [], [], [], []
+            for i in range(ns):
+                for j in range(i + 1, ns):
+                    A_, B_ = PROD_SCALP[i], PROD_SCALP[j]
+                    aps.append(abs(P[A_][1] - P[B_][1]))
+                    lrs.append(abs(P[A_][0] - P[B_][0]))
+                    ds.append(float(np.hypot(P[A_][0] - P[B_][0], P[A_][1] - P[B_][1])))
+                    vs.append(db[i, j])
+            vs = np.asarray(vs)
+            med = float(np.median(db[iu]))
+            h = float(np.median(hv))
+            o = float(np.median(db[np.triu(mask, 1)]))
+            rap = float(np.corrcoef(aps, vs)[0, 1])
+            rlr = float(np.corrcoef(lrs, vs)[0, 1])
+            rds = float(np.corrcoef(ds, vs)[0, 1])
+            err = float(np.mean([abs(med - REAL_ALPHA_DWPLI) / REAL_ALPHA_DWPLI,
+                                 abs(h / o - REAL_HOMOTOPIC / REAL_OTHER)
+                                 / (REAL_HOMOTOPIC / REAL_OTHER),
+                                 abs(rap - 0.131), abs(rlr + 0.190), abs(rds + 0.104)]))
+            print(f"  {mode:<12}{v:>5.1f}{med:>9.4f}{h:>8.4f}{o:>8.4f}{h / o:>7.2f}"
+                  f"{rap:>8.3f}{rlr:>8.3f}{rds:>9.3f}{err:>7.3f}")
+            if best is None or err < best[0]:
+                best = (err, mode, v)
+        print()
+    print(f"  BEST: {best[1]} at {best[2]} m/s, mean relative error {best[0]:.3f}\n")
 
     print("""
   THREE THINGS HAD TO HOLD. Does dwPLI reach the real 0.068 at a speed inside the published
