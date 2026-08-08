@@ -2404,3 +2404,69 @@ is a bounded, stated limitation rather than an unexplained miss, and it is the d
 model that knows what it cannot do and one that has not looked.
 
 Reproduce: `prep/leadfield/probe_wave_angle.py`.
+
+---
+
+# Finding 30 — the injected connection works, and the fifth source-vs-output conflation was mine again
+
+The connectivity panel needed a positive control. Every source here projects instantaneously, so
+all inter-channel coupling is zero-lag volume conduction and dwPLI correctly reports almost nothing
+— 0.004 against a real 0.068. A blank map is then unfalsifiable: it could mean the measure is
+rejecting volume conduction, or that it never shows anything.
+
+`injectedCoupling` drives `coupling_dst` (peak Pz) from `coupling_src` (peak C3):
+
+```
+dst(t) = c · src(t − lag) + √(1 − c²) · independent(t)
+```
+
+which leaves the target's total variance unchanged and moves only its shared fraction, so `c = 0`
+is a genuine null rather than a quiet setting. It is the connectivity-benchmarking literature's
+standard two-source design, adopted rather than invented so results are comparable with published
+method comparisons.
+
+## What it does
+
+| coupling | dwPLI(C3,Pz) | montage median | ratio | lag recovered |
+|---|---|---|---|---|
+| **OFF** | 0.0036 | 0.0044 | 0.83 | — |
+| **ON** | **0.4062** | 0.0872 | **4.66** | −8.3 ms |
+
+- **rises 112×** when enabled, 0.0036 → 0.4062
+- **at chance when off** — 0.0036 against a montage median of 0.0044
+- **specific** — 4.7× the montage median, not a global lift
+
+The matched null is the same generator with the same draws and the same injected patches at the
+same amplitude; only the driver's reach changes. Anything surviving that contrast is the coupling
+and not the anatomy.
+
+## And the criterion I wrote was wrong
+
+The check originally required the recovered lag to match the injected one within 25%. It measured
+**8.3 ms against an injected 20 ms** and declared the injection broken.
+
+The injection is correct. **The assumption was.** Both electrodes see *both* patches through volume
+conduction, so the measured cross-spectrum mixes the lagged term with zero-lag leakage, and
+zero-lag leakage pulls the apparent phase toward zero. The scalp lag is attenuated by construction
+— here to **41% of the source lag**.
+
+That is the source-leakage caveat this project already quoted in Finding 25 — *no bivariate index
+escapes it* — arriving as a number rather than a warning. And it is the **fifth** time here that a
+source parameter has been assumed to appear unchanged as an output observable: Findings 22, 24, 28,
+29, and now the pass criterion of the check meant to catch such things.
+
+The criterion now asks only that a lag is **detected**, and reports the scalp-to-source ratio as a
+measurement. Requiring them to match would be requiring volume conduction not to exist.
+
+## What this does not establish
+
+**Direction.** dwPLI and the phase slope are symmetric; the sign of the recovered lag depends on
+which channel is named first. Showing that the influence runs C3 → Pz rather than the reverse needs
+a directed measure — Granger causality or the directed transfer function — and this pair is exactly
+the fixture such a check would use. That is the obvious next gate and it is not claimed here.
+
+**Calibration.** 41% is one measurement at one lag, one strength and one pair. Whether the
+attenuation is proportional across lags is untested, and until it is, the ratio is a fact about this
+configuration rather than a transfer function.
+
+Reproduce: `prep/reference/t2m1_injected_coupling.py`.

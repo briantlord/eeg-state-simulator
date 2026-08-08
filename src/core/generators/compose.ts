@@ -120,6 +120,16 @@ export interface ComposeOptions {
    * measures, so leaving it on would add a conspicuous artifact that changes no observable.
    */
   readonly lineNoise?: boolean;
+  /**
+   * Inject a known connection: `coupling_src` drives `coupling_dst` at `coupling_lag_ms` with
+   * `coupling_strength`. OFF by default, and additive when on, so no existing draw moves.
+   *
+   * The connectivity panel needs a positive control. Every source here projects instantaneously,
+   * so all inter-channel coupling is zero-lag volume conduction and debiased wPLI correctly
+   * reports almost nothing -- which leaves a blank map meaning either "the measure is working" or
+   * "the measure never shows anything", with no way to tell. This is the difference.
+   */
+  readonly injectedCoupling?: boolean;
   /** Mains frequency in Hz. Defaults to the first `line_freq` option. */
   readonly lineFreqHz?: number;
   /** Coefficient-update scheme for the tilt filter. See src/core/filters/tilt.ts. */
@@ -366,6 +376,67 @@ export function composeState(
   // Seam 5: the mix is explicit. Background is the reference and is never scaled.
   const snrDb = opts.snrDb ?? 0;
   const sourceGain = Math.pow(10, snrDb / 20); // @lit-ok dB-to-linear: 10^(dB/20) is the definition of decibels
+
+  // AN INJECTED CONNECTION WITH A KNOWN LAG, off unless asked for.
+  //
+  // Every source in this generator projects INSTANTANEOUSLY, so all inter-channel coupling is
+  // zero-lag volume conduction, and debiased wPLI -- built to reject exactly that -- correctly
+  // reports almost nothing: 0.004 against a real 0.068 (Findings 25, 26). A blank connectivity map
+  // is then unfalsifiable. It could mean the measure is doing its job, or that it never shows
+  // anything at all, and a reader has no way to tell the two apart.
+  //
+  // So one patch drives another at a known lag:
+  //
+  //     dst(t) = c * src(t - lag) + sqrt(1 - c^2) * independent(t)
+  //
+  // which leaves the target's TOTAL variance unchanged and moves only its shared fraction, so
+  // `coupling_strength` = 0 is genuinely the null rather than merely a quiet setting.
+  //
+  // A two-source model with a time-delayed linear influence of one on the other is the standard
+  // design in the connectivity-benchmarking literature, adopted here rather than invented so that
+  // results are comparable with published method comparisons.
+  //
+  // The delay is padded with zeros at the segment start. At 20 ms that is 5 samples, well inside
+  // the 0.25 s taper `crossfadeIn` already applies, so the pad is never visible.
+  if (opts.injectedCoupling) {
+    const lagSamples = Math.round((scalarValue('coupling_lag_ms') / 1000) * fs); // @lit-ok ms per second
+    const c = scalarValue('coupling_strength');
+    const rms = rmsFromPeakToPeak('coupling_amp');
+    const { lo, hi } = bandEdges('alpha_band');
+    const mk = (name: string): Float64Array =>
+      synthesizeOscillation(
+        Rng.substream(seed, name),
+        nSamples,
+        {
+          bandLo: lo,
+          bandHi: hi,
+          rmsUv: rms,
+          envelopeDepth: DEFAULT_ENVELOPE_DEPTH,
+          envelopeRateHz: DEFAULT_ENVELOPE_RATE_HZ,
+        },
+        fs,
+      );
+
+    const srcModes = modesOf('coupling_src');
+    const dstModes = modesOf('coupling_dst');
+    for (let m = 0; m < srcModes.length; m++) {
+      const driver = mk(`coupling/${state}/src${m}`);
+      projectInto(out, driver, srcModes[m]!);
+    }
+    // Each destination mode is driven by its OWN delayed copy of a driver, so the connection is
+    // between the two patches rather than between one pair of modes.
+    for (let m = 0; m < dstModes.length; m++) {
+      const driver = mk(`coupling/${state}/src${m % srcModes.length}`);
+      const indep = mk(`coupling/${state}/dst${m}`);
+      const mixed = new Float64Array(nSamples);
+      const w = Math.sqrt(Math.max(0, 1 - c * c));
+      for (let i = 0; i < nSamples; i++) {
+        const j = i - lagSamples;
+        mixed[i] = (j >= 0 ? c * driver[j]! : 0) + w * indep[i]!;
+      }
+      projectInto(out, mixed, dstModes[m]!);
+    }
+  }
 
   const oscTruth: ComposeResult['truth']['oscillations'] = [];
   // A BAND RHYTHM OCCUPIES A CORTICAL PATCH, and a patch has more than one spatial mode.

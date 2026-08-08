@@ -198,6 +198,9 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 | `topo_centre_resp_artifact_y` | 0.55 | normalized_10_20 | `invented` | frontal: the artifact is largest where the leads run and where frontal electrodes sit furthest from the reference | all |
 | `topo_sigma_resp_artifact` | 0.9 | normalized_10_20 | `invented` | broad: a mechanical artifact is not focal, and nothing measured constrains the width | all |
 | `bem_source_mindist_mm` | 5 | mm | `chosen` | MNE's default exclusion distance between a source and the inner skull surface; kept rather than chosen independently, because departing from a forward-modelling package's default is a claim needing its own justification | all |
+| `coupling_lag_ms` | 20 | ms | `chosen` | inside the documented cortico-cortical conduction range; the demonstration's value is that the lag is KNOWN, not that it is typical of any particular pathway | all |
+| `coupling_strength` | 0.6 | — | `chosen` | fraction of the target's variance carried by the delayed driver; chosen high enough to be visible and below 1 so the target keeps independent variance | all |
+| `coupling_amp` | 10–30 *(uncertainty)* | uV_pp | `invented` | amplitude of the injected coupled pair; nothing constrains it because the pair is a demonstration rather than a modelled rhythm | all |
 | `cortical_coherence_mm` | — *(pending T1-M1; runs on 40)* | mm | `invented` | no source consulted gives a cortical coherence length for a specific rhythm at this resolution; it is the ONE spatial shape parameter left after the lead field replaced 31 | all |
 | `patch_mode_variance` | 0.99 | — | `chosen` | how much of a patch's spatial variance the retained eigenmodes must carry; a truncation tolerance, not a physical quantity | all |
 | `channel_local_share` | — *(pending T1-M1; runs on 0.2)* | — | `invented` | an independent-EQUIVALENT share under this model, not a measured physiological quantity; part of it is certainly model mismatch | all |
@@ -218,6 +221,12 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 **`topo_sigma_resp_artifact`.** See topo_centre_resp_artifact_x. Wide compared with any cortical patch, which is the point: a movement artifact spreads across the montage rather than peaking over a generator.
 
 **`bem_source_mindist_mm`.** Sources closer than this to the inner skull are dropped from the forward solution. It is a NUMERICAL SAFEGUARD, not a physiological statement: the BEM potential diverges as a dipole approaches a conductivity boundary, so nearby sources would otherwise dominate every topography with an artefact of the discretisation. FOUND BY THE LINTER, not by review. It was an inline 5.0 in the producer, and it is a modelling parameter that shapes every weight vector in data/projection_10_20.json -- the only unregistered scientific value the new Python coverage turned up, which is the argument for that coverage existing.
+
+**`coupling_lag_ms`.** THE LAG OF AN INJECTED, SPECIFIABLE CONNECTION -- not a claim about the brain. Every source in this generator is projected instantaneously, so all inter-channel coupling is zero-lag volume conduction and debiased wPLI correctly reports almost nothing (Finding 25). That makes the connectivity panel unfalsifiable: a blank dwPLI map could mean the measure is rejecting volume conduction, or that it never shows anything. This row supplies the positive control. One patch drives another at a known lag and known strength, so dwPLI has something real to find and a reader can see it separate the true connection from the volume-conducted fakes coherence reports everywhere. IT IS THE FIELD'S STANDARD DESIGN, not an invention here: a two-source model with a time-delayed linear influence of one on the other is what the connectivity-benchmarking literature uses precisely because the ground truth is exact and specifiable. Results from it are comparable with published method comparisons. OFF BY DEFAULT, like mains interference, and for the same reason -- it is an injection, not physiology. Enabled, it perturbs no existing draw: the coupled pair is additional signal.
+
+**`coupling_strength`.** The target's signal is c * driver(t - lag) + sqrt(1 - c^2) * independent, so the target's total variance is unchanged by c and only its SHARED fraction moves. At 0 the two patches are independent and dwPLI between them should fall to chance -- which is the matched null for the coupling gate, and the reason the row is a fraction rather than a gain.
+
+**`coupling_amp`.** Sized to sit within the montage rather than dominate it. It is deliberately NOT fitted against a corpus: the injected pair is a positive control whose value is that its parameters are known, and fitting it to real data would make it a claim about brains instead.
 
 **`cortical_coherence_mm`.** THE ONLY REMAINING FREE PARAMETER OF THE SPATIAL MODEL, and that is the point of D19. It sets the source covariance inside a patch, C_s(i,j) = exp(-d(i,j)/this), so it decides how many spatial eigenmodes a patch has and therefore how many dimensions a rhythm occupies. At 0 every dipole is independent and the patch spans as many modes as the montage can resolve; at infinity the patch collapses to one mode and the model is separable again -- which is the defect Finding 19 measured. Distances are Euclidean rather than geodesic, which makes coherence slightly too high across a sulcus. Registered as a known approximation, not silently.
 
@@ -499,9 +508,9 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 | Standing | Rows |
 |---|---|
 | `definitional` | 11 |
-| `chosen` | 56 |
+| `chosen` | 58 |
 | `literature` | 9 |
 | `derived` | 15 |
-| `invented` | 88 |
+| `invented` | 89 |
 | `absent` | 11 |
-| **total** | **190** |
+| **total** | **193** |

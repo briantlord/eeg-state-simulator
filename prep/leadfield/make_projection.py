@@ -127,6 +127,25 @@ PATCHES: dict[str, list[str]] = {
 #: The aperiodic background is the whole cortex, not a region.
 BACKGROUND = 'background'
 
+# AN INJECTED, SPECIFIABLE CONNECTION -- the positive control the connectivity panel needs.
+#
+# Every source here is projected instantaneously, so all inter-channel coupling is zero-lag volume
+# conduction and debiased wPLI correctly reports almost nothing (Finding 25). A blank dwPLI map is
+# then unfalsifiable: it could mean the measure is rejecting volume conduction, or that it never
+# shows anything at all. These two patches give it something real to find.
+#
+# A two-source model with a time-delayed linear influence of one on the other is the standard
+# design in the connectivity-benchmarking literature, used there because the ground truth is exact
+# and specifiable. Adopting it means results from this simulator are comparable with published
+# method comparisons rather than only with itself.
+#
+# Fronto-parietal and well separated, so the connection is visible on a head plot and cannot be
+# confused with a near-neighbour pair. Bilateral, like every other patch here.
+COUPLING_PATCHES = {
+    'coupling_src': ['caudalmiddlefrontal'],
+    'coupling_dst': ['superiorparietal'],
+}
+
 # THE ONE TOPOGRAPHY THAT IS DELIBERATELY NOT CORTICAL. `resp_artifact` is mechanical -- electrode
 # movement and impedance change with the chest -- so a cortical forward model is the wrong
 # instrument for it. It keeps an explicit electrode-space profile, and being the sole exception is
@@ -299,6 +318,14 @@ def main() -> int:
 
     # The aperiodic background is the whole cortex. Every labelled region, not a chosen subset --
     # `background_n_sources` and its six invented centres are what this deletes.
+    # The injected coupled pair. Emitted like any other patch -- the topographies are ordinary
+    # anatomy; what makes them a control is how compose.ts drives them.
+    for gen, regions in COUPLING_PATCHES.items():
+        missing = [r for r in regions if r not in labels]
+        if missing:
+            raise SystemExit(f'{gen}: no such Desikan-Killiany region(s): {missing}')
+        emit(gen, np.unique(np.concatenate([labels[r] for r in regions])), regions)
+
     allsrc = np.unique(np.concatenate([v for k, v in labels.items() if k != 'unknown']))
     emit(BACKGROUND, allsrc, ['<whole cortex>'])
 
@@ -361,7 +388,7 @@ def main() -> int:
     fams: dict[str, int] = {}
     for k in projections:
         fams[k.split('_m')[0]] = fams.get(k.split('_m')[0], 0) + 1
-    for g in list(PATCHES) + [BACKGROUND, 'resp_artifact']:
+    for g in list(PATCHES) + list(COUPLING_PATCHES) + [BACKGROUND, 'resp_artifact']:
         w0 = np.asarray(projections[g]['weights'])
         peak = chan_names[int(np.argmax(np.abs(w0)))]
         print(f'  {g:<14} {fams[g]:>2} mode(s)   mode-0 argmax {peak}')

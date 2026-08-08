@@ -1563,6 +1563,54 @@
       "section": "5. Topography and geometry",
       "note": "Sources closer than this to the inner skull are dropped from the forward solution. It is a NUMERICAL SAFEGUARD, not a physiological statement: the BEM potential diverges as a dipole approaches a conductivity boundary, so nearby sources would otherwise dominate every topography with an artefact of the discretisation. FOUND BY THE LINTER, not by review. It was an inline 5.0 in the producer, and it is a modelling parameter that shapes every weight vector in data/projection_10_20.json -- the only unregistered scientific value the new Python coverage turned up, which is the argument for that coverage existing."
     },
+    "coupling_lag_ms": {
+      "value": {
+        "kind": "scalar",
+        "v": 20
+      },
+      "units": "ms",
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "inside the documented cortico-cortical conduction range; the demonstration's value is that the lag is KNOWN, not that it is typical of any particular pathway"
+      },
+      "states": "all",
+      "section": "5. Topography and geometry",
+      "note": "THE LAG OF AN INJECTED, SPECIFIABLE CONNECTION -- not a claim about the brain. Every source in this generator is projected instantaneously, so all inter-channel coupling is zero-lag volume conduction and debiased wPLI correctly reports almost nothing (Finding 25). That makes the connectivity panel unfalsifiable: a blank dwPLI map could mean the measure is rejecting volume conduction, or that it never shows anything. This row supplies the positive control. One patch drives another at a known lag and known strength, so dwPLI has something real to find and a reader can see it separate the true connection from the volume-conducted fakes coherence reports everywhere. IT IS THE FIELD'S STANDARD DESIGN, not an invention here: a two-source model with a time-delayed linear influence of one on the other is what the connectivity-benchmarking literature uses precisely because the ground truth is exact and specifiable. Results from it are comparable with published method comparisons. OFF BY DEFAULT, like mains interference, and for the same reason -- it is an injection, not physiology. Enabled, it perturbs no existing draw: the coupled pair is additional signal."
+    },
+    "coupling_strength": {
+      "value": {
+        "kind": "scalar",
+        "v": 0.6
+      },
+      "units": null,
+      "standing": "chosen",
+      "source": {
+        "kind": "none",
+        "rationale": "fraction of the target's variance carried by the delayed driver; chosen high enough to be visible and below 1 so the target keeps independent variance"
+      },
+      "states": "all",
+      "section": "5. Topography and geometry",
+      "note": "The target's signal is c * driver(t - lag) + sqrt(1 - c^2) * independent, so the target's total variance is unchanged by c and only its SHARED fraction moves. At 0 the two patches are independent and dwPLI between them should fall to chance -- which is the matched null for the coupling gate, and the reason the row is a fraction rather than a gain."
+    },
+    "coupling_amp": {
+      "value": {
+        "kind": "interval",
+        "lo": 10,
+        "hi": 30,
+        "meaning": "uncertainty"
+      },
+      "units": "uV_pp",
+      "standing": "invented",
+      "source": {
+        "kind": "none",
+        "rationale": "amplitude of the injected coupled pair; nothing constrains it because the pair is a demonstration rather than a modelled rhythm"
+      },
+      "states": "all",
+      "section": "5. Topography and geometry",
+      "milestone": "T1-M1",
+      "note": "Sized to sit within the montage rather than dominate it. It is deliberately NOT fitted against a corpus: the injected pair is a positive control whose value is that its parameters are known, and fitting it to real data would make it a claim about brains instead."
+    },
     "cortical_coherence_mm": {
       "value": {
         "kind": "pending"

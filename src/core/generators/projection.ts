@@ -64,7 +64,11 @@ if (projection.channels.length !== ALL_CHANNELS.length ||
 export type PatchId =
   | 'background'
   | 'alpha' | 'beta' | 'theta' | 'delta'
-  | 'spindle_fast' | 'spindle_slow' | 'kc';
+  | 'spindle_fast' | 'spindle_slow' | 'kc'
+  // An INJECTED, specifiable connection: `coupling_src` drives `coupling_dst` at a known lag and
+  // strength. Off by default. Not physiology -- a positive control, so a blank dwPLI map can be
+  // told apart from a measure that never shows anything.
+  | 'coupling_src' | 'coupling_dst';
 
 export type GeneratorId =
   | PatchId

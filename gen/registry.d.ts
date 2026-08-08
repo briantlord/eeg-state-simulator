@@ -49,6 +49,9 @@ export type ParamKey =
   | 'chi_wake_ec'
   | 'chi_wake_eo'
   | 'cortical_coherence_mm'
+  | 'coupling_amp'
+  | 'coupling_lag_ms'
+  | 'coupling_strength'
   | 'delta_amp'
   | 'delta_band'
   | 'display_buffer_s'
@@ -243,6 +246,9 @@ export interface ParamKindMap {
   'chi_wake_ec': 'pending';
   'chi_wake_eo': 'pending';
   'cortical_coherence_mm': 'pending';
+  'coupling_amp': 'interval';
+  'coupling_lag_ms': 'scalar';
+  'coupling_strength': 'scalar';
   'delta_amp': 'interval';
   'delta_band': 'interval';
   'display_buffer_s': 'scalar';
