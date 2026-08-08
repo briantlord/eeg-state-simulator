@@ -2354,3 +2354,53 @@ now known not to be a direction-variability artefact. The obvious next test is t
 r(AP) and r(LR) together. Untested, and recorded as open rather than assumed.
 
 Reproduce: `prep/leadfield/probe_travelling_wave.py`.
+
+---
+
+# Finding 29 — the angle does not rescue r(AP), and the reason is a model-class limit
+
+Finding 28 left one statistic missing and named the untested variable: only posterior→anterior had
+ever been tried, chosen because the literature names it rather than because anything selected it.
+Swept over azimuth 0–150°, elevation 0° and 30°, and 0.4–0.6 m/s — 36 configurations.
+
+**Azimuth 0°, elevation 0°, 0.5 m/s remains best, unchanged, at mean relative error 0.083.** The
+choice Finding 27 made by assumption survives being measured, which is worth knowing on its own.
+
+## But the residual is a trade-off, not a limit of the angle
+
+| configuration | dwPLI | homo/other | r(AP) | r(LR) | r(dist) | err |
+|---|---|---|---|---|---|---|
+| **real** | **0.0678** | **0.42** | **+0.131** | **−0.190** | **−0.104** | |
+| **az 0, el 0, 0.5** | 0.0744 | **0.40** | −0.020 | −0.209 | −0.198 | **0.083** |
+| az 0, el 30, 0.4 | 0.0536 | 0.21 | **+0.135** | −0.255 | −0.082 | 0.160 |
+| az 0, el 30, 0.6 | 0.0490 | 0.54 | +0.107 | −0.256 | −0.128 | 0.134 |
+
+**Tilting the wave 30° out of the axial plane fixes r(AP) almost exactly** — +0.135 against a real
++0.131 — and breaks the homotopic ratio doing it, to 0.21 against a real 0.42. The in-plane wave
+gets the homotopic ratio right and r(AP) wrong. Nothing in the sweep gets both.
+
+## Which is a familiar shape
+
+A single plane wave has **three degrees of freedom** — azimuth, elevation, speed — against **five
+target statistics**. It is underparameterised in *shape*, not in count: the same diagnosis D19 made
+of the Gaussian mixture, where four fitted parameters could not reproduce a distance kernel because
+the model class did not contain one.
+
+So the honest statement is that a single plane wave across one patch captures the **dominant**
+effect — the connectivity magnitude and the homotopic suppression, which are the two things the
+generator currently gets wrong by 17× and completely — and does not reproduce the full spatial
+pattern. Getting the rest would need either several patches propagating independently, or a wave
+that follows cortical geometry instead of a plane. Both are real work and neither is justified by
+the demo.
+
+## Recommendation
+
+Implement the single plane wave: **azimuth 0° (posterior→anterior), 0.5 m/s**, both inside
+published ranges, matching four of five statistics.
+
+Record `r(AP)` as a **known limit of the single-plane-wave model class**, with the measurement above
+as its evidence — 36 configurations, and the one that fixes r(AP) costs the homotopic ratio. That
+is a bounded, stated limitation rather than an unexplained miss, and it is the difference between a
+model that knows what it cannot do and one that has not looked.
+
+Reproduce: `prep/leadfield/probe_wave_angle.py`.
