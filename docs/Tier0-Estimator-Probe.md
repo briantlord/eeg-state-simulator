@@ -2217,3 +2217,78 @@ against a 0.006 floor) while the *pattern* is not, and a first implementation sh
 former without claiming the latter.
 
 Reproduce: `prep/reference/t2m1_real_connectivity.py`.
+
+---
+
+# Finding 27 — a travelling wave reproduces the missing connectivity, and one fixed direction would not
+
+Step 1 for coupled sources, run before implementation. Finding 26 measured the gap: real alpha
+dwPLI 0.068 against a 0.006 floor, ours 0.004. The proposal was that patches which fire
+synchronously are the omission, and that alpha propagating as a travelling wave — documented, at
+published speeds, and already modelled here for slow oscillations — would close it.
+
+Tested by reaching into the lead field and synthesising what the generator *would* emit, at the
+registry's own amplitudes, with no generator change.
+
+## It works, and the speed picks itself
+
+| v (m/s) | phase span (rad) | dwPLI | homotopic | other | r(AP) | r(LR) | r(dist) |
+|---|---|---|---|---|---|---|---|
+| **real (EEGMAT)** | | **0.0678** | **0.0294** | **0.0694** | **+0.131** | **−0.190** | **−0.104** |
+| ours, no wave | | 0.0040 | | | | | |
+| **0.5** | 8.77 | **0.0775** | **0.0286** | **0.0813** | −0.008 | −0.206 | −0.187 |
+| 0.7 | 6.26 | 0.0453 | 0.0050 | 0.0458 | −0.072 | −0.180 | −0.215 |
+| 1.0 | 4.38 | 0.1416 | 0.0066 | 0.1851 | +0.218 | −0.315 | −0.070 |
+| 1.4 | 3.13 | 0.1974 | 0.0043 | 0.2097 | +0.228 | −0.304 | −0.054 |
+| 2.1 | 2.09 | 0.1617 | 0.0072 | 0.1818 | +0.195 | −0.299 | −0.079 |
+| 3.0 | 1.46 | 0.0960 | 0.0077 | 0.1153 | +0.170 | −0.295 | −0.096 |
+| 5.0 | 0.88 | 0.0432 | 0.0055 | 0.0457 | +0.154 | −0.291 | −0.104 |
+
+All three preconditions hold at **0.5 m/s**, inside Zhang's published intracortical range of
+0.25–0.75 m/s:
+
+- **magnitude** 0.0775 against a real 0.0678 — the right size, from a literature speed rather
+  than a fitted one;
+- **homotopic suppression** 0.0286 against a real 0.0294, and below `other` as measured;
+- **non-geometric** — r(LR) −0.206 against −0.190, r(dist) −0.187 against −0.104.
+
+The mechanism is confirmed: instantaneous patches were the omission, and a wave closes a 17× gap.
+
+## The design error it caught
+
+**A single fixed propagation direction over-suppresses homotopic pairs, badly.** At 1.4 m/s the
+model gives homotopic 0.0043 against `other` 0.2097 — a **50×** ratio, where the real recordings
+show 2.4×. The plan called for one registered direction (posterior→anterior), and that would have
+produced a head plot with an obviously wrong hole down the midline.
+
+The cause is exact symmetry. A plane wave travelling along the anterior–posterior axis reaches
+left and right twins at *identical* phase, so `Im(S) = a_i b_j − b_i a_j` vanishes for every
+homotopic pair by construction. Real cortex does not do this: propagation direction is documented
+as variable and task-dependent, and [rotating waves organise sleep
+spindles](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3366935/).
+
+So the model needs **direction variability** — drawn per burst, or rotating — not one axis. That
+is a design change discovered before implementation rather than after, and it is also better
+supported by the literature than the fixed axis was.
+
+**Why 0.5 m/s escapes it**: at that speed the phase span across the patch is 8.77 rad, so the wave
+wraps about 1.4 times within the patch (10 Hz at 0.5 m/s is a 50 mm wavelength across a ~100 mm
+patch). The wrapping breaks the midline symmetry that suppresses homotopic pairs at faster speeds.
+That is a real effect, but relying on it would be relying on an accident of patch size — direction
+variability is the principled fix, and the speed should then be re-fitted with it in place.
+
+## The residual
+
+**r(AP) is −0.008 against a real +0.131.** The only statistic that misses. A single
+anterior–posterior wave should, if anything, produce a positive AP correlation; it produces none.
+Worth understanding before shipping, and likely another consequence of the fixed direction —
+direction variability should be measured against it rather than assumed to fix it.
+
+## Cost, revised
+
+No hemisphere split, no patch restructuring, no re-fit of the spatial parameters. The producer
+emits two real topographies per travelling rhythm (`W_cos`, `W_sin`) and compose drives them with
+a signal and its quadrature — which alpha nearly has for free, being a damped oscillator whose
+state includes velocity. **3–5 days**, against the 2+ weeks the homotopic design implied.
+
+Reproduce: `prep/leadfield/probe_travelling_wave.py`.
