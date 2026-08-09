@@ -2470,3 +2470,59 @@ attenuation is proportional across lags is untested, and until it is, the ratio 
 configuration rather than a transfer function.
 
 Reproduce: `prep/reference/t2m1_injected_coupling.py`.
+
+---
+
+# Finding 31 — the directed measure fails its own null, so there is no directed gate
+
+Finding 30 established an injected connection that dwPLI detects (112× on, at chance off,
+4.7× specific) but cannot orient: dwPLI and the phase slope are symmetric, and the sign depends on
+which channel is named first. The obvious completion was a directed measure, and the phase slope
+index is the natural choice — built from the imaginary part of coherency, so it inherits the
+volume-conduction robustness, with a sign that is meant to be the direction of flow.
+
+Measured across 8 seeds, counting sign consistency and testing against p = 0.5:
+
+| coupling | consistent sign | ties | sign-test p |
+|---|---|---|---|
+| **ON** | 8/8 | 0 | **0.0078** |
+| **OFF** | 8/8 | 0 | **0.0078** |
+
+**Identical.** The sign is exactly as consistent with no connection present as with one.
+
+## What that means, and what it does not
+
+It does **not** mean direction was recovered. A measure returning the same answer whether or not
+the thing exists is reporting something else — here, almost certainly a fixed property of the
+montage. C3 and Pz sit where they sit, one anterior to the other, and the surrounding alpha patch,
+background and per-channel noise are the same in both arms. Whatever asymmetry PSI is reading is
+present without any coupling at all.
+
+Two possibilities remain open and this probe does not separate them: the estimator is being applied
+wrongly here — epoching, mode, or index convention — or PSI on this montage has a structural bias
+that a single pair cannot distinguish from flow. Either way the honest statement is the same:
+**direction is not established, and there is no directed gate.**
+
+## The null is the entire reason this is known
+
+With only the ON arm, the result reads *"direction recovered across 8 seeds, p = 0.0078"* — a clean
+significant finding, and false. The matched null cost one extra run and converted it into a
+detected failure.
+
+That is the seventh time in this project a matched null or a pre-registered criterion has caught
+something the positive arm alone would have reported as a result, and it is why the runner refuses
+to start when a gate is missing its null.
+
+## What a directed gate would need
+
+- A second pair with the **opposite** injected direction. If PSI returns the same sign for
+  src→dst and dst→src, it is reading geometry, and no amount of seeds will fix that.
+- A **swap test**: exchanging the two channel indices must flip the sign. If it does not, the usage
+  is wrong rather than the measure.
+- Only then a Granger or DTF arm, which carries model-order assumptions this project has not
+  characterised.
+
+None of that is done. The injected coupling of Finding 30 stands on its own as the fixture such a
+gate would use.
+
+Reproduce: `prep/reference/t2m1_injected_coupling.py`.

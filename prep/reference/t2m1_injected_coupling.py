@@ -50,13 +50,14 @@ import { applyReference } from './src/analysis/referencing.ts';
 import { scalarValue } from './src/core/registry.ts';
 const fs = scalarValue('fs');
 const on = process.argv[3] === 'on';
-const r = composeState(4242, process.argv[2], fs * 300, fs, { injectedCoupling: on });
+const seed = Number(process.argv[4] ?? 4242);
+const r = composeState(seed, process.argv[2], fs * 300, fs, { injectedCoupling: on });
 const ref = applyReference(r.channels, 'average');
 process.stdout.write(JSON.stringify({ labels: ref.labels, data: ref.channels.map(c => [...c]) }));
 '''
 
 
-def run(state: str, on: bool):
+def run(state: str, on: bool, seed: int = 4242):
     f = ROOT / '.coupling-probe.mts'
     f.write_text(H, encoding='utf8')
     try:
@@ -128,6 +129,56 @@ def main() -> int:
     ok = on_pair > 4 * off_pair and on_pair > 4 * on_med and abs(on_tau) > 0.2 * lag_ms
     print(f"\n  -> {'PASSES' if ok else 'DOES NOT PASS -- read the rows above'}"
           f"   (scalp lag is {abs(on_tau) / lag_ms:.0%} of the injected source lag)")
+    # ---------------------------------------------------------------- direction
+    #
+    # dwPLI says a lag exists; it cannot say which way. The phase slope index (Nolte et al. 2008)
+    # can: it is built from the imaginary part of coherency, so it inherits the volume-conduction
+    # robustness, and its SIGN is the direction of information flow.
+    #
+    # ONE SEED CANNOT ESTABLISH A DIRECTION. A sign is either right or wrong, and being right once
+    # is a coin toss. So the direction is counted across seeds and tested against p = 0.5 -- the
+    # 0.5 coming from the two-way choice itself, not from a threshold anyone picked, which is the
+    # pattern D14 settled for G4.
+    #
+    # mne_connectivity's implementation is used rather than ours: an external, independently
+    # authored measure is what would make the eventual gate class V rather than class C.
+    from mne_connectivity import phase_slope_index
+    from scipy import stats as st
+
+    SEEDS = [4242, 7, 101, 2024, 31337, 55, 909, 12345]
+    print(f"\n  DIRECTION, phase slope index over {lo:g}-{hi:g} Hz, {len(SEEDS)} seeds.")
+    print(f"  {'coupling':<10}{'correct sign':>14}{'ties':>7}{'sign test p':>13}")
+    print('  ' + '-' * 45)
+    verdicts = {}
+    for on in (True, False):
+        signs = []
+        for sd in SEEDS:
+            labels_, x_ = run('wake_ec', on, sd)
+            n_ = int(EPOCH_S * FS)
+            ep = np.stack([x_[:, k:k + n_] for k in range(0, x_.shape[1] - n_ + 1, n_ // 2)])
+            psi = phase_slope_index(ep, indices=([i], [j]), sfreq=FS, mode='fourier',
+                                    fmin=lo, fmax=hi, verbose=False)
+            signs.append(float(np.asarray(psi.get_data()).squeeze()))
+        arr = np.asarray(signs)
+        # Ties are discarded, not counted as evidence -- the error Finding 17 found in G3 and G4.
+        nz = arr[arr != 0]
+        pos = int((nz > 0).sum())
+        ties = len(arr) - len(nz)
+        pv = float(st.binomtest(max(pos, len(nz) - pos), len(nz), 0.5).pvalue) if len(nz) else 1.0
+        verdicts['on' if on else 'off'] = (pos, len(nz), ties, pv, float(np.mean(arr)))
+        print(f"  {'ON' if on else 'OFF':<10}{f'{max(pos, len(nz) - pos)}/{len(nz)}':>14}"
+              f"{ties:>7}{pv:>13.4f}")
+
+    p_on, p_off = verdicts['on'][3], verdicts['off'][3]
+    print(f"""
+  DIRECTION IS ESTABLISHED only if the sign is consistent with coupling ON and inconsistent with
+  it OFF. A measure that returned the same sign either way would be reporting the montage, not the
+  connection -- the two patches sit in fixed places and one is anterior to the other whether or not
+  anything flows between them.
+
+    coupling ON  : p = {p_on:.4f}   {'consistent' if p_on < 0.05 else 'NOT consistent'}
+    coupling OFF : p = {p_off:.4f}   {'consistent -- BAD, this is the montage speaking' if p_off < 0.05 else 'at chance, as required'}""")
+
     print("""
   The sign of the recovered lag depends on which channel is taken first and is not evidence of
   direction: dwPLI and the phase slope are symmetric measures. Establishing WHICH way the influence
