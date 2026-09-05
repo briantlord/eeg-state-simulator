@@ -6,11 +6,14 @@ datasets. Author attribution and the public repository account remain intentiona
 
 Use your GitHub-provided noreply address for commits to this repository. In a new clone, enable
 the publication hooks with `git config core.hooksPath .githooks`. The pre-commit hook checks the
-index and commit email; the pre-push hook checks reachable history. CI repeats the history check.
+index and commit email; the pre-push hook checks history reachable from every tip being published.
+CI repeats the history check on its checkout.
 GitHub secret scanning and push protection are enabled separately in repository settings.
 
 `npm run privacy:check` checks tracked working files. `npm run privacy:history` checks reachable
-Git objects and author/committer emails. These guards report locations and categories, without
+Git objects and author/committer emails across all local refs. Retained older local branches can
+therefore produce findings even when the published branch is clean. The push hook checks only
+the refs being sent, so private recovery history can stay local. These guards report locations and categories, without
 printing matched values. They cover personal home-directory paths, private-key material, common
 credential prefixes, credential filenames, and commit identities. They are a supplement to
 GitHub's credential detection, not a guarantee that arbitrary encoded secrets will be found.

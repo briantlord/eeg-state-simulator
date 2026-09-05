@@ -30,12 +30,24 @@ export function privateFilename(path) {
   return /^(?:\.env(?:\..*)?|\.npmrc|\.pypirc|\.netrc|credentials(?:\..*)?\.json|id_rsa|id_ed25519)$/i.test(name)
     || /\.(?:pem|key|pfx|p12)$/i.test(name) || path.split('/').includes('secrets');
 }
+export function pushRoots(input) {
+  const roots = [];
+  for (const row of input.trim().split('\n').filter(Boolean)) {
+    const fields = row.trim().split(/\s+/);
+    if (fields.length !== 4 || !/^[a-f0-9]{40,64}$/i.test(fields[1])) throw new Error('Invalid pre-push input');
+    if (!/^0+$/.test(fields[1])) roots.push(fields[1]);
+  }
+  return [...new Set(roots)];
+}
 const git = (args, options = {}) => execFileSync('git', args, { maxBuffer: 128 * 1024 * 1024, ...options });
 
 export function main(args = process.argv.slice(2)) {
   const history = args.includes('--history');
   const staged = args.includes('--staged');
-  if (args.some(a => !['--history', '--staged'].includes(a))) throw new Error('Unknown privacy-check option');
+  const push = args.includes('--push');
+  if (args.some(a => !['--history', '--staged', '--push'].includes(a)) || (push && !history) || (staged && history)) throw new Error('Invalid privacy-check option');
+  const roots = push ? pushRoots(readFileSync(0, 'utf8')) : ['--all'];
+  if (push && !roots.length) { console.log('Privacy check OK: no history is being published'); return; }
   let failures = 0, checked = 0;
   const report = (path, findings) => {
     for (const { category, line } of findings) {
@@ -49,12 +61,12 @@ export function main(args = process.argv.slice(2)) {
     if (isPrivateEmail(email)) report('Git identity', [{ category: 'use your GitHub noreply commit email' }]);
   }
   if (history) {
-    const identities = git(['log', '--all', '--format=%H%x09%ae%x09%ce']).toString().trim().split('\n');
+    const identities = git(['log', '--format=%H%x09%ae%x09%ce', ...roots, '--']).toString().trim().split('\n');
     for (const row of identities.filter(Boolean)) {
       const [oid, author, committer] = row.split('\t');
       if (isPrivateEmail(author) || isPrivateEmail(committer)) report(`commit ${oid.slice(0, 12)}`, [{ category: 'non-noreply commit identity' }]);
     }
-    const objects = git(['rev-list', '--objects', '--all']).toString().trim().split('\n');
+    const objects = git(['rev-list', '--objects', ...roots, '--']).toString().trim().split('\n');
     const names = new Map(objects.map(row => { const [oid, ...parts] = row.split(' '); return [oid, parts.join(' ')]; }));
     for (const [oid, path] of names) if (path && privateFilename(path)) report(`history ${path} (${oid.slice(0, 12)})`, [{ category: 'credential filename' }]);
     const data = git(['cat-file', '--batch'], { input: [...names.keys()].join('\n') + '\n' });
