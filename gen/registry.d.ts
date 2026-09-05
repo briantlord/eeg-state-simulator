@@ -12,7 +12,6 @@ export type ParamKey =
   | 'alpha_burst_duty_note'
   | 'alpha_burst_rate'
   | 'alpha_interburst_level'
-  | 'alpha_mod_depth'
   | 'alpha_mode_dwell'
   | 'alpha_peak'
   | 'alpha_rem_shift'
@@ -23,6 +22,11 @@ export type ParamKey =
   | 'analysis_window'
   | 'ap_axis_span'
   | 'aperiodic_model'
+  | 'background_envelope_depth'
+  | 'background_envelope_rate'
+  | 'background_fast_fraction_n3'
+  | 'background_fast_knee_n3'
+  | 'background_gain_n3'
   | 'background_rms_uv'
   | 'bem_source_mindist_mm'
   | 'beta_amp'
@@ -30,6 +34,11 @@ export type ParamKey =
   | 'blink_amp'
   | 'blink_dur'
   | 'blink_rate'
+  | 'cardiac_fast_tau_beats'
+  | 'cardiac_fast_variance_fraction'
+  | 'cardiac_rr_min_s'
+  | 'cardiac_slow_tau_s'
+  | 'cardiac_subject_hr_cv'
   | 'channel_local_share'
   | 'chi_direction'
   | 'chi_est_band'
@@ -38,9 +47,10 @@ export type ParamKey =
   | 'chi_inband_band'
   | 'chi_inband_slope'
   | 'chi_mod_depth'
-  | 'chi_mod_phase_sleep'
-  | 'chi_mod_phase_wake'
-  | 'chi_mod_phi0_sleep'
+  | 'chi_mod_phi0_n1'
+  | 'chi_mod_phi0_n2'
+  | 'chi_mod_phi0_n3'
+  | 'chi_mod_phi0_rem'
   | 'chi_mod_phi0_wake'
   | 'chi_n1'
   | 'chi_n2'
@@ -62,6 +72,7 @@ export type ParamKey =
   | 'display_window_options'
   | 'ecg_r_amp'
   | 'ecg_wave_shape'
+  | 'electrode_dc_drift_rms'
   | 'emg_amp_wake'
   | 'emg_band'
   | 'emg_rem_level'
@@ -103,9 +114,48 @@ export type ParamKey =
   | 'gate_pac_tol'
   | 'gate_spindle_f1'
   | 'gate_topography'
+  | 'hpf_default'
   | 'hpf_options'
-  | 'hr_mean'
-  | 'hr_sd'
+  | 'hr_mean_n1'
+  | 'hr_mean_n2'
+  | 'hr_mean_n3'
+  | 'hr_mean_rem'
+  | 'hr_mean_wake'
+  | 'isf1_band'
+  | 'isf2_band'
+  | 'isf_band'
+  | 'isf_band_variance_fraction'
+  | 'isf_comparison_hpf'
+  | 'isf_controller_rate'
+  | 'isf_cortical_rms_nrem'
+  | 'isf_cortical_rms_rem'
+  | 'isf_cortical_rms_wake'
+  | 'isf_lateral_family'
+  | 'isf_mechanism_arms'
+  | 'isf_modulation_gain_model'
+  | 'isf_modulation_target_map'
+  | 'isf_overview_antialias_hz'
+  | 'isf_overview_duration_options'
+  | 'isf_overview_rate'
+  | 'isf_pac_channel_fraction_nrem'
+  | 'isf_pac_channel_fraction_wake'
+  | 'isf_pac_depth_nrem'
+  | 'isf_pac_depth_rem'
+  | 'isf_pac_depth_wake'
+  | 'isf_pac_plv_nrem_reference'
+  | 'isf_pac_plv_wake_reference'
+  | 'isf_pac_preferred_phase'
+  | 'isf_power_state_contrast'
+  | 'isf_probe_record_length'
+  | 'isf_resonance_fraction'
+  | 'isf_shared_source_fraction'
+  | 'isf_source_delay_s'
+  | 'isf_source_families'
+  | 'isf_spatial_model'
+  | 'isf_spectrum_range'
+  | 'isf_temporal_exponent'
+  | 'isf_temporal_model'
+  | 'isf_temporal_pole_count'
   | 'k_n1'
   | 'k_n2'
   | 'k_n3'
@@ -144,19 +194,62 @@ export type ParamKey =
   | 'notch_q'
   | 'osc_carrier_flatten'
   | 'patch_mode_variance'
+  | 'periodic_mod_depth_high'
+  | 'periodic_mod_phi0_high'
+  | 'periodic_mod_phi0_low'
   | 'reference_channels'
+  | 'reference_dc_drift_rms'
   | 'render_decimation'
   | 'resp_amp_mod_depth'
   | 'resp_artifact_amp'
+  | 'resp_depth_cv_n1'
+  | 'resp_depth_cv_n2'
+  | 'resp_depth_cv_n3'
+  | 'resp_depth_cv_rem'
+  | 'resp_depth_cv_wake'
+  | 'resp_depth_timing_correlation'
+  | 'resp_exhale_pause_probability'
+  | 'resp_fast_tau_breaths'
+  | 'resp_fast_variance_fraction'
   | 'resp_ie_ratio'
-  | 'resp_pause_fraction'
-  | 'resp_period_cv'
+  | 'resp_ie_ratio_cv'
+  | 'resp_inhale_pause_probability'
+  | 'resp_pause_duration_s'
+  | 'resp_period_cv_n1'
+  | 'resp_period_cv_n2'
+  | 'resp_period_cv_n3'
+  | 'resp_period_cv_rem'
+  | 'resp_period_cv_wake'
+  | 'resp_rate_n1'
   | 'resp_rate_n2'
   | 'resp_rate_n3'
   | 'resp_rate_rem'
   | 'resp_rate_wake'
+  | 'resp_slow_fraction_n1'
+  | 'resp_slow_fraction_nrem'
+  | 'resp_slow_fraction_rem'
+  | 'resp_slow_fraction_wake'
+  | 'resp_slow_tau_s'
+  | 'resp_so_hazard_kappa'
+  | 'resp_so_pref_phase'
+  | 'resp_so_resultant_length'
+  | 'resp_spindle_fast_hazard_kappa'
+  | 'resp_spindle_fast_pref_phase'
+  | 'resp_spindle_fast_resultant_length'
+  | 'resp_spindle_slow_hazard'
+  | 'resp_subject_rate_cv'
   | 'rng_algorithm_ts'
-  | 'rsa_depth'
+  | 'rr_sdnn_n1'
+  | 'rr_sdnn_n2'
+  | 'rr_sdnn_n3'
+  | 'rr_sdnn_rem'
+  | 'rr_sdnn_wake'
+  | 'rsa_phase_offset'
+  | 'rsa_relative_n1_n2'
+  | 'rsa_relative_n3'
+  | 'rsa_relative_rem'
+  | 'rsa_relative_wake'
+  | 'rsa_rr_amp_rem'
   | 'sensor_noise_rms'
   | 'snr_calibration_epoch'
   | 'snr_calibration_seed'
@@ -165,6 +258,7 @@ export type ParamKey =
   | 'snr_range_ui'
   | 'so_amp'
   | 'so_freq'
+  | 'so_rate'
   | 'so_rdsym'
   | 'so_spindle_pref_phase'
   | 'so_spindle_strength'
@@ -173,9 +267,13 @@ export type ParamKey =
   | 'specparam_max_n_peaks'
   | 'specparam_peak_threshold'
   | 'specparam_peak_width_limits'
+  | 'spectrum_hybrid_blend'
+  | 'spectrum_low_min_segments'
+  | 'spectrum_low_smooth_radius_bins'
   | 'spindle_amp'
   | 'spindle_band'
   | 'spindle_dur_min'
+  | 'spindle_fast_fraction'
   | 'spindle_fast_freq'
   | 'spindle_rate'
   | 'spindle_slow_freq'
@@ -203,14 +301,13 @@ export type Standing = 'definitional' | 'chosen' | 'literature' | 'derived' | 'f
 export interface ParamKindMap {
   'alpha_amp': 'interval';
   'alpha_band': 'interval';
-  'alpha_bandwidth_broad': 'scalar';
-  'alpha_bandwidth_sharp': 'scalar';
+  'alpha_bandwidth_broad': 'pending';
+  'alpha_bandwidth_sharp': 'pending';
   'alpha_burst_dur': 'interval';
   'alpha_burst_duty_note': 'procedure';
   'alpha_burst_rate': 'interval';
   'alpha_interburst_level': 'scalar';
-  'alpha_mod_depth': 'pending';
-  'alpha_mode_dwell': 'scalar';
+  'alpha_mode_dwell': 'pending';
   'alpha_peak': 'scalar';
   'alpha_rem_shift': 'interval';
   'alpha_shape_rdsym': 'scalar';
@@ -220,6 +317,11 @@ export interface ParamKindMap {
   'analysis_window': 'scalar';
   'ap_axis_span': 'scalar';
   'aperiodic_model': 'procedure';
+  'background_envelope_depth': 'pending';
+  'background_envelope_rate': 'scalar';
+  'background_fast_fraction_n3': 'pending';
+  'background_fast_knee_n3': 'pending';
+  'background_gain_n3': 'pending';
   'background_rms_uv': 'interval';
   'bem_source_mindist_mm': 'scalar';
   'beta_amp': 'interval';
@@ -227,6 +329,11 @@ export interface ParamKindMap {
   'blink_amp': 'interval';
   'blink_dur': 'interval';
   'blink_rate': 'interval';
+  'cardiac_fast_tau_beats': 'pending';
+  'cardiac_fast_variance_fraction': 'pending';
+  'cardiac_rr_min_s': 'scalar';
+  'cardiac_slow_tau_s': 'pending';
+  'cardiac_subject_hr_cv': 'scalar';
   'channel_local_share': 'pending';
   'chi_direction': 'ordering';
   'chi_est_band': 'interval';
@@ -235,10 +342,11 @@ export interface ParamKindMap {
   'chi_inband_band': 'interval';
   'chi_inband_slope': 'procedure';
   'chi_mod_depth': 'pending';
-  'chi_mod_phase_sleep': 'procedure';
-  'chi_mod_phase_wake': 'procedure';
-  'chi_mod_phi0_sleep': 'pending';
-  'chi_mod_phi0_wake': 'pending';
+  'chi_mod_phi0_n1': 'scalar';
+  'chi_mod_phi0_n2': 'scalar';
+  'chi_mod_phi0_n3': 'scalar';
+  'chi_mod_phi0_rem': 'scalar';
+  'chi_mod_phi0_wake': 'scalar';
   'chi_n1': 'pending';
   'chi_n2': 'pending';
   'chi_n3': 'pending';
@@ -249,7 +357,7 @@ export interface ParamKindMap {
   'coupling_amp': 'interval';
   'coupling_lag_ms': 'scalar';
   'coupling_strength': 'scalar';
-  'delta_amp': 'interval';
+  'delta_amp': 'pending';
   'delta_band': 'interval';
   'display_buffer_s': 'scalar';
   'display_cal_pulse_amp': 'scalar';
@@ -259,6 +367,7 @@ export interface ParamKindMap {
   'display_window_options': 'enum';
   'ecg_r_amp': 'pending';
   'ecg_wave_shape': 'procedure';
+  'electrode_dc_drift_rms': 'absent';
   'emg_amp_wake': 'interval';
   'emg_band': 'bound';
   'emg_rem_level': 'scalar';
@@ -300,9 +409,48 @@ export interface ParamKindMap {
   'gate_pac_tol': 'absent';
   'gate_spindle_f1': 'absent';
   'gate_topography': 'procedure';
+  'hpf_default': 'scalar';
   'hpf_options': 'enum';
-  'hr_mean': 'pending';
-  'hr_sd': 'pending';
+  'hr_mean_n1': 'scalar';
+  'hr_mean_n2': 'scalar';
+  'hr_mean_n3': 'scalar';
+  'hr_mean_rem': 'scalar';
+  'hr_mean_wake': 'scalar';
+  'isf1_band': 'interval';
+  'isf2_band': 'interval';
+  'isf_band': 'interval';
+  'isf_band_variance_fraction': 'pending';
+  'isf_comparison_hpf': 'scalar';
+  'isf_controller_rate': 'scalar';
+  'isf_cortical_rms_nrem': 'pending';
+  'isf_cortical_rms_rem': 'pending';
+  'isf_cortical_rms_wake': 'pending';
+  'isf_lateral_family': 'absent';
+  'isf_mechanism_arms': 'procedure';
+  'isf_modulation_gain_model': 'enum';
+  'isf_modulation_target_map': 'procedure';
+  'isf_overview_antialias_hz': 'scalar';
+  'isf_overview_duration_options': 'enum';
+  'isf_overview_rate': 'scalar';
+  'isf_pac_channel_fraction_nrem': 'interval';
+  'isf_pac_channel_fraction_wake': 'interval';
+  'isf_pac_depth_nrem': 'pending';
+  'isf_pac_depth_rem': 'pending';
+  'isf_pac_depth_wake': 'pending';
+  'isf_pac_plv_nrem_reference': 'scalar';
+  'isf_pac_plv_wake_reference': 'scalar';
+  'isf_pac_preferred_phase': 'absent';
+  'isf_power_state_contrast': 'procedure';
+  'isf_probe_record_length': 'scalar';
+  'isf_resonance_fraction': 'absent';
+  'isf_shared_source_fraction': 'absent';
+  'isf_source_delay_s': 'absent';
+  'isf_source_families': 'enum';
+  'isf_spatial_model': 'enum';
+  'isf_spectrum_range': 'interval';
+  'isf_temporal_exponent': 'pending';
+  'isf_temporal_model': 'enum';
+  'isf_temporal_pole_count': 'pending';
   'k_n1': 'pending';
   'k_n2': 'pending';
   'k_n3': 'pending';
@@ -341,19 +489,62 @@ export interface ParamKindMap {
   'notch_q': 'scalar';
   'osc_carrier_flatten': 'scalar';
   'patch_mode_variance': 'scalar';
+  'periodic_mod_depth_high': 'pending';
+  'periodic_mod_phi0_high': 'scalar';
+  'periodic_mod_phi0_low': 'scalar';
   'reference_channels': 'electrodes';
+  'reference_dc_drift_rms': 'absent';
   'render_decimation': 'enum';
   'resp_amp_mod_depth': 'pending';
   'resp_artifact_amp': 'interval';
+  'resp_depth_cv_n1': 'pending';
+  'resp_depth_cv_n2': 'pending';
+  'resp_depth_cv_n3': 'pending';
+  'resp_depth_cv_rem': 'pending';
+  'resp_depth_cv_wake': 'pending';
+  'resp_depth_timing_correlation': 'pending';
+  'resp_exhale_pause_probability': 'scalar';
+  'resp_fast_tau_breaths': 'pending';
+  'resp_fast_variance_fraction': 'pending';
   'resp_ie_ratio': 'interval';
-  'resp_pause_fraction': 'scalar';
-  'resp_period_cv': 'pending';
-  'resp_rate_n2': 'interval';
-  'resp_rate_n3': 'interval';
-  'resp_rate_rem': 'interval';
-  'resp_rate_wake': 'interval';
+  'resp_ie_ratio_cv': 'pending';
+  'resp_inhale_pause_probability': 'scalar';
+  'resp_pause_duration_s': 'scalar';
+  'resp_period_cv_n1': 'pending';
+  'resp_period_cv_n2': 'pending';
+  'resp_period_cv_n3': 'pending';
+  'resp_period_cv_rem': 'pending';
+  'resp_period_cv_wake': 'pending';
+  'resp_rate_n1': 'scalar';
+  'resp_rate_n2': 'scalar';
+  'resp_rate_n3': 'scalar';
+  'resp_rate_rem': 'scalar';
+  'resp_rate_wake': 'scalar';
+  'resp_slow_fraction_n1': 'pending';
+  'resp_slow_fraction_nrem': 'pending';
+  'resp_slow_fraction_rem': 'pending';
+  'resp_slow_fraction_wake': 'pending';
+  'resp_slow_tau_s': 'pending';
+  'resp_so_hazard_kappa': 'scalar';
+  'resp_so_pref_phase': 'scalar';
+  'resp_so_resultant_length': 'scalar';
+  'resp_spindle_fast_hazard_kappa': 'scalar';
+  'resp_spindle_fast_pref_phase': 'scalar';
+  'resp_spindle_fast_resultant_length': 'scalar';
+  'resp_spindle_slow_hazard': 'absent';
+  'resp_subject_rate_cv': 'pending';
   'rng_algorithm_ts': 'enum';
-  'rsa_depth': 'pending';
+  'rr_sdnn_n1': 'scalar';
+  'rr_sdnn_n2': 'scalar';
+  'rr_sdnn_n3': 'scalar';
+  'rr_sdnn_rem': 'scalar';
+  'rr_sdnn_wake': 'scalar';
+  'rsa_phase_offset': 'pending';
+  'rsa_relative_n1_n2': 'scalar';
+  'rsa_relative_n3': 'scalar';
+  'rsa_relative_rem': 'scalar';
+  'rsa_relative_wake': 'scalar';
+  'rsa_rr_amp_rem': 'pending';
   'sensor_noise_rms': 'interval';
   'snr_calibration_epoch': 'scalar';
   'snr_calibration_seed': 'scalar';
@@ -362,6 +553,7 @@ export interface ParamKindMap {
   'snr_range_ui': 'interval';
   'so_amp': 'interval';
   'so_freq': 'bound';
+  'so_rate': 'pending';
   'so_rdsym': 'scalar';
   'so_spindle_pref_phase': 'pending';
   'so_spindle_strength': 'pending';
@@ -370,9 +562,13 @@ export interface ParamKindMap {
   'specparam_max_n_peaks': 'scalar';
   'specparam_peak_threshold': 'scalar';
   'specparam_peak_width_limits': 'interval';
+  'spectrum_hybrid_blend': 'interval';
+  'spectrum_low_min_segments': 'scalar';
+  'spectrum_low_smooth_radius_bins': 'scalar';
   'spindle_amp': 'interval';
   'spindle_band': 'interval';
   'spindle_dur_min': 'scalar';
+  'spindle_fast_fraction': 'pending';
   'spindle_fast_freq': 'interval';
   'spindle_rate': 'interval';
   'spindle_slow_freq': 'interval';

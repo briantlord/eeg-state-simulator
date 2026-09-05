@@ -72,6 +72,12 @@ PATCHES: dict[str, list[str]] = {
     # Posterior dominant rhythm: occipital and parieto-occipital.
     'alpha': ['pericalcarine', 'cuneus', 'lingual', 'lateraloccipital',
               'superiorparietal', 'precuneus'],
+    # Respiration-locked APERIODIC modulation is widespread but strongest over posterior
+    # sensors (Kluger et al. 2023). This patch supplies a non-negative scalp POWER loading for
+    # modulation depth; it is not an additional waveform and therefore changes no baseline
+    # variance by itself. The runtime derives the loading from the family's root-sum-square.
+    'resp_aperiodic': ['pericalcarine', 'cuneus', 'lingual', 'lateraloccipital',
+                       'superiorparietal', 'precuneus'],
     # Sensorimotor and dorsolateral frontal beta.
     'beta': ['precentral', 'postcentral', 'caudalmiddlefrontal', 'parsopercularis'],
     # Frontal midline theta: medial frontal and anterior cingulate.
@@ -86,6 +92,29 @@ PATCHES: dict[str, list[str]] = {
     'spindle_slow': ['superiorfrontal', 'caudalmiddlefrontal'],
     # K-complex: fronto-central midline.
     'kc': ['superiorfrontal', 'caudalanteriorcingulate', 'paracentral'],
+}
+
+# INFRA-SLOW CORTICAL SOURCE FAMILIES (D26, ISF-2). These are deliberately broad anatomical
+# systems rather than electrode targets. The full-band literature supports distributed,
+# network-specific components and frontal enhancement in NREM, but it does not identify a
+# 19-channel amplitude, a shared-source fraction, or a propagation delay. Consequently these
+# patches are emitted as UNIT-VARIANCE spatial bases only; compose.ts does not drive them yet.
+#
+# Three families are the accepted prefix: anterior association, central sensorimotor, and
+# posterior visual/association cortex. A fourth lateral-association family was proposed as an
+# escape hatch, not as a requirement. It is omitted because no external observation currently
+# requires another spatial degree of freedom (the parsimony stop rule in the ISF plan).
+ISF_PATCHES: dict[str, list[str]] = {
+    'isf_frontomedial': [
+        'superiorfrontal', 'rostralmiddlefrontal',
+        'caudalanteriorcingulate', 'rostralanteriorcingulate',
+        'medialorbitofrontal',
+    ],
+    'isf_sensorimotor': ['precentral', 'postcentral', 'paracentral'],
+    'isf_posterior': [
+        'pericalcarine', 'cuneus', 'lingual', 'lateraloccipital',
+        'precuneus', 'superiorparietal',
+    ],
 }
 # TWO PATCHES WERE REVISED AFTER G6 FAILED, and that sequence is stated rather than hidden.
 #
@@ -177,7 +206,7 @@ def build_leadfield(subjects_dir: Path):
 
     import mne
     mne.set_log_level('ERROR')
-    fs_dir = Path(mne.datasets.fetch_fsaverage(verbose=False))
+    fs_dir = Path(mne.datasets.fetch_fsaverage(subjects_dir=subjects_dir, verbose=False))
     src_path = fs_dir / 'bem' / 'fsaverage-ico-5-src.fif'
     bem_path = fs_dir / 'bem' / 'fsaverage-5120-5120-5120-bem-sol.fif'
 
@@ -265,7 +294,17 @@ def main() -> int:
 
     import mne
     mne.set_log_level('ERROR')
-    subjects_dir = Path(mne.datasets.fetch_fsaverage(verbose=False)).parent
+    # Locate already-fetched data without touching MNE's user config. CI caches under
+    # ~/mne_data; this workspace may also expose a repository-local link. If the lead-field
+    # cache exists, build_leadfield returns before reading either path.
+    candidates = (
+        Path.home() / 'mne_data' / 'MNE-fsaverage-data',
+        _ROOT / 'mne_data' / 'MNE-fsaverage-data',
+    )
+    subjects_dir = next(
+        (p for p in candidates if (p / 'fsaverage' / 'bem' / 'fsaverage-ico-5-src.fif').exists()),
+        candidates[0],
+    )
 
     L, names, pos, labels = build_leadfield(subjects_dir)
     lam = num('cortical_coherence_mm')
@@ -309,7 +348,7 @@ def main() -> int:
                 },
             }
 
-    for gen, regions in PATCHES.items():
+    for gen, regions in {**PATCHES, **ISF_PATCHES}.items():
         missing = [r for r in regions if r not in labels]
         if missing:
             raise SystemExit(f"{gen}: no such Desikan-Killiany region(s): {missing}")
@@ -388,7 +427,7 @@ def main() -> int:
     fams: dict[str, int] = {}
     for k in projections:
         fams[k.split('_m')[0]] = fams.get(k.split('_m')[0], 0) + 1
-    for g in list(PATCHES) + list(COUPLING_PATCHES) + [BACKGROUND, 'resp_artifact']:
+    for g in list(PATCHES) + list(ISF_PATCHES) + list(COUPLING_PATCHES) + [BACKGROUND, 'resp_artifact']:
         w0 = np.asarray(projections[g]['weights'])
         peak = chan_names[int(np.argmax(np.abs(w0)))]
         print(f'  {g:<14} {fams[g]:>2} mode(s)   mode-0 argmax {peak}')

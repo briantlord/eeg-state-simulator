@@ -13,7 +13,7 @@
  *   it."
  */
 import '../tokens/tokens.css';
-import { ALL_CHANNELS, REFERENCE_LABELS, weightsFor } from '../core/generators/projection.ts';
+import { ALL_CHANNELS, CHANNELS, REFERENCE_LABELS, weightsFor } from '../core/generators/projection.ts';
 import { STATE_IDS, STATE_LABELS, type StateId } from '../core/types/state.ts';
 import {
   applyFilterChain,
@@ -30,6 +30,9 @@ import { Rng } from '../core/rng/xoshiro128pp.ts';
 import type { ComposeResult } from '../core/generators/compose.ts';
 import { drawTrace } from '../render/trace.ts';
 import { SignalStream } from './stream.ts';
+import { RELEASE_MECHANISMS } from '../core/profile.ts';
+import { RELEASE_PROFILE_ID, RELEASE_CALIBRATION } from '../core/release.ts';
+import { mountFullBandPanel } from './fullband-panel.ts';
 import {
   applyReference,
   effectiveRank,
@@ -71,13 +74,12 @@ const ui = {
   // told what to look at. N3 opened here previously and led with the least typical trace.
   state: 'wake_ec' as StateId,
   seed: scalarValue('snr_calibration_seed'),
-  // BOTH ENDS ON, BOTH WIDE OPEN. The filter is a SPEC -- two independently switchable ends, an
-  // order and a phase mode -- and it opens with both ends enabled at the extremes of
-  // `filter_ui_range`, so the panel shows its full travel and the first drag of either handle
-  // narrows the passband rather than switching something on. Read from the registry's own UI
-  // domain rather than written as numbers, so the handles cannot start outside their range.
+  // BOTH ENDS ON. The high-pass opens at the separately registered 0.1 Hz default but can travel
+  // below the named infra-slow band; conflating its default with the UI floor made 0.1 Hz the
+  // lowest selectable value and prevented the control from retaining the mechanism it explains.
+  // The low-pass remains fully open at the top of the UI domain.
   hpEnabled: true,
-  hpHz: uiDomain('filter_ui_range').lo,
+  hpHz: scalarValue('hpf_default'),
   lpEnabled: true,
   lpHz: uiDomain('filter_ui_range').hi,
   forder: scalarValue('filter_order'),
@@ -93,13 +95,20 @@ const ui = {
   showReference: false,
   /** Respiration belt and ECG, below the montage behind a firm boundary. */
   showAux: true,
+  /** State-dependent stochastic breathing, or a fixed-cycle teaching contrast. */
+  respirationMode: RELEASE_MECHANISMS.respirationMode as 'natural' | 'regular',
+  /** Mechanical electrode movement only; neural respiratory coupling remains independent. */
+  movementArtifact: Boolean(RELEASE_MECHANISMS.movementArtifact),
+  /** Provisional source-level ISF mechanisms; independently switchable in the full-band panel. */
+  infraSlowCortical: Boolean(RELEASE_MECHANISMS.infraSlowCortical),
+  infraSlowModulation: Boolean(RELEASE_MECHANISMS.infraSlowModulation),
   /** Mains interference. Off by default -- it sits above every band measured here. */
-  lineNoise: false,
+  lineNoise: Boolean(RELEASE_MECHANISMS.lineNoise),
   // North American mains, not `line_freq`'s first option. The row's own rationale is "regional
   // mains; selected by DEPLOYMENT", so picking one here is the deployment doing its job -- and it
   // is read OUT of the enum rather than written as a literal, so the registry still owns the set
   // of legal values. Both options stay selectable in the UI.
-  lineFreqHz: enumValue('line_freq').at(-1) as number,
+  lineFreqHz: RELEASE_MECHANISMS.lineFreqHz,
   reference: 'linked-mastoid' as ReferenceMode,
 };
 
@@ -107,9 +116,10 @@ let stream = new SignalStream({
   seed: ui.seed,
   state: ui.state,
   // All three respiratory mechanisms of Build Plan 5.1, kept separate in the API.
-  movementArtifact: true,
-  amplitudeModulation: true,
-  chiModulation: true,
+  movementArtifact: ui.movementArtifact,
+  infraSlowCortical: ui.infraSlowCortical,
+  infraSlowModulation: ui.infraSlowModulation,
+  respirationMode: ui.respirationMode,
   lineNoise: ui.lineNoise,
   lineFreqHz: ui.lineFreqHz,
 });
@@ -359,9 +369,12 @@ function drawFrame(): void {
 
 let last = performance.now();
 function loop(now: number): void {
-  const dt = Math.min(0.25, (now - last) / 1000); // @lit-ok frame dt clamp (0.25 s) and milliseconds per second
+  // A queued first-frame timestamp can precede initialization's performance.now().
+  const dt = Math.max(0, Math.min(0.25, (now - last) / 1000)); // @lit-ok frame dt clamp (0.25 s) and milliseconds per second
   last = now;
+  const previousIndex = stream.segmentIndex;
   if (ui.running) stream.advance(dt);
+  if (previousIndex !== stream.segmentIndex) refreshMeasurements();
   drawFrame();
   requestAnimationFrame(loop);
 }
@@ -369,6 +382,7 @@ function loop(now: number): void {
 // -------------------------------------------------------------- observables
 
 function updateObservables(): void {
+  refreshMeasurements();
   // Panel archived out of index.html; see $opt. Restoring the markup re-enables this with no
   // other change.
   if (!$opt('c-chi')) return;
@@ -457,8 +471,6 @@ function updateObservables(): void {
   // Effective dimensionality, and the reference that produced it. Referencing is a rank
   // operation, so the two belong on screen together.
   $('o-rank').textContent = p.rank.toFixed(2);
-  drawSpectrumPanel();
-  $('ref-note').textContent = REFERENCE_NOTE[ui.reference];
 
   renderDemo3();
 }
@@ -584,7 +596,7 @@ function hzToSlider(f: number): number {
   return Math.round(fToUnit(f, FILT_RANGE.lo, FILT_RANGE.hi) * SLIDER_MAX);
 }
 function fmtHz(f: number): string {
-  return `${f < 1 ? f.toFixed(2) : f.toFixed(f < 10 ? 1 : 0)} Hz`; // @lit-ok display precision thresholds
+  return `${f < 0.1 ? f.toFixed(3) : f < 1 ? f.toFixed(2) : f.toFixed(f < 10 ? 1 : 0)} Hz`; // @lit-ok display precision thresholds
 }
 
 function refreshFilterUi(): void {
@@ -593,17 +605,30 @@ function refreshFilterUi(): void {
   $<HTMLInputElement>('hp-slider').disabled = !ui.hpEnabled;
   $<HTMLInputElement>('lp-slider').disabled = !ui.lpEnabled;
   processedKey = '';
-  drawSpectrumPanel();
   updateObservables();
 }
 
+// The visible spectrum has its own invalidation key, independent of archived observables.
+let measurementKey = '';
+let fullbandPanel: ReturnType<typeof mountFullBandPanel> | null = null;
+function refreshMeasurements(): void {
+  const key = JSON.stringify([ui.seed, ui.state, stream.segmentIndex, ui.reference,
+    currentSpec(), ui.respirationMode, ui.movementArtifact, ui.infraSlowCortical,
+    ui.infraSlowModulation, ui.lineNoise, ui.lineFreqHz]);
+  if (key === measurementKey) return;
+  drawSpectrumPanel();
+  $('ref-note').textContent = REFERENCE_NOTE[ui.reference];
+  measurementKey = key;
+  fullbandPanel?.invalidate();
+}
+
 function drawSpectrumPanel(): void {
-  const p = ensureProcessed();
-  // The spectrum is drawn on the UNFILTERED referenced channel and filters it itself, so the
-  // raw curve is genuinely raw. Drawing it on `p.channels` would show a filtered signal being
-  // filtered again, and the "raw" curve would already have the stopband in it.
-  const rawRef = p.raw ? p.raw[p.labels.indexOf('Pz')] : null;
-  const src = rawRef ?? chan(p, 'Pz');
+  // Always derive the spectrum source from the UNFILTERED segment. `Processed.raw` exists only
+  // when the trace overlay is visible; falling back from it to `Processed.channels` silently
+  // handed drawSpectrum an already-filtered signal and the panel filtered it a second time.
+  const rawReference = applyReference([...stream.channels], ui.reference);
+  const pz = rawReference.labels.indexOf('Pz');
+  const src = rawReference.channels[pz >= 0 ? pz : 0]!;
   drawSpectrum($<HTMLCanvasElement>('spectrum'), {
     raw: src,
     fs: FS,
@@ -611,6 +636,10 @@ function drawSpectrumPanel(): void {
     fMin: FILT_RANGE.lo,
     fMax: Math.min(FILT_RANGE.hi, FS / 2),
     showFiltered: ui.hpEnabled || ui.lpEnabled,
+    // The 90-second display segment resolves the low-frequency control far better than the
+    // ordinary four-second Welch estimate. The renderer marks frequencies below 1/T rather
+    // than extending this curve into a region the record cannot measure.
+    estimator: 'hybrid',
   });
 }
 
@@ -749,6 +778,10 @@ function renderInvented(): void {
 function restart(): void {
   stream.reset({
     seed: ui.seed, state: ui.state,
+    respirationMode: ui.respirationMode,
+    movementArtifact: ui.movementArtifact,
+    infraSlowCortical: ui.infraSlowCortical,
+    infraSlowModulation: ui.infraSlowModulation,
     lineNoise: ui.lineNoise, lineFreqHz: ui.lineFreqHz,
   });
   // THE PLAYHEAD IS NO LONGER PRIMED. It used to be advanced by one window so the chart opened
@@ -756,11 +789,30 @@ function restart(): void {
   // request: the pen now starts at the left of blank paper and the trace fills in as it is
   // generated, which is what a recording actually looks like starting up.
   processedKey = '';
+  measurementKey = '';
   segCache.clear();
+  $<HTMLInputElement>('scrub').value = '0';
   updateObservables();
 }
 
 function mount(): void {
+  const durations = enumValue('isf_overview_duration_options');
+  select('fullband-duration', durations, durations[0]!);
+  fullbandPanel = mountFullBandPanel(() => ({
+    seed: ui.seed, state: ui.state, reference: ui.reference,
+    durationS: Number($<HTMLSelectElement>('fullband-duration').value),
+    compose: {
+      respirationMode: ui.respirationMode, movementArtifact: ui.movementArtifact,
+      infraSlowCortical: ui.infraSlowCortical, infraSlowModulation: ui.infraSlowModulation,
+      lineNoise: ui.lineNoise, lineFreqHz: ui.lineFreqHz,
+    },
+  }), () => ui.ftype === 'causal');
+  $('fullband-duration').addEventListener('change', () => fullbandPanel!.invalidate());
+  for (const [id, key] of [['isf-cortical', 'infraSlowCortical'], ['isf-modulation', 'infraSlowModulation']] as const) {
+    const input = $<HTMLInputElement>(id);
+    input.checked = ui[key];
+    input.addEventListener('change', () => { ui[key] = input.checked; restart(); });
+  }
   select('state', STATE_IDS, ui.state).addEventListener('change', (e) => {
     ui.state = (e.target as HTMLSelectElement).value as StateId;
     restart();
@@ -768,6 +820,26 @@ function mount(): void {
   for (const opt of Array.from($<HTMLSelectElement>('state').options)) {
     opt.textContent = STATE_LABELS[opt.value as StateId];
   }
+
+  for (const btn of Array.from($('resp-mode').querySelectorAll('button'))) {
+    btn.addEventListener('click', () => {
+      ui.respirationMode = (btn as HTMLElement).dataset['v'] as 'natural' | 'regular';
+      for (const candidate of Array.from($('resp-mode').querySelectorAll('button'))) {
+        candidate.setAttribute('aria-pressed', String(candidate === btn));
+      }
+      restart();
+    });
+  }
+
+  const movementBtn = $<HTMLButtonElement>('movement-artifact');
+  movementBtn.addEventListener('click', () => {
+    ui.movementArtifact = !ui.movementArtifact;
+    movementBtn.setAttribute('aria-pressed', String(ui.movementArtifact));
+    movementBtn.textContent = ui.movementArtifact
+      ? 'movement artifact on'
+      : 'movement artifact off';
+    restart();
+  });
 
   const seedInput = $<HTMLInputElement>('seed');
   seedInput.value = String(ui.seed);
@@ -879,15 +951,18 @@ function mount(): void {
   });
 
   const scrub = $<HTMLInputElement>('scrub');
-  scrub.max = String(stream.segmentSeconds);
+  scrub.max = String(stream.segmentSeconds - 1 / FS);
+  scrub.step = String(1 / FS);
   scrub.addEventListener('input', () => {
     ui.running = false;
     play.textContent = 'play';
+    play.setAttribute('aria-pressed', 'false');
     stream.seekTo(Number(scrub.value));
     updateObservables();
   });
 
-  $('version').textContent = `generator v${GENERATOR_VERSION}`;
+  $('version').textContent = `generator v${GENERATOR_VERSION} · ${RELEASE_PROFILE_ID} · ` +
+    `${RELEASE_CALIBRATION.value_db.toFixed(4)} dB`; // @lit-ok display precision; serialized calibration retains full precision
 
   renderInvented();
   // NOT PRIMED. mount() advanced the playhead by one window here as well as in restart(), so

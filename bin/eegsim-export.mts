@@ -9,12 +9,9 @@
  * channels through data/projection_10_20.json, plus independent sensor noise. See
  * src/core/generators/compose.ts.
  *
- *   TODO(WP-E): graphoelements — spindles, K-complexes, slow oscillations with AP travel.
- *   TODO(WP-F): respiration, the tilt filter, and chi(t) modulation.
- *   TODO(WP-J): blink, EMG and line-noise artifacts.
+ * Defaults to the same named calibrated configuration as the browser. Isolated validation
+ * arms must use --profile isolated or override individual mechanisms explicitly.
  */
-import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { FixedState, STATE_IDS, isStateId } from '../src/core/types/state.ts';
@@ -24,28 +21,22 @@ import {
   writeEpoch,
   writeManifest,
   writeEventList,
+  writePhysiologyTruth,
   defaultManifestFields,
   epochSamples,
   type EpochSidecar,
   type InjectedTruth,
 } from '../src/io/epoch_dir.ts';
-import { scalarValue, electrodeSet, STATES } from '../src/core/registry.ts';
-import { composeState } from '../src/core/generators/compose.ts';
+import { scalarValue, electrodeSet, enumValue, STATES } from '../src/core/registry.ts';
+import { composeState, type ComposeOptions } from '../src/core/generators/compose.ts';
 import { ALL_CHANNELS, weightsFor, modesOf, type PatchId } from '../src/core/generators/projection.ts';
+import { releasedOptions, RELEASE_PROFILE_ID, RELEASE_CALIBRATION } from '../src/core/release.ts';
+import { ISOLATED_MECHANISMS } from '../src/core/profile.ts';
+import { fileDigest, modelFingerprint } from '../src/io/provenance.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 const MONTAGE = ALL_CHANNELS;
-
-/** The solved snr_nominal, or 0 dB if calibration has not been run. */
-function solvedSnrNominal(): number {
-  try {
-    const p = join(ROOT, 'prep', 'fixtures', 'snr_calibration.json');
-    return JSON.parse(readFileSync(p, 'utf8')).value_db as number;
-  } catch {
-    return 0;
-  }
-}
 
 function parseArgs(argv: string[]): Record<string, string> {
   const out: Record<string, string> = {};
@@ -68,6 +59,36 @@ function parseArgs(argv: string[]): Record<string, string> {
 
 function main(): void {
   const args = parseArgs(process.argv.slice(2));
+  const known = new Set(['profile', 'seed', 'state', 'epochs', 'out', 'snr-db', 'movement-artifact',
+    'amplitude-modulation', 'chi-modulation', 'no-resp-event-coupling', 'chi-mod-depth',
+    'resp-amp-mod-depth', 'resp-rate', 'independent-chi-mod-freq', 'no-graphoelements',
+    'no-infraslow-cortical', 'no-infraslow-modulation', 'line-noise', 'line-freq', 'respiration-mode']);
+  for (const key of Object.keys(args)) if (!known.has(key)) throw new Error(`Unknown option --${key}`);
+  const profile = args['profile'] ?? 'released';
+  if (profile !== 'released' && profile !== 'isolated') throw new Error('Expected --profile released or isolated');
+  const defaults = releasedOptions(profile === 'isolated' ? ISOLATED_MECHANISMS : {});
+  const flag = (name: string, fallback: boolean): boolean => {
+    if (args[name] === undefined) return fallback;
+    if (args[name] !== 'true' && args[name] !== 'false') throw new Error(`--${name} must be true or false`);
+    return args[name] === 'true';
+  };
+  for (const name of ['snr-db', 'epochs', 'seed', 'chi-mod-depth', 'resp-amp-mod-depth',
+    'resp-rate', 'independent-chi-mod-freq', 'line-freq']) {
+    if (args[name] !== undefined && !Number.isFinite(Number(args[name]))) {
+      throw new Error(`--${name} must be finite`);
+    }
+  }
+  for (const name of ['resp-rate', 'independent-chi-mod-freq']) {
+    if (args[name] !== undefined && Number(args[name]) <= 0) throw new Error(`--${name} must be positive`);
+  }
+  for (const name of ['chi-mod-depth', 'resp-amp-mod-depth']) {
+    if (args[name] !== undefined && Number(args[name]) < 0) throw new Error(`--${name} must be non-negative`);
+  }
+  const respirationMode = args['respiration-mode'] ?? defaults.respirationMode;
+  if (respirationMode !== 'natural' && respirationMode !== 'regular') throw new Error('Invalid --respiration-mode');
+  if (args['line-freq'] !== undefined && !enumValue('line_freq').includes(Number(args['line-freq']))) {
+    throw new Error('--line-freq must be one of the registered mains frequencies');
+  }
 
   const seed = Number(args['seed'] ?? scalarValue('snr_calibration_seed'));
   const stateArg = args['state'] ?? 'n3';
@@ -76,9 +97,10 @@ function main(): void {
     process.exit(2);
   }
   const nEpochs = Number(args['epochs'] ?? 1);
+  if (!Number.isSafeInteger(nEpochs) || nEpochs < 1) throw new Error('--epochs must be a positive integer');
   // Defaults to the solved snr_nominal when the calibration artifact exists, so exported
   // data is at the calibrated mix unless a caller deliberately overrides it.
-  const snrDb = args['snr-db'] !== undefined ? Number(args['snr-db']) : solvedSnrNominal();
+  const snrDb = args['snr-db'] !== undefined ? Number(args['snr-db']) : defaults.snrDb!;
   // `resolve`, not `join`: an absolute --out must be honoured, and join() would concatenate
   // it onto ROOT and produce a nonsense path.
   const outDir = resolve(ROOT, args['out'] ?? `prep/out/run_${stateArg}_${seed}`);
@@ -93,22 +115,11 @@ function main(): void {
   const nSamp = epochSamples();
   const state = new FixedState(stateArg);
 
-  const registryDigest = createHash('sha256')
-    .update(readFileSync(join(ROOT, 'gen', 'registry.json')))
-    .digest('hex')
-    .slice(0, 16); // @lit-ok 16-hex-char registry-digest prefix
-
-  writeManifest(outDir, {
-    ...defaultManifestFields(),
-    seed,
-    fs,
-    channels: MONTAGE,
-    referenceChannels: electrodeSet('reference_channels'),
-    nEpochs,
-    epochDuration: epochDur,
-    registryDigest,
-    stateSourceKind: state.kind,
-  });
+  const fingerprint = modelFingerprint();
+  const registryDigest = fingerprint.registrySha256.slice(0, 16); // @lit-ok legacy 16-hex registry identifier
+  if (JSON.stringify(fingerprint) !== JSON.stringify(RELEASE_CALIBRATION.fingerprint)) {
+    throw new Error('Calibration inputs changed; run npm run calibrate before exporting');
+  }
 
   // ONE CONTINUOUS RUN, sliced into epochs — not one independent realisation per epoch.
   //
@@ -120,14 +131,12 @@ function main(): void {
   // in Tier 0.
   const totalSamples = nSamp * nEpochs;
 
-  // THE RESPIRATORY MECHANISMS ARE OFF UNLESS ASKED FOR, and each is its own flag, because
-  // Build Plan 5.1 requires the three stay separable and a single --respiration would be that
-  // error in a CLI. G4's fixture needs exactly one of them on (the movement artifact) and one
-  // deliberately off (the amplitude half), so a combined flag could not express it at all.
+  // Independent overrides preserve fixture isolation without changing the released defaults.
   const respOpts = {
-    movementArtifact: args['movement-artifact'] === 'true',
-    amplitudeModulation: args['amplitude-modulation'] === 'true',
-    chiModulation: args['chi-modulation'] === 'true',
+    movementArtifact: flag('movement-artifact', defaults.movementArtifact!),
+    amplitudeModulation: flag('amplitude-modulation', defaults.amplitudeModulation!),
+    chiModulation: flag('chi-modulation', defaults.chiModulation!),
+    eventRespirationCoupling: !flag('no-resp-event-coupling', false),
     ...(args['chi-mod-depth'] !== undefined ? { chiModDepth: Number(args['chi-mod-depth']) } : {}),
     // Exists to falsify G4's null arm by injecting a leakage large enough for a paired sign test
     // to resolve; see ComposeOptions.respAmpModDepth.
@@ -141,17 +150,40 @@ function main(): void {
   };
 
   // G3's matched null: the same background with the graphoelements left out of the mix.
-  const suppressGraphoelements = args['no-graphoelements'] === 'true';
+  const suppressGraphoelements = flag('no-graphoelements', false);
 
-  const composed = composeState(seed, stateArg, totalSamples, fs, {
+  const resolvedOptions = {
+    ...defaults,
+    respirationMode,
     snrDb,
     suppressGraphoelements,
     ...respOpts,
+    infraSlowCortical: !flag('no-infraslow-cortical', false),
+    infraSlowModulation: !flag('no-infraslow-modulation', false),
+    lineNoise: flag('line-noise', defaults.lineNoise!),
+    ...(args['line-freq'] !== undefined ? { lineFreqHz: Number(args['line-freq']) } : {}),
+  } satisfies ComposeOptions;
+  const composed = composeState(seed, stateArg, totalSamples, fs, resolvedOptions);
+  // Validate and compose before creating any output files.
+  writeManifest(outDir, {
+    ...defaultManifestFields(), seed, fs, channels: MONTAGE,
+    referenceChannels: electrodeSet('reference_channels'), nEpochs, epochDuration: epochDur,
+    registryDigest, stateSourceKind: state.kind,
+    configuration: { profile: profile === 'released' ? RELEASE_PROFILE_ID : 'isolated-fixture', options: resolvedOptions },
+    provenance: { ...fingerprint, calibrationSha256: fileDigest('prep/fixtures/snr_calibration.json') },
   });
+
+  const { breaths: _breaths, ...respirationSummary } = composed.truth.respiration;
+  const {
+    rPeaksS: _rPeaksS,
+    rrIntervalsS: _rrIntervalsS,
+    ...cardiacSummary
+  } = composed.truth.cardiac;
 
   const truth: InjectedTruth = {
     chi: composed.truth.chi,
     knee: composed.truth.knee,
+    aperiodicComponents: composed.truth.aperiodicComponents,
     snrDb: composed.truth.snrDb,
     // Read back from the generator rather than from the CLI arguments. The sidecar records
     // WHAT WAS INJECTED; echoing the request would make it agree with itself even if the
@@ -159,7 +191,29 @@ function main(): void {
     // built to detect, so the gate must not be handed a truth block that cannot disagree.
     chiModDepth: respOpts.chiModulation ? composed.truth.chiModDepth : 0,
     chiModPhi0: composed.truth.chiModPhi0,
+    chiSpatialLoading: composed.truth.chiSpatialLoading,
+    periodicModulations: composed.truth.oscillations.map((osc) => ({
+      generator: osc.generator,
+      band: osc.band,
+      depth: osc.respModDepth,
+      phi0: osc.respModPhi0,
+    })),
     respFreq: composed.truth.respFreqHz,
+    respEventCoupling: composed.truth.respEventCoupling,
+    respiration: respirationSummary,
+    cardiac: cardiacSummary,
+    eventPhaseSummaries: composed.truth.eventPhaseSummaries,
+    infraSlow: composed.truth.infraSlow
+      ? {
+          fixture: composed.truth.infraSlow.fixture,
+          profile: composed.truth.infraSlow.profile,
+          extrapolated: composed.truth.infraSlow.extrapolated,
+          sourceModeIds: composed.truth.infraSlow.sourceModes.map((mode) => mode.sourceId),
+          modulationTargets: composed.truth.infraSlow.modulation.map((item) => item.targetSource),
+          electrodeDriftEnabled: composed.truth.infraSlow.electrodeDrift.enabled,
+        }
+      : null,
+    physiologyFile: 'physiology.json',
     independentChiModFreq: respOpts.independentChiModFreq ?? null,
     projectionWeights: Object.fromEntries(
       [
@@ -167,6 +221,12 @@ function main(): void {
         // registry row: it is a property of the head model and `patch_mode_variance`, and a row
         // could disagree with the weights that were actually applied.
         ...modesOf('background'),
+        // A non-additive lead-field family: when chi modulation is enabled its root-sum-square
+        // sets the spatial modulation depth. Schema v3 records it because it was actually used.
+        ...(respOpts.chiModulation ? modesOf('resp_aperiodic') : []),
+        // Schema v6: every named cortical ISF mode that contributed additive voltage or drove
+        // a source gain. The complete amplitudes and target map live in physiology.json.
+        ...(composed.truth.infraSlow?.sourceModes.map((mode) => mode.sourceId) ?? []),
         // ...and every mode of each oscillation the state ran.
         ...composed.truth.oscillations.flatMap((o) => modesOf(o.generator as PatchId)),
         // Graphoelement generators, DERIVED FROM THE EVENT LIST rather than listed for every
@@ -189,9 +249,18 @@ function main(): void {
       rmbo: false,
       amplitudeModulation: respOpts.amplitudeModulation,
       chiModulation: respOpts.chiModulation,
+      eventTiming: respOpts.eventRespirationCoupling,
     },
     graphoelementsSuppressed: suppressGraphoelements,
   };
+
+  writePhysiologyTruth(outDir, {
+    schemaVersion: defaultManifestFields().schemaVersion,
+    respiration: composed.truth.respiration,
+    cardiac: composed.truth.cardiac,
+    eventPhaseSummaries: composed.truth.eventPhaseSummaries,
+    infraSlow: composed.truth.infraSlow ?? null,
+  });
 
   for (let e = 0; e < nEpochs; e++) {
     const signal = composed.channels.map((full) => full.subarray(e * nSamp, (e + 1) * nSamp));

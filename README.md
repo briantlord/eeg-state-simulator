@@ -21,12 +21,13 @@ fetching the page's own script and stylesheet. Signal generation, filtering, ref
 spectrum and the analysis readouts all execute in the visitor's browser.
 
 `vite.config.ts` sets `base: './'`, so the built `dist/` works unchanged at a GitHub Pages project
-URL, in a subdirectory of another site, or opened straight from disk.
+URL or in a subdirectory of another static HTTP server. Serve the build over HTTP; browser
+module restrictions can prevent opening the HTML directly from disk.
 
 ```bash
-npm install
+npm install        # Node >=22.12; CI uses Node 22
 npm run dev        # http://localhost:5173
-npm run build      # -> dist/, a self-contained static bundle (~56 kB gzipped)
+npm run build      # -> dist/, a self-contained static bundle
 ```
 
 ## Where the topographies come from
@@ -51,23 +52,28 @@ Measured against real resting recordings under average reference, effective rank
 This is a research instrument in progress, and the documentation is written to be checkable rather
 than persuasive.
 
-- **89 of 190 registry rows are `invented`** — not empirically constrained. Every one is marked as
-  such and routed to a milestone. A slider labelled "not empirically constrained" is more honest
-  than a hidden literal.
+- **Provisional parameters are explicit.** Current values and standings are in the generated
+  [parameter ledger](docs/PARAMETERS.md); the [current status](docs/STATUS.md) separates tested
+  behavior from remaining physiological uncertainty.
 - **Four of six arousal states have thin empirical support.** The reference corpus for wake is
   PhysioNet EEGMAT (8 subjects); sleep states are being anchored against the HMC sleep-staging
-  database. Neither is a full-montage sleep corpus, so *spatial* statistics for sleep are
-  unanchored.
+  database. Five additional nights were reserved before evaluation for version 0.11.0, with
+  substantial N1/REM spectral differences recorded. HMC has four EEG derivations, so full-montage
+  *spatial* statistics for sleep remain unanchored.
 - **Gates print their class.** V = recovery by an external, independently authored, published
   tool. C = recovery by code in this repository, which proves internal consistency and nothing
   more. U = no recovery check exists. Several important gates are class C; that is not a failure,
   but it must never be read as validation.
-- Known open problems are listed as P1–P17 in `docs/DECISIONS.md`, with what each one blocks.
+- The browser and default exporter share the calibrated `physiology-v1` configuration. A lazy
+  continuous full-band view exposes infra-slow controls and a fixed high-pass comparison.
+- [Stabilization results](docs/Stabilization-0.11.0.md) describe the repairs, schema migration,
+  independent comparisons, and remaining limitations. Historical decisions are retained separately.
 
 ## Development
 
 ```bash
 python -m venv .venv && .venv/Scripts/python -m pip install -r requirements.txt
+npx playwright install chromium # Linux CI also uses --with-deps; local Windows tests use Edge
 npm run verify
 ```
 
@@ -80,14 +86,27 @@ stopping at the first one:
 | projection fixed-point | the weights are the only path the head model takes into the runtime |
 | literal acceptance check | no scientific constant may ship outside the registry |
 | typecheck | seam 7 — comparing a 1–45 Hz knee-mode exponent to a 30–45 Hz fixed-mode one is a *compile* error |
+| production build | the static browser artifact compiles |
 | core + harness tests | seam 4 non-perturbation, the exponent contract, the export boundary |
+| browser integration | state/spectrum synchronization, continuous overview, and voltage polarity |
 | gate ledger | all fourteen arms, each with its matched null; refuses to start if one is missing |
 
 ```bash
 npm run registry:emit      # regenerate docs/PARAMETERS.md + gen/ from the registry
 npm run projection:emit    # rebuild data/projection_10_20.json from the forward model
 npm run export -- --seed 20260728 --state n3 --epochs 10 --out prep/out/run
+npm run calibrate          # after changing model/calibration inputs; persisted replay is checked
+npm run calibration:check  # read-only replay; also runs automatically before npm run build
+npm run test:browser       # repeatable page-level regressions
+python -m prep.reference.fetch_hmc_holdout
+python -m prep.reference.t1m1_state_realism --cohort holdout
+node --experimental-strip-types --no-warnings prep/reference/released_coupling.mts
 ```
+
+The exporter accepts independent mechanism overrides and `--profile isolated` for controlled
+fixtures. Its default matches the browser. See [the scoring and configuration contract](docs/Scoring-Contract.md).
+The reserved HMC cache is separate from the legacy fitting cache; do not tune parameters on its
+results. Empirical comparisons are record-only and are not downloaded or run on every CI push.
 
 ## Layout
 
@@ -108,8 +127,9 @@ docs/                       planning documents, decisions, findings, status
 | Document | What it is |
 |---|---|
 | `docs/STATUS.md` | what is built, what is measured, what is wrong, in priority order |
-| `docs/DECISIONS.md` | every parameter and architectural choice with its reasoning, D1–D19, P1–P17 |
-| `docs/Tier0-Estimator-Probe.md` | Findings 1–22: measured behaviour, including several confirmed defects in this project's own gates |
+| `docs/DECISIONS.md` | architectural decisions and their history |
+| `docs/Tier0-Estimator-Probe.md` | the chronological measurement ledger, including confirmed defects |
+| `docs/Stabilization-0.11.0.md` | current repairs, verification, and development/holdout results |
 | `docs/PARAMETERS.md` | the constant registry *(generated — edit `registry/parameters.yaml`)* |
 
 ## Attribution

@@ -1,12 +1,12 @@
 {
   "name": "eeg-state-simulator",
-  "version": "0.1.0",
+  "version": "0.11.0",
   "private": true,
   "description": "Generator of realistic multichannel EEG for arousal states. A model, not a measurement.",
   "license": "BSD-3-Clause",
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": ">=22.12.0"
   },
   "scripts": {
     "dev": "vite",
@@ -19,9 +19,14 @@
     "test": "node --test --experimental-strip-types \"test/**/*.test.ts\"",
     "typecheck": "tsc --noEmit",
     "verify": "node tools/verify.mjs",
-    "projection:check": "python -m prep.leadfield.make_projection --check"
+    "projection:check": "python -m prep.leadfield.make_projection --check",
+    "test:browser": "playwright test",
+    "validate:holdout": "python -m prep.reference.t1m1_state_realism --cohort holdout",
+    "calibration:check": "node --experimental-strip-types --no-warnings bin/eegsim-calibrate.mts --check",
+    "prebuild": "npm run calibration:check"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@types/node": "^22.20.1",
     "typescript": "^5.6.0",
     "vite": "^8.1.5",

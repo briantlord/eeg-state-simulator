@@ -90,7 +90,7 @@ GATE_LEDGER: dict[str, GateSpec] = {
         depends_on=("G2",),
         criterion_key="gate_g4_criterion",
         requires_tools=(),
-        provenance_keys=("chi_mod_depth", "tilt_n_poles", "resp_period_cv"),
+        provenance_keys=("chi_mod_depth", "tilt_n_poles", "resp_period_cv_n3"),
         claim="The only check that the filter demonstration measures coupling rather than "
         "leakage from a tilt filter modulated at the respiratory rate. Class C -- we wrote the "
         "estimator -- and still the most important gate in Tier 0.",

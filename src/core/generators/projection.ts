@@ -63,6 +63,11 @@ if (projection.channels.length !== ALL_CHANNELS.length ||
 /** A generator that owns a cortical patch in the projection file. */
 export type PatchId =
   | 'background'
+  | 'resp_aperiodic'
+  // ISF-2 UNIT-VARIANCE cortical bases. They are present in the projection file but remain
+  // undriven until an external amplitude fit licenses the additive path. Their names encode
+  // anatomy, never an electrode-level target.
+  | 'isf_frontomedial' | 'isf_sensorimotor' | 'isf_posterior'
   | 'alpha' | 'beta' | 'theta' | 'delta'
   | 'spindle_fast' | 'spindle_slow' | 'kc'
   // An INJECTED, specifiable connection: `coupling_src` drives `coupling_dst` at a known lag and
@@ -106,6 +111,27 @@ export function modesOf(patch: PatchId): GeneratorId[] {
     ids.push(id);
   }
   return ids;
+}
+
+/**
+ * Non-negative scalp power loading of a cortical patch, normalized to peak at one.
+ *
+ * A signed lead-field mode is a voltage topography; modulation STRENGTH is a power quantity and
+ * cannot flip sign when cortical orientation flips. Root-sum-square over the independently driven
+ * spatial modes is therefore the same family normalization used by the projection producer.
+ */
+export function patchPowerLoading(patch: PatchId): Float64Array {
+  const modes = modesOf(patch).map(weightsFor);
+  const out = new Float64Array(ALL_CHANNELS.length);
+  let peak = 0;
+  for (let c = 0; c < out.length; c++) {
+    let power = 0;
+    for (const mode of modes) power += mode[c]! * mode[c]!;
+    out[c] = Math.sqrt(power);
+    peak = Math.max(peak, out[c]!);
+  }
+  if (peak > 0) for (let c = 0; c < out.length; c++) out[c] = out[c]! / peak;
+  return out;
 }
 
 /** Channel with the largest weight. G6's quantity — structural, no tolerance needed. */

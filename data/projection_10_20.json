@@ -359,6 +359,314 @@
         ]
       }
     },
+    "resp_aperiodic": {
+      "weights": [
+        -0.35034,
+        -0.361319,
+        -0.303963,
+        -0.302452,
+        -0.286707,
+        -0.332367,
+        -0.342937,
+        -0.184965,
+        0.008672,
+        0.094558,
+        -0.103435,
+        -0.28159,
+        0.209739,
+        0.687943,
+        0.890864,
+        0.422216,
+        0.030849,
+        0.731113,
+        0.631155,
+        -0.153097,
+        -0.214413
+      ],
+      "provenance": {
+        "method": "leadfield_patch_eigenmode",
+        "mode": 0,
+        "of_modes": 7,
+        "head_model": "fsaverage 3-shell BEM, ico-5, fixed orientation",
+        "regions": [
+          "pericalcarine",
+          "cuneus",
+          "lingual",
+          "lateraloccipital",
+          "superiorparietal",
+          "precuneus"
+        ],
+        "n_sources": 3967,
+        "registry_keys": [
+          "cortical_coherence_mm",
+          "patch_mode_variance"
+        ]
+      }
+    },
+    "resp_aperiodic_m1": {
+      "weights": [
+        0.04828,
+        0.025421,
+        0.063738,
+        0.116686,
+        0.112386,
+        0.053337,
+        -0.016382,
+        0.090269,
+        0.280168,
+        0.262531,
+        0.057686,
+        -0.09703,
+        0.056007,
+        0.362457,
+        0.328454,
+        -0.080114,
+        -0.332067,
+        -0.183405,
+        -0.508029,
+        -0.03381,
+        -0.154409
+      ],
+      "provenance": {
+        "method": "leadfield_patch_eigenmode",
+        "mode": 1,
+        "of_modes": 7,
+        "head_model": "fsaverage 3-shell BEM, ico-5, fixed orientation",
+        "regions": [
+          "pericalcarine",
+          "cuneus",
+          "lingual",
+          "lateraloccipital",
+          "superiorparietal",
+          "precuneus"
+        ],
+        "n_sources": 3967,
+        "registry_keys": [
+          "cortical_coherence_mm",
+          "patch_mode_variance"
+        ]
+      }
+    },
+    "resp_aperiodic_m2": {
+      "weights": [
+        -0.015492,
+        0.01677,
+        -0.064412,
+        -0.004164,
+        0.063588,
+        0.085051,
+        0.048261,
+        -0.159776,
+        -0.040668,
+        0.199122,
+        0.282848,
+        0.10438,
+        -0.382091,
+        -0.159556,
+        0.297472,
+        0.419788,
+        0.183432,
+        -0.378726,
+        0.073542,
+        -0.174435,
+        0.003588
+      ],
+      "provenance": {
+        "method": "leadfield_patch_eigenmode",
+        "mode": 2,
+        "of_modes": 7,
+        "head_model": "fsaverage 3-shell BEM, ico-5, fixed orientation",
+        "regions": [
+          "pericalcarine",
+          "cuneus",
+          "lingual",
+          "lateraloccipital",
+          "superiorparietal",
+          "precuneus"
+        ],
+        "n_sources": 3967,
+        "registry_keys": [
+          "cortical_coherence_mm",
+          "patch_mode_variance"
+        ]
+      }
+    },
+    "resp_aperiodic_m3": {
+      "weights": [
+        0.015052,
+        -0.002042,
+        0.029582,
+        0.03263,
+        0.000174,
+        -0.02967,
+        -0.019926,
+        0.030226,
+        0.096225,
+        -0.010434,
+        -0.126743,
+        -0.030942,
+        -0.093135,
+        0.09604,
+        0.00501,
+        -0.104438,
+        0.060243,
+        -0.146142,
+        0.143096,
+        -0.00465,
+        0.010595
+      ],
+      "provenance": {
+        "method": "leadfield_patch_eigenmode",
+        "mode": 3,
+        "of_modes": 7,
+        "head_model": "fsaverage 3-shell BEM, ico-5, fixed orientation",
+        "regions": [
+          "pericalcarine",
+          "cuneus",
+          "lingual",
+          "lateraloccipital",
+          "superiorparietal",
+          "precuneus"
+        ],
+        "n_sources": 3967,
+        "registry_keys": [
+          "cortical_coherence_mm",
+          "patch_mode_variance"
+        ]
+      }
+    },
+    "resp_aperiodic_m4": {
+      "weights": [
+        0.038892,
+        0.031619,
+        0.028607,
+        0.04379,
+        0.04555,
+        0.02732,
+        0.006392,
+        -0.013838,
+        -0.013089,
+        0.044063,
+        -0.024974,
+        -0.050838,
+        -0.102635,
+        -0.102371,
+        0.049617,
+        -0.052507,
+        -0.140531,
+        0.085854,
+        0.079739,
+        -0.009792,
+        -0.034834
+      ],
+      "provenance": {
+        "method": "leadfield_patch_eigenmode",
+        "mode": 4,
+        "of_modes": 7,
+        "head_model": "fsaverage 3-shell BEM, ico-5, fixed orientation",
+        "regions": [
+          "pericalcarine",
+          "cuneus",
+          "lingual",
+          "lateraloccipital",
+          "superiorparietal",
+          "precuneus"
+        ],
+        "n_sources": 3967,
+        "registry_keys": [
+          "cortical_coherence_mm",
+          "patch_mode_variance"
+        ]
+      }
+    },
+    "resp_aperiodic_m5": {
+      "weights": [
+        -0.007484,
+        -0.027025,
+        0.017972,
+        -0.005586,
+        -0.024416,
+        -0.043397,
+        -0.045586,
+        0.055956,
+        -0.015807,
+        -0.007447,
+        -0.036829,
+        -0.068749,
+        0.079251,
+        -0.097512,
+        0.037985,
+        0.053903,
+        -0.039075,
+        -0.092389,
+        0.01479,
+        0.067229,
+        -0.027634
+      ],
+      "provenance": {
+        "method": "leadfield_patch_eigenmode",
+        "mode": 5,
+        "of_modes": 7,
+        "head_model": "fsaverage 3-shell BEM, ico-5, fixed orientation",
+        "regions": [
+          "pericalcarine",
+          "cuneus",
+          "lingual",
+          "lateraloccipital",
+          "superiorparietal",
+          "precuneus"
+        ],
+        "n_sources": 3967,
+        "registry_keys": [
+          "cortical_coherence_mm",
+          "patch_mode_variance"
+        ]
+      }
+    },
+    "resp_aperiodic_m6": {
+      "weights": [
+        -0.02629,
+        -0.016183,
+        -0.036483,
+        -0.0522,
+        -0.041663,
+        -0.031489,
+        -0.003446,
+        -0.058111,
+        -0.075665,
+        -0.017425,
+        -0.058725,
+        0.006528,
+        -0.049812,
+        -0.028768,
+        0.07785,
+        -0.086252,
+        0.004134,
+        -0.020305,
+        -0.078862,
+        0.020734,
+        0.061751
+      ],
+      "provenance": {
+        "method": "leadfield_patch_eigenmode",
+        "mode": 6,
+        "of_modes": 7,
+        "head_model": "fsaverage 3-shell BEM, ico-5, fixed orientation",
+        "regions": [
+          "pericalcarine",
+          "cuneus",
+          "lingual",
+          "lateraloccipital",
+          "superiorparietal",
+          "precuneus"
+        ],
+        "n_sources": 3967,
+        "registry_keys": [
+          "cortical_coherence_mm",
+          "patch_mode_variance"
+        ]
+      }
+    },
     "beta": {
       "weights": [
         -0.138347,
@@ -1960,6 +2268,859 @@
           "paracentral"
         ],
         "n_sources": 2142,
+        "registry_keys": [
+          "cortical_coherence_mm",
+          "patch_mode_variance"
+        ]
+      }
+    },
+    "isf_frontomedial": {
+      "weights": [
+        0.701673,
+        0.689194,
+        0.227733,
+        0.783083,
+        0.974424,
+        0.80076,
+        0.222561,
+        -0.207774,
+        0.040515,
+        0.249143,
+        0.060192,
+        -0.199055,
+        -0.338425,
+        -0.260245,
+        -0.19855,
+        -0.246346,
+        -0.331702,
+        -0.361107,
+        -0.358852,
+        -0.222549,
+        -0.211859
+      ],
+      "provenance": {
+        "method": "leadfield_patch_eigenmode",
+        "mode": 0,
+        "of_modes": 6,
+        "head_model": "fsaverage 3-shell BEM, ico-5, fixed orientation",
+        "regions": [
+          "superiorfrontal",
+          "rostralmiddlefrontal",
+          "caudalanteriorcingulate",
+          "rostralanteriorcingulate",
+          "medialorbitofrontal"
+        ],
+        "n_sources": 3126,
+        "registry_keys": [
+          "cortical_coherence_mm",
+          "patch_mode_variance"
+        ]
+      }
+    },
+    "isf_frontomedial_m1": {
+      "weights": [
+        -0.206594,
+        0.147274,
+        -0.262231,
+        -0.384425,
+        0.023288,
+        0.394018,
+        0.227195,
+        -0.106082,
+        -0.131675,
+        0.039257,
+        0.163495,
+        0.09798,
+        -0.037861,
+        -0.031163,
+        0.011343,
+        0.044846,
+        0.035988,
+        -0.010199,
+        0.010572,
+        -0.058697,
+        0.047287
+      ],
+      "provenance": {
+        "method": "leadfield_patch_eigenmode",
+        "mode": 1,
+        "of_modes": 6,
+        "head_model": "fsaverage 3-shell BEM, ico-5, fixed orientation",
+        "regions": [
+          "superiorfrontal",
+          "rostralmiddlefrontal",
+          "caudalanteriorcingulate",
+          "rostralanteriorcingulate",
+          "medialorbitofrontal"
+        ],
+        "n_sources": 3126,
+        "registry_keys": [
+          "cortical_coherence_mm",
+          "patch_mode_variance"
+        ]
+      }
+    },
+    "isf_frontomedial_m2": {
+      "weights": [
+        -0.21837,
+        -0.246277,
+        -0.091388,
+        0.066106,
+        0.205338,
+        -0.001376,
+        -0.129888,
+        -0.035982,
+        0.113082,
+        0.292559,
+        0.115065,
+        -0.040802,
+        -0.024398,
+        0.032326,
+        0.077928,
+        0.042726,
+        -0.019022,
+        -0.015384,
+        -0.012618,
+        -0.07074,
+        -0.075284
+      ],
+      "provenance": {
+        "method": "leadfield_patch_eigenmode",
+        "mode": 2,
+        "of_modes": 6,
+        "head_model": "fsaverage 3-shell BEM, ico-5, fixed orientation",
+        "regions": [
+          "superiorfrontal",
+          "rostralmiddlefrontal",
+          "caudalanteriorcingulate",
+          "rostralanteriorcingulate",
+          "medialorbitofrontal"
+        ],
+        "n_sources": 3126,
+        "registry_keys": [
+          "cortical_coherence_mm",
+          "patch_mode_variance"
+        ]
+      }
+    },
+    "isf_frontomedial_m3": {
+      "weights": [
+        0.084474,
+        0.036732,
+        -0.058898,
+        -0.032638,
+        0.011999,
+        -0.117772,
+        -0.021517,
+        -0.083526,
+        -0.060596,
+        0.061061,
+        0.027706,
+        0.023648,
+        -0.049828,
+        -0.032285,
+        0.011501,
+        0.027958,
+        0.024904,
+        -0.018736,
+        0.007026,
+        -0.038111,
+        0.027597
+      ],
+      "provenance": {
+        "method": "leadfield_patch_eigenmode",
+        "mode": 3,
+        "of_modes": 6,
+        "head_model": "fsaverage 3-shell BEM, ico-5, fixed orientation",
+        "regions": [
+          "superiorfrontal",
+          "rostralmiddlefrontal",
+          "caudalanteriorcingulate",
+          "rostralanteriorcingulate",
+          "medialorbitofrontal"
+        ],
+        "n_sources": 3126,
+        "registry_keys": [
+          "cortical_coherence_mm",
+          "patch_mode_variance"
+        ]
+      }
+    },
+    "isf_frontomedial_m4": {
+      "weights": [
+        0.014896,
+        0.06214,
+        -0.030613,
+        -0.09795,
+        0.036904,
+        -0.017418,
+        -0.060212,
+        0.027442,
+        0.025399,
+        0.029553,
+        -0.066058,
+        -0.077895,
+        0.029216,
+        0.026029,
+        0.004782,
+        -0.03263,
+        -0.044069,
+        0.010969,
+        -0.014021,
+        0.028136,
+        -0.036394
+      ],
+      "provenance": {
+        "method": "leadfield_patch_eigenmode",
+        "mode": 4,
+        "of_modes": 6,
+        "head_model": "fsaverage 3-shell BEM, ico-5, fixed orientation",
+        "regions": [
+          "superiorfrontal",
+          "rostralmiddlefrontal",
+          "caudalanteriorcingulate",
+          "rostralanteriorcingulate",
+          "medialorbitofrontal"
+        ],
+        "n_sources": 3126,
+        "registry_keys": [
+          "cortical_coherence_mm",
+          "patch_mode_variance"
+        ]
+      }
+    },
+    "isf_frontomedial_m5": {
+      "weights": [
+        -0.030176,
+        -0.005611,
+        -0.054584,
+        0.021909,
+        0.079279,
+        -0.017143,
+        -0.014665,
+        -0.010493,
+        -0.020628,
+        -0.075812,
+        -0.036787,
+        0.011745,
+        0.007653,
+        -0.002867,
+        -0.015591,
+        -0.003679,
+        0.017371,
+        0.013068,
+        0.015641,
+        0.00034,
+        0.01812
+      ],
+      "provenance": {
+        "method": "leadfield_patch_eigenmode",
+        "mode": 5,
+        "of_modes": 6,
+        "head_model": "fsaverage 3-shell BEM, ico-5, fixed orientation",
+        "regions": [
+          "superiorfrontal",
+          "rostralmiddlefrontal",
+          "caudalanteriorcingulate",
+          "rostralanteriorcingulate",
+          "medialorbitofrontal"
+        ],
+        "n_sources": 3126,
+        "registry_keys": [
+          "cortical_coherence_mm",
+          "patch_mode_variance"
+        ]
+      }
+    },
+    "isf_sensorimotor": {
+      "weights": [
+        -0.0109,
+        -0.141097,
+        0.167106,
+        0.237123,
+        0.025559,
+        -0.237165,
+        -0.283365,
+        0.360725,
+        0.899991,
+        0.24536,
+        -0.523775,
+        -0.421187,
+        0.196634,
+        0.35899,
+        0.12029,
+        -0.240992,
+        -0.290484,
+        0.022136,
+        -0.134372,
+        0.072885,
+        -0.244238
+      ],
+      "provenance": {
+        "method": "leadfield_patch_eigenmode",
+        "mode": 0,
+        "of_modes": 7,
+        "head_model": "fsaverage 3-shell BEM, ico-5, fixed orientation",
+        "regions": [
+          "precentral",
+          "postcentral",
+          "paracentral"
+        ],
+        "n_sources": 2960,
+        "registry_keys": [
+          "cortical_coherence_mm",
+          "patch_mode_variance"
+        ]
+      }
+    },
+    "isf_sensorimotor_m1": {
+      "weights": [
+        -0.250944,
+        -0.216677,
+        -0.251991,
+        -0.083398,
+        0.065595,
+        0.045948,
+        -0.121058,
+        -0.231734,
+        0.328361,
+        0.720533,
+        0.778612,
+        0.01029,
+        -0.186414,
+        0.125455,
+        0.394057,
+        0.31873,
+        -0.043054,
+        -0.136682,
+        -0.09291,
+        -0.288813,
+        -0.192595
+      ],
+      "provenance": {
+        "method": "leadfield_patch_eigenmode",
+        "mode": 1,
+        "of_modes": 7,
+        "head_model": "fsaverage 3-shell BEM, ico-5, fixed orientation",
+        "regions": [
+          "precentral",
+          "postcentral",
+          "paracentral"
+        ],
+        "n_sources": 2960,
+        "registry_keys": [
+          "cortical_coherence_mm",
+          "patch_mode_variance"
+        ]
+      }
+    },
+    "isf_sensorimotor_m2": {
+      "weights": [
+        0.194074,
+        0.192366,
+        0.135555,
+        0.269172,
+        0.28032,
+        0.256352,
+        0.135798,
+        -0.05839,
+        0.094249,
+        0.111215,
+        0.091449,
+        -0.029251,
+        -0.175681,
+        -0.212169,
+        -0.215691,
+        -0.190254,
+        -0.147364,
+        -0.20791,
+        -0.198006,
+        -0.057233,
+        -0.039262
+      ],
+      "provenance": {
+        "method": "leadfield_patch_eigenmode",
+        "mode": 2,
+        "of_modes": 7,
+        "head_model": "fsaverage 3-shell BEM, ico-5, fixed orientation",
+        "regions": [
+          "precentral",
+          "postcentral",
+          "paracentral"
+        ],
+        "n_sources": 2960,
+        "registry_keys": [
+          "cortical_coherence_mm",
+          "patch_mode_variance"
+        ]
+      }
+    },
+    "isf_sensorimotor_m3": {
+      "weights": [
+        -0.076677,
+        -0.07916,
+        0.038033,
+        -0.022969,
+        -0.102707,
+        -0.020069,
+        0.023632,
+        0.210424,
+        0.213526,
+        -0.214121,
+        0.252596,
+        0.170587,
+        0.044342,
+        -0.028276,
+        -0.167254,
+        -0.017862,
+        0.028609,
+        -0.070826,
+        -0.074012,
+        0.039261,
+        0.022204
+      ],
+      "provenance": {
+        "method": "leadfield_patch_eigenmode",
+        "mode": 3,
+        "of_modes": 7,
+        "head_model": "fsaverage 3-shell BEM, ico-5, fixed orientation",
+        "regions": [
+          "precentral",
+          "postcentral",
+          "paracentral"
+        ],
+        "n_sources": 2960,
+        "registry_keys": [
+          "cortical_coherence_mm",
+          "patch_mode_variance"
+        ]
+      }
+    },
+    "isf_sensorimotor_m4": {
+      "weights": [
+        -0.010696,
+        0.009902,
+        -0.06836,
+        0.022534,
+        -0.008289,
+        -0.021967,
+        0.066813,
+        -0.175542,
+        0.159754,
+        -0.031479,
+        -0.116285,
+        0.168165,
+        -0.059705,
+        0.044363,
+        -0.004335,
+        -0.025564,
+        0.071946,
+        -0.007264,
+        0.017528,
+        -0.089594,
+        0.087594
+      ],
+      "provenance": {
+        "method": "leadfield_patch_eigenmode",
+        "mode": 4,
+        "of_modes": 7,
+        "head_model": "fsaverage 3-shell BEM, ico-5, fixed orientation",
+        "regions": [
+          "precentral",
+          "postcentral",
+          "paracentral"
+        ],
+        "n_sources": 2960,
+        "registry_keys": [
+          "cortical_coherence_mm",
+          "patch_mode_variance"
+        ]
+      }
+    },
+    "isf_sensorimotor_m5": {
+      "weights": [
+        0.031809,
+        0.037226,
+        -0.011797,
+        0.032037,
+        0.034161,
+        0.057006,
+        -0.006155,
+        -0.070025,
+        0.044556,
+        -0.130441,
+        0.061751,
+        -0.092208,
+        0.027483,
+        0.068,
+        0.005476,
+        0.04861,
+        0.002416,
+        0.051255,
+        0.042323,
+        -0.028244,
+        -0.04136
+      ],
+      "provenance": {
+        "method": "leadfield_patch_eigenmode",
+        "mode": 5,
+        "of_modes": 7,
+        "head_model": "fsaverage 3-shell BEM, ico-5, fixed orientation",
+        "regions": [
+          "precentral",
+          "postcentral",
+          "paracentral"
+        ],
+        "n_sources": 2960,
+        "registry_keys": [
+          "cortical_coherence_mm",
+          "patch_mode_variance"
+        ]
+      }
+    },
+    "isf_sensorimotor_m6": {
+      "weights": [
+        0.028944,
+        -0.025293,
+        0.066408,
+        0.091672,
+        -0.002323,
+        -0.084641,
+        -0.065351,
+        -0.004246,
+        0.014581,
+        -0.02008,
+        -0.007536,
+        -0.012226,
+        -0.062578,
+        -0.086909,
+        0.008242,
+        0.102797,
+        0.060114,
+        -0.024363,
+        0.035987,
+        -0.008701,
+        -0.001537
+      ],
+      "provenance": {
+        "method": "leadfield_patch_eigenmode",
+        "mode": 6,
+        "of_modes": 7,
+        "head_model": "fsaverage 3-shell BEM, ico-5, fixed orientation",
+        "regions": [
+          "precentral",
+          "postcentral",
+          "paracentral"
+        ],
+        "n_sources": 2960,
+        "registry_keys": [
+          "cortical_coherence_mm",
+          "patch_mode_variance"
+        ]
+      }
+    },
+    "isf_posterior": {
+      "weights": [
+        -0.35034,
+        -0.361319,
+        -0.303963,
+        -0.302452,
+        -0.286707,
+        -0.332367,
+        -0.342937,
+        -0.184965,
+        0.008672,
+        0.094558,
+        -0.103435,
+        -0.28159,
+        0.209739,
+        0.687943,
+        0.890864,
+        0.422216,
+        0.030849,
+        0.731113,
+        0.631155,
+        -0.153097,
+        -0.214413
+      ],
+      "provenance": {
+        "method": "leadfield_patch_eigenmode",
+        "mode": 0,
+        "of_modes": 7,
+        "head_model": "fsaverage 3-shell BEM, ico-5, fixed orientation",
+        "regions": [
+          "pericalcarine",
+          "cuneus",
+          "lingual",
+          "lateraloccipital",
+          "precuneus",
+          "superiorparietal"
+        ],
+        "n_sources": 3967,
+        "registry_keys": [
+          "cortical_coherence_mm",
+          "patch_mode_variance"
+        ]
+      }
+    },
+    "isf_posterior_m1": {
+      "weights": [
+        0.04828,
+        0.025421,
+        0.063738,
+        0.116686,
+        0.112386,
+        0.053337,
+        -0.016382,
+        0.090269,
+        0.280168,
+        0.262531,
+        0.057686,
+        -0.09703,
+        0.056007,
+        0.362457,
+        0.328454,
+        -0.080114,
+        -0.332067,
+        -0.183405,
+        -0.508029,
+        -0.03381,
+        -0.154409
+      ],
+      "provenance": {
+        "method": "leadfield_patch_eigenmode",
+        "mode": 1,
+        "of_modes": 7,
+        "head_model": "fsaverage 3-shell BEM, ico-5, fixed orientation",
+        "regions": [
+          "pericalcarine",
+          "cuneus",
+          "lingual",
+          "lateraloccipital",
+          "precuneus",
+          "superiorparietal"
+        ],
+        "n_sources": 3967,
+        "registry_keys": [
+          "cortical_coherence_mm",
+          "patch_mode_variance"
+        ]
+      }
+    },
+    "isf_posterior_m2": {
+      "weights": [
+        -0.015492,
+        0.01677,
+        -0.064412,
+        -0.004164,
+        0.063588,
+        0.085051,
+        0.048261,
+        -0.159776,
+        -0.040668,
+        0.199122,
+        0.282848,
+        0.10438,
+        -0.382091,
+        -0.159556,
+        0.297472,
+        0.419788,
+        0.183432,
+        -0.378726,
+        0.073542,
+        -0.174435,
+        0.003588
+      ],
+      "provenance": {
+        "method": "leadfield_patch_eigenmode",
+        "mode": 2,
+        "of_modes": 7,
+        "head_model": "fsaverage 3-shell BEM, ico-5, fixed orientation",
+        "regions": [
+          "pericalcarine",
+          "cuneus",
+          "lingual",
+          "lateraloccipital",
+          "precuneus",
+          "superiorparietal"
+        ],
+        "n_sources": 3967,
+        "registry_keys": [
+          "cortical_coherence_mm",
+          "patch_mode_variance"
+        ]
+      }
+    },
+    "isf_posterior_m3": {
+      "weights": [
+        0.015052,
+        -0.002042,
+        0.029582,
+        0.03263,
+        0.000174,
+        -0.02967,
+        -0.019926,
+        0.030226,
+        0.096225,
+        -0.010434,
+        -0.126743,
+        -0.030942,
+        -0.093135,
+        0.09604,
+        0.00501,
+        -0.104438,
+        0.060243,
+        -0.146142,
+        0.143096,
+        -0.00465,
+        0.010595
+      ],
+      "provenance": {
+        "method": "leadfield_patch_eigenmode",
+        "mode": 3,
+        "of_modes": 7,
+        "head_model": "fsaverage 3-shell BEM, ico-5, fixed orientation",
+        "regions": [
+          "pericalcarine",
+          "cuneus",
+          "lingual",
+          "lateraloccipital",
+          "precuneus",
+          "superiorparietal"
+        ],
+        "n_sources": 3967,
+        "registry_keys": [
+          "cortical_coherence_mm",
+          "patch_mode_variance"
+        ]
+      }
+    },
+    "isf_posterior_m4": {
+      "weights": [
+        0.038892,
+        0.031619,
+        0.028607,
+        0.04379,
+        0.04555,
+        0.02732,
+        0.006392,
+        -0.013838,
+        -0.013089,
+        0.044063,
+        -0.024974,
+        -0.050838,
+        -0.102635,
+        -0.102371,
+        0.049617,
+        -0.052507,
+        -0.140531,
+        0.085854,
+        0.079739,
+        -0.009792,
+        -0.034834
+      ],
+      "provenance": {
+        "method": "leadfield_patch_eigenmode",
+        "mode": 4,
+        "of_modes": 7,
+        "head_model": "fsaverage 3-shell BEM, ico-5, fixed orientation",
+        "regions": [
+          "pericalcarine",
+          "cuneus",
+          "lingual",
+          "lateraloccipital",
+          "precuneus",
+          "superiorparietal"
+        ],
+        "n_sources": 3967,
+        "registry_keys": [
+          "cortical_coherence_mm",
+          "patch_mode_variance"
+        ]
+      }
+    },
+    "isf_posterior_m5": {
+      "weights": [
+        -0.007484,
+        -0.027025,
+        0.017972,
+        -0.005586,
+        -0.024416,
+        -0.043397,
+        -0.045586,
+        0.055956,
+        -0.015807,
+        -0.007447,
+        -0.036829,
+        -0.068749,
+        0.079251,
+        -0.097512,
+        0.037985,
+        0.053903,
+        -0.039075,
+        -0.092389,
+        0.01479,
+        0.067229,
+        -0.027634
+      ],
+      "provenance": {
+        "method": "leadfield_patch_eigenmode",
+        "mode": 5,
+        "of_modes": 7,
+        "head_model": "fsaverage 3-shell BEM, ico-5, fixed orientation",
+        "regions": [
+          "pericalcarine",
+          "cuneus",
+          "lingual",
+          "lateraloccipital",
+          "precuneus",
+          "superiorparietal"
+        ],
+        "n_sources": 3967,
+        "registry_keys": [
+          "cortical_coherence_mm",
+          "patch_mode_variance"
+        ]
+      }
+    },
+    "isf_posterior_m6": {
+      "weights": [
+        -0.02629,
+        -0.016183,
+        -0.036483,
+        -0.0522,
+        -0.041663,
+        -0.031489,
+        -0.003446,
+        -0.058111,
+        -0.075665,
+        -0.017425,
+        -0.058725,
+        0.006528,
+        -0.049812,
+        -0.028768,
+        0.07785,
+        -0.086252,
+        0.004134,
+        -0.020305,
+        -0.078862,
+        0.020734,
+        0.061751
+      ],
+      "provenance": {
+        "method": "leadfield_patch_eigenmode",
+        "mode": 6,
+        "of_modes": 7,
+        "head_model": "fsaverage 3-shell BEM, ico-5, fixed orientation",
+        "regions": [
+          "pericalcarine",
+          "cuneus",
+          "lingual",
+          "lateraloccipital",
+          "precuneus",
+          "superiorparietal"
+        ],
+        "n_sources": 3967,
         "registry_keys": [
           "cortical_coherence_mm",
           "patch_mode_variance"

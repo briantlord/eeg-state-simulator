@@ -1,0 +1,924 @@
+{
+  "schema": 1,
+  "created": "2026-09-04T23:28:46+00:00",
+  "generator_version": "0.11.0",
+  "registry_digest": "e3fb57710b683296",
+  "toolchain_fingerprint": "mne=1.12.1;numpy=1.26.4;scipy=1.15.3;specparam=2.0.0rc7;yasa=0.7.0",
+  "runtime_tier": "all",
+  "tools": {
+    "specparam": {
+      "available": true,
+      "installed": "2.0.0rc7",
+      "pinned": "2.0.0rc7",
+      "prerelease": true,
+      "version_mismatch": false
+    },
+    "yasa": {
+      "available": true,
+      "installed": "0.7.0",
+      "pinned": "0.7.0",
+      "prerelease": false,
+      "version_mismatch": false
+    },
+    "mne": {
+      "available": true,
+      "installed": "1.12.1",
+      "pinned": "1.12.1",
+      "prerelease": false,
+      "version_mismatch": false
+    },
+    "numpy": {
+      "available": true,
+      "installed": "1.26.4",
+      "pinned": "1.26.4",
+      "prerelease": false,
+      "version_mismatch": false
+    },
+    "scipy": {
+      "available": true,
+      "installed": "1.15.3",
+      "pinned": "1.15.3",
+      "prerelease": false,
+      "version_mismatch": false
+    }
+  },
+  "gates": [
+    {
+      "id": "G2",
+      "arm": "positive",
+      "label": "G2",
+      "title": "Determinism, bit-identical within platform and version",
+      "class": "C",
+      "class_meaning": "recovery by code in this repository -- self-consistency only",
+      "runtime_tier": "fast",
+      "failable": true,
+      "status": "PASS",
+      "is_pass": true,
+      "threshold": "bit-identical, within-platform and within-ve...",
+      "threshold_standing": "chosen",
+      "criterion_key": "gate_determinism",
+      "provenance_provisional": false,
+      "claim": "The implementation is self-consistent: one seed gives one output. Says nothing about whether that output resembles EEG.",
+      "detail": "5 seed(s) generated twice each, 2 epoch(s), state n3; capped from 6 seeds, 1 not run",
+      "duration_s": 7.117,
+      "metric": {
+        "kind": "digest",
+        "n_seeds": 5,
+        "per_seed": {
+          "1000": "a58780188ca646ddb4bb1bacd80b027a5759c7ead28242f0b0277a38ebc17a1c",
+          "1001": "4648ee9f88e5155b31e657835bf9fdbbda30d363a9352dd49f340d48f87c3ea1",
+          "1002": "72d5901f87f9aed52c739644bf9a0bc602202ef83f676ec941a9e9e540577050",
+          "1003": "baf01f4517285790d69246baf4b8ce08077999ab4ddea6b891ae4f5521d6a8e5",
+          "1004": "bdb31ea95baaa18ffc9253f9558e7d38d463b03db41be8604ba0fe4fc9a9f8b4"
+        }
+      },
+      "extras": {
+        "max_seeds": 5,
+        "seeds_dropped": 1,
+        "mismatched_seeds": []
+      }
+    },
+    {
+      "id": "G2",
+      "arm": "null",
+      "label": "G2~null",
+      "title": "Determinism null -- different seeds must differ",
+      "class": "C",
+      "class_meaning": "recovery by code in this repository -- self-consistency only",
+      "runtime_tier": "fast",
+      "failable": true,
+      "status": "PASS",
+      "is_pass": true,
+      "threshold": "bit-identical, within-platform and within-ve...",
+      "threshold_standing": "chosen",
+      "criterion_key": "gate_determinism",
+      "provenance_provisional": false,
+      "claim": "Catches a seed that is not actually threaded through, and channels that share a substream. Says nothing about the quality of the randomness.",
+      "detail": "5 seeds -> 5 distinct digests; 21 channels all distinct",
+      "duration_s": 3.163,
+      "metric": {
+        "kind": "digest",
+        "n_seeds": 5,
+        "per_seed": {
+          "1000": "acdfc657626babeaa70249e9f516bf6c0389191e94e881deb0db71e8445443d2",
+          "1001": "17b321c21e18b9fbbac0ee1b04959762bbf10ded49def7ed921f2701758e6b13",
+          "1002": "e135ee8deb16755a858657228b8a374ed7df20c9121e9bb29bb079e05f18308d",
+          "1003": "6066f8b71bfe9c519460d887f0f566f701b80cd3acf2de611f7e2ad8fc7e3c55",
+          "1004": "97d2fea4a077e8fa466ac08a94428d9d8da95cf5aa435a9d5da74d11c8807dcb"
+        }
+      },
+      "extras": {
+        "distinct_digests": 5,
+        "identical_channel_pairs": 0
+      }
+    },
+    {
+      "id": "G4",
+      "arm": "positive",
+      "label": "G4",
+      "title": "Respiration-chi off-frequency null",
+      "class": "C",
+      "class_meaning": "recovery by code in this repository -- self-consistency only",
+      "runtime_tier": "fast",
+      "failable": true,
+      "status": "PASS",
+      "is_pass": true,
+      "threshold": "PAIRED per seed. Detection arm: depth(f1) wi...",
+      "threshold_standing": "derived",
+      "criterion_key": "gate_g4_criterion",
+      "provenance_provisional": true,
+      "claim": "The only check that the filter demonstration measures coupling rather than leakage from a tilt filter modulated at the respiratory rate. Class C -- we wrote the estimator -- and still the most important gate in Tier 0.",
+      "detail": "detection 12/12 (p=0.00024), selectivity 12/12 (p=0.00024); median depth f1=0.2772 vs f2=0.0391, ratio 7.09x. Injects g4_fixture_chi_mod_depth=2, 13x the shipped depth: says nothing about whether the SHIPPED coupling is recoverable. Runner supplied 6 seed(s); extended to g4_n_seeds=12 because the sign test's smallest achievable p is 2^-n and at n=6 one flipped seed would decide the gate.",
+      "duration_s": 83.456,
+      "metric": {
+        "kind": "scalar",
+        "unit": "chi modulation depth at f1",
+        "median": 0.2772145446268557,
+        "iqr": 0.03345323981537257,
+        "n_seeds": 12,
+        "per_seed": {
+          "1000": 0.2788666635698646,
+          "1001": 0.2714753474548306,
+          "1002": 0.3288787491201787,
+          "1003": 0.2213376444918518,
+          "1004": 0.3171190058201561,
+          "1005": 0.2956247472046312,
+          "1006": 0.2697857473563977,
+          "1007": 0.27218709654385126,
+          "1008": 0.3056162198050656,
+          "1009": 0.2755624256838468,
+          "1010": 0.2071481459734704,
+          "1011": 0.29779688937031734
+        }
+      },
+      "extras": {
+        "n_seeds": 12,
+        "detection": {
+          "k": 12,
+          "n": 12,
+          "p": 0.000244140625
+        },
+        "selectivity": {
+          "k": 12,
+          "n": 12,
+          "p": 0.000244140625
+        },
+        "median_depth_f1": 0.2772145446268557,
+        "median_depth_f2": 0.03910612522810268,
+        "fixture_chi_mod_depth": 2,
+        "shipped_chi_mod_depth": 0.15
+      }
+    },
+    {
+      "id": "G4",
+      "arm": "null",
+      "label": "G4~null",
+      "title": "Respiration\u2013\u03c7 leakage null \u2014 respiration at f\u2082 must not reach \u03c7\u0302",
+      "class": "C",
+      "class_meaning": "recovery by code in this repository -- self-consistency only",
+      "runtime_tier": "fast",
+      "failable": true,
+      "status": "PASS",
+      "is_pass": true,
+      "threshold": "Exact binomial sign test on the paired per-s...",
+      "threshold_standing": "derived",
+      "criterion_key": "gate_g4_seed_aggregation",
+      "provenance_provisional": false,
+      "claim": "Establishes that respiratory leakage into \u03c7\u0302 is not gross. ABSENCE OF EVIDENCE: a paired sign test at this n cannot resolve a small leak, and the measured effect is 0.2% of the null median. Says nothing about the estimator's behaviour at other frequencies.",
+      "detail": "f2 5/12 (p=0.77, 1.000x, effect 0.0000 < floor); f2-f1 7/12 (p=0.77, 1.001x, effect 0.0010 < floor); f2+f1 7/12 (p=0.77, 0.999x, effect 0.0009 < floor). Mechanism (a) injects resp_artifact_amp ~5-25 uV at f2. Largest paired effect 0.0010 against the estimator's detection floor chi_est_mdd_resp = 0.048: leakage must be BOTH consistent (p < 0.05) and at least that large, because a paired sign test detects direction rather than magnitude. ABSENCE OF EVIDENCE either way -- this bounds leakage below the floor, it does not show it is zero.",
+      "duration_s": 77.802,
+      "metric": {
+        "kind": "scalar",
+        "unit": "chi modulation depth at f2",
+        "median": 0.03910612522810268,
+        "iqr": 0.033025287322465055,
+        "n_seeds": 12,
+        "per_seed": {
+          "1000": 0.00552431856721769,
+          "1001": 0.021724695654199894,
+          "1002": 0.05291834803189441,
+          "1003": 0.053915493066055795,
+          "1004": 0.02191132210106443,
+          "1005": 0.035857938800180324,
+          "1006": 0.06225751576267884,
+          "1007": 0.04235431165602504,
+          "1008": 0.006481329259906623,
+          "1009": 0.06740834992877431,
+          "1010": 0.03565788655470814,
+          "1011": 0.05509035509582284
+        }
+      },
+      "extras": {
+        "n_seeds": 12,
+        "checks": {
+          "f2": {
+            "freq": 0.25,
+            "k": 5,
+            "n": 12,
+            "p": 0.7744140625,
+            "ratio": 0.9997547529388349,
+            "effect": 0.0,
+            "material": false,
+            "median_obs": 0.03910612522810268,
+            "median_null": 0.03911571824304715
+          },
+          "f2-f1": {
+            "freq": 0.15,
+            "k": 7,
+            "n": 12,
+            "p": 0.7744140625,
+            "ratio": 1.0011049880208718,
+            "effect": 0.0010371827893812856,
+            "material": false,
+            "median_obs": 0.03926371401561951,
+            "median_null": 0.039220375969998576
+          },
+          "f2+f1": {
+            "freq": 0.35,
+            "k": 7,
+            "n": 12,
+            "p": 0.7744140625,
+            "ratio": 0.9993922872863957,
+            "effect": 0.0009317213528156852,
+            "material": false,
+            "median_obs": 0.026670642514305953,
+            "median_null": 0.026686860458692886
+          }
+        }
+      }
+    },
+    {
+      "id": "G6",
+      "arm": "positive",
+      "label": "G6",
+      "title": "Topography, structural argmax",
+      "class": "C",
+      "class_meaning": "recovery by code in this repository -- self-consistency only",
+      "runtime_tier": "fast",
+      "failable": true,
+      "status": "PASS",
+      "is_pass": true,
+      "threshold": "argmax over electrodes matches the topo_expe...",
+      "threshold_standing": "derived",
+      "criterion_key": "gate_topography",
+      "provenance_provisional": false,
+      "claim": "Tests the PROJECTION FILE against an expectation held independently in the registry. Reading the expectation from the file being tested would make this a check that argmax works.",
+      "detail": "spindle_fast -> C3 (ok, expected one of C3/C4/Cz); spindle_slow -> Fz (ok, expected one of F3/Fz/F4); kc -> Fz (ok, expected one of Fz/F3/F4); alpha -> Pz (ok, expected one of O1/O2/Pz). alpha posterior/frontal ratio inf (gate_alpha_ratio gt 3) RECORDED ONLY -- that row is invented and routed to T1-M2, so it does not decide this verdict. 1 seed: the weights are a data file, identical across seeds.",
+      "duration_s": 5.626,
+      "metric": {
+        "kind": "scalar",
+        "unit": "generators with argmax in the expected set",
+        "median": 4.0,
+        "iqr": NaN,
+        "n_seeds": 1,
+        "per_seed": {
+          "1000": 4.0
+        }
+      },
+      "extras": {
+        "results": {
+          "spindle_fast": {
+            "argmax": "C3",
+            "expected": [
+              "C3",
+              "C4",
+              "Cz"
+            ],
+            "ok": true,
+            "row": "topo_expect_spindle_fast"
+          },
+          "spindle_slow": {
+            "argmax": "Fz",
+            "expected": [
+              "F3",
+              "Fz",
+              "F4"
+            ],
+            "ok": true,
+            "row": "topo_expect_spindle_slow"
+          },
+          "kc": {
+            "argmax": "Fz",
+            "expected": [
+              "Fz",
+              "F3",
+              "F4"
+            ],
+            "ok": true,
+            "row": "topo_expect_kc"
+          },
+          "alpha": {
+            "argmax": "Pz",
+            "expected": [
+              "O1",
+              "O2",
+              "Pz"
+            ],
+            "ok": true,
+            "row": "topo_expect_alpha"
+          }
+        },
+        "alpha_posterior_frontal_ratio": Infinity,
+        "alpha_ratio_bound_recorded_only": [
+          "gt",
+          3
+        ]
+      }
+    },
+    {
+      "id": "G6",
+      "arm": "null",
+      "label": "G6~null",
+      "title": "Topography null \u2014 a mis-centred projection must fail every comparison",
+      "class": "C",
+      "class_meaning": "recovery by code in this repository -- self-consistency only",
+      "runtime_tier": "fast",
+      "failable": true,
+      "status": "PASS",
+      "is_pass": true,
+      "threshold": "argmax over electrodes matches the topo_expe...",
+      "threshold_standing": "derived",
+      "criterion_key": "gate_topography",
+      "provenance_provisional": false,
+      "claim": "Confirms G6 reads the projection file and compares it against an independent expectation, rather than comparing the file to itself. Says nothing about whether the topographies are the right SHAPE \u2014 only that they are centred somewhere the literature agrees with, and that moving them breaks the gate.",
+      "detail": "transposed topographies (spindle_fast<->kc, alpha<->spindle_slow): 4/4 comparisons broke. spindle_fast -> Fz (left C3/C4/Cz); spindle_slow -> Pz (left F3/Fz/F4); kc -> C3 (left Fz/F3/F4); alpha -> Fz (left O1/O2/Pz)",
+      "duration_s": 5.563,
+      "metric": {
+        "kind": "scalar",
+        "unit": "comparisons broken by mis-centring",
+        "median": 4.0,
+        "iqr": NaN,
+        "n_seeds": 1,
+        "per_seed": {
+          "1000": 4.0
+        }
+      },
+      "extras": {
+        "results": {
+          "spindle_fast": {
+            "argmax": "Fz",
+            "expected": [
+              "C3",
+              "C4",
+              "Cz"
+            ],
+            "ok": false,
+            "row": "topo_expect_spindle_fast"
+          },
+          "spindle_slow": {
+            "argmax": "Pz",
+            "expected": [
+              "F3",
+              "Fz",
+              "F4"
+            ],
+            "ok": false,
+            "row": "topo_expect_spindle_slow"
+          },
+          "kc": {
+            "argmax": "C3",
+            "expected": [
+              "Fz",
+              "F3",
+              "F4"
+            ],
+            "ok": false,
+            "row": "topo_expect_kc"
+          },
+          "alpha": {
+            "argmax": "Fz",
+            "expected": [
+              "O1",
+              "O2",
+              "Pz"
+            ],
+            "ok": false,
+            "row": "topo_expect_alpha"
+          }
+        },
+        "n_broken": 4,
+        "n_total": 4
+      }
+    },
+    {
+      "id": "G5",
+      "arm": "positive",
+      "label": "G5",
+      "title": "AASM N3 criterion",
+      "class": "C",
+      "class_meaning": "recovery by code in this repository -- self-consistency only",
+      "runtime_tier": "fast",
+      "failable": false,
+      "status": "RECORD",
+      "is_pass": false,
+      "threshold": "0.2",
+      "threshold_standing": "definitional",
+      "criterion_key": "gate_aasm_n3_min_fraction",
+      "provenance_provisional": true,
+      "claim": "POSITIVE ARM IS RECORD-ONLY (D9). Post-calibration this is largely a regression check on the amplitude relationship. It is NOT evidence that our N3 resembles real N3. The null carries the discriminative weight.",
+      "detail": "pass fraction 0.44 over 6 held-out seed(s) x 6 epochs; calibration seed 20260728 excluded; snr_nominal = 3.4836158752441406 dB. RECORD-ONLY: no threshold on this fraction exists that would not be invented.",
+      "duration_s": 7.797,
+      "metric": {
+        "kind": "scalar",
+        "unit": "pass fraction",
+        "median": 0.41666666666666663,
+        "iqr": 0.20833333333333331,
+        "n_seeds": 6,
+        "per_seed": {
+          "1000": 0.3333333333333333,
+          "1001": 0.3333333333333333,
+          "1002": 0.5,
+          "1003": 0.3333333333333333,
+          "1004": 0.6666666666666666,
+          "1005": 0.5
+        }
+      },
+      "extras": {
+        "snr_nominal_db": 3.4836158752441406,
+        "calibration_seed": 20260728,
+        "epochs_per_seed": 6
+      }
+    },
+    {
+      "id": "G5",
+      "arm": "null",
+      "label": "G5~null",
+      "title": "AASM N3 null -- N2 must fail, and N3 at -6 dB must fail",
+      "class": "C",
+      "class_meaning": "recovery by code in this repository -- self-consistency only",
+      "runtime_tier": "fast",
+      "failable": true,
+      "status": "PASS",
+      "is_pass": true,
+      "threshold": "pass_fraction(N3 @ snr_nominal) > pass_fract...",
+      "threshold_standing": "derived",
+      "criterion_key": "gate_g5_null_ordering",
+      "provenance_provisional": false,
+      "claim": "Carries G5's verdict. Catches a criterion that everything passes -- which is not a criterion. Says nothing about whether our N3 resembles real N3.",
+      "detail": "N3 0.44 vs N2 0.00 (ok) and vs N3-6dB 0.03 (ok), 6 seed(s) x 6 epochs",
+      "duration_s": 23.088,
+      "metric": {
+        "kind": "scalar",
+        "unit": "pass fraction",
+        "median": 0.41666666666666663,
+        "iqr": 0.20833333333333331,
+        "n_seeds": 6,
+        "per_seed": {
+          "1000": 0.3333333333333333,
+          "1001": 0.3333333333333333,
+          "1002": 0.5,
+          "1003": 0.3333333333333333,
+          "1004": 0.6666666666666666,
+          "1005": 0.5
+        }
+      },
+      "extras": {
+        "n3": 0.4444444444444444,
+        "n2": 0.0,
+        "n3_attenuated": 0.027777777777777776,
+        "snr_null_offset_db": -6,
+        "snr_nominal_db": 3.4836158752441406
+      }
+    },
+    {
+      "id": "G1a",
+      "arm": "positive",
+      "label": "G1a",
+      "title": "chi round-trip, knee mode over 1-45 Hz",
+      "class": "V",
+      "class_meaning": "recovery by an external, independently authored, published tool",
+      "runtime_tier": "fast",
+      "failable": false,
+      "status": "RECORD",
+      "is_pass": false,
+      "threshold": "(none at Tier 0)",
+      "threshold_standing": "absent",
+      "criterion_key": "gate_chi_tol_knee",
+      "provenance_provisional": true,
+      "claim": "Records the recovery error distribution for chi and k. Sets no tolerance at Tier 0; the tolerance is derived at T1-M2 from specparam bias and variance at our SNR and window.",
+      "detail": "Pz, 10 epochs x 6 seeds. [rem] injected \u03c7=2.100: err +0.398 (IQR 0.045), knee 20.0 Hz -> 16.8 Hz | [n3] injected \u03c7=3.400: err -1.206 (IQR 0.085), knee OUT OF BAND by design (1.00 Hz), unrecoverable in 2/6 fits. RECORD-ONLY: no tolerance exists and none may be derived from this spread. A DIFFERENT QUANTITY from G1b \u2014 never differenced against it.",
+      "duration_s": 28.563,
+      "metric": {
+        "kind": "scalar",
+        "unit": "\u03c7 recovery error, knee mode 1\u201345 Hz (rem)",
+        "median": 0.3976160708444323,
+        "iqr": 0.1174566591251085,
+        "n_seeds": 6,
+        "per_seed": {
+          "1000": 0.6545396723602783,
+          "1001": 0.4173644796072473,
+          "1002": 0.4195140735489167,
+          "1003": 0.324148865690991,
+          "1004": 0.3730354636052011,
+          "1005": 0.37786766208161726
+        }
+      },
+      "extras": {
+        "channel": "Pz",
+        "epochs": 10,
+        "states": {
+          "rem": {
+            "median_error": 0.3976160708444323,
+            "iqr": 0.04473316183919418,
+            "injected_chi": 2.1,
+            "injected_knee_hz": 19.999999310578627,
+            "knee_in_fit_band": true,
+            "median_knee_hz": 16.844072096992324,
+            "n_knee_unrecoverable": 0,
+            "band": [
+              1,
+              45
+            ],
+            "mode": "knee"
+          },
+          "n3": {
+            "median_error": -1.2056078472973415,
+            "iqr": 0.08456352708891313,
+            "injected_chi": 3.4,
+            "injected_knee_hz": 1.0,
+            "knee_in_fit_band": false,
+            "median_knee_hz": 0.5991333799332184,
+            "n_knee_unrecoverable": 2,
+            "band": [
+              1,
+              45
+            ],
+            "mode": "knee"
+          }
+        }
+      }
+    },
+    {
+      "id": "G1a",
+      "arm": "null",
+      "label": "G1a~null",
+      "title": "\u03c7 recovery null \u2014 white noise must return \u03c7 \u2248 0 and no spurious knee",
+      "class": "V",
+      "class_meaning": "recovery by an external, independently authored, published tool",
+      "runtime_tier": "fast",
+      "failable": true,
+      "status": "PASS",
+      "is_pass": true,
+      "threshold": "On synthetic white noise: |MEAN chi_hat| < 0...",
+      "threshold_standing": "chosen",
+      "criterion_key": "gate_g1_null_zero",
+      "provenance_provisional": false,
+      "claim": "Checks the harness's own PSD-and-fit path against a signal whose answer is known analytically. Says NOTHING about whether our generator's chi is right, nor about the recovery error the gate records \u2014 it is a wiring check, and the gate it guards is record-only.",
+      "detail": "white noise, 12 seeds x 300 s, MEANS tested (not per-seed): chi_hat +0.0015 +/- 0.0033 (|mean| < 0.1 ok), knee parameter -0.0897 (|mean| < 1.0 ok). Bounds are numerical resolution of 'returned zero', NOT the recovery tolerance the gate is missing; that stays absent until T1-M2. Synthetic white noise, so this checks the PSD-and-fit path, not the generator.",
+      "duration_s": 2.219,
+      "metric": {
+        "kind": "scalar",
+        "unit": "chi_hat on white noise (should be ~ 0)",
+        "median": 0.0007903958597396417,
+        "iqr": 0.017348261427720797,
+        "n_seeds": 12,
+        "per_seed": {
+          "1000": 0.0005292878838124015,
+          "1001": 0.001051503835666882,
+          "1002": 0.009442993106722754,
+          "1003": -0.008317607422006433,
+          "1004": -0.0016800303947045489,
+          "1005": 0.021388847503336986,
+          "1006": 0.012122700185736877,
+          "1007": 0.003758579763738383,
+          "1008": -3.4292898212334547e-06,
+          "1009": -0.009038447313247568,
+          "1010": -0.02227923259062905,
+          "1011": 0.011105733314478864
+        }
+      },
+      "extras": {
+        "chi": [
+          0.0005292878838124015,
+          0.001051503835666882,
+          0.009442993106722754,
+          -0.008317607422006433,
+          -0.0016800303947045489,
+          0.021388847503336986,
+          0.012122700185736877,
+          0.003758579763738383,
+          -3.4292898212334547e-06,
+          -0.009038447313247568,
+          -0.02227923259062905,
+          0.011105733314478864
+        ],
+        "knee": [
+          -0.5190386951604506,
+          -0.001899700841807348,
+          -0.01872733036985582,
+          -0.004818200231811117,
+          -0.03571944751074941,
+          0.28602194795531866,
+          0.043765759940259,
+          -0.4352105725061432,
+          -0.528536837016315,
+          0.01806935690215903,
+          0.1385203316712059,
+          -0.01894068102626588
+        ],
+        "mean": 0.0015067415485903596,
+        "sd": 0.011502104222688441,
+        "chi_zero_bound": 0.1,
+        "knee_zero_bound": 1.0
+      }
+    },
+    {
+      "id": "G1b",
+      "arm": "positive",
+      "label": "G1b",
+      "title": "chi round-trip, fixed mode over 30-45 Hz",
+      "class": "V",
+      "class_meaning": "recovery by an external, independently authored, published tool",
+      "runtime_tier": "fast",
+      "failable": false,
+      "status": "RECORD",
+      "is_pass": false,
+      "threshold": "(none at Tier 0)",
+      "threshold_standing": "absent",
+      "criterion_key": "gate_chi_tol_fixed",
+      "provenance_provisional": true,
+      "claim": "A DIFFERENT quantity from G1a, not a second estimate of the same one. Its bias is structural and originates in the modelled 20 Hz knee, so its magnitude is a function of the invented k_* rows -- not evidence of comparability with published narrowband exponents.",
+      "detail": "Pz, 10 epochs x 6 seeds. [rem] injected \u03c7=2.100: err -0.527 (IQR 0.286) | [n3] injected \u03c7=3.400: err -1.332 (IQR 0.117). The bias is EXPECTED and kept: a fixed-mode fit across the modelled knee is what the published narrowband exponents were fitted with. Its magnitude is set by the invented knee_freq_* rows, so it is reproduced in form but not in mechanism. RECORD-ONLY. A DIFFERENT QUANTITY from G1a \u2014 never differenced against it.",
+      "duration_s": 0.0,
+      "metric": {
+        "kind": "scalar",
+        "unit": "\u03c7 recovery error, fixed mode 30\u201345 Hz (rem)",
+        "median": -0.5274755706439352,
+        "iqr": 0.40423907924974034,
+        "n_seeds": 6,
+        "per_seed": {
+          "1000": -0.2035236886087224,
+          "1001": -0.5433450716924699,
+          "1002": -0.6763089536404312,
+          "1003": -0.7067901886650534,
+          "1004": -0.5116060695954006,
+          "1005": -0.30507901465955434
+        }
+      },
+      "extras": {
+        "channel": "Pz",
+        "epochs": 10,
+        "states": {
+          "rem": {
+            "median_error": -0.5274755706439352,
+            "iqr": 0.28635720475992504,
+            "injected_chi": 2.1,
+            "band": [
+              30,
+              45
+            ],
+            "mode": "fixed"
+          },
+          "n3": {
+            "median_error": -1.3315367398899423,
+            "iqr": 0.11719621032639171,
+            "injected_chi": 3.4,
+            "band": [
+              30,
+              45
+            ],
+            "mode": "fixed"
+          }
+        }
+      }
+    },
+    {
+      "id": "G1b",
+      "arm": "null",
+      "label": "G1b~null",
+      "title": "Narrowband chi null \u2014 white noise must return chi ~= 0 over 30\u201345 Hz",
+      "class": "V",
+      "class_meaning": "recovery by an external, independently authored, published tool",
+      "runtime_tier": "fast",
+      "failable": true,
+      "status": "PASS",
+      "is_pass": true,
+      "threshold": "On synthetic white noise: |MEAN chi_hat| < 0...",
+      "threshold_standing": "chosen",
+      "criterion_key": "gate_g1b_null_zero",
+      "provenance_provisional": false,
+      "claim": "Checks the fixed-mode fit path against a known-zero signal, and MEASURES the estimator's noise floor over 30\u201345 Hz. That floor exceeds the chi spacing between adjacent states, which constrains what any narrowband comparison can claim.",
+      "detail": "white noise, 12 seeds x 300 s, MEAN tested (not per-seed): chi_hat -0.0246 +/- 0.0674 (|mean| < 0.1 ok). PER-SEED sd 0.234 over only 0.176 decades of leverage \u2014 larger than the chi spacing between adjacent states in the registry, so no state ordering is supportable from narrowband chi on a single 300 s record (Finding 14, constrains P10). Synthetic white noise: this checks the fit path, not the generator.",
+      "duration_s": 2.201,
+      "metric": {
+        "kind": "scalar",
+        "unit": "chi_hat on white noise, 30-45 Hz (should be ~ 0)",
+        "median": -0.05297500695112997,
+        "iqr": 0.30346931098829,
+        "n_seeds": 12,
+        "per_seed": {
+          "1000": -0.18135032359137881,
+          "1001": -0.30375870221186,
+          "1002": -0.12216015499549537,
+          "1003": -0.20277978599801322,
+          "1004": -0.27720829037609834,
+          "1005": 0.4785579731941807,
+          "1006": -0.03508418663015295,
+          "1007": -0.070865827272107,
+          "1008": 0.30470742088239694,
+          "1009": 0.1446806371100649,
+          "1010": -0.009854348962453241,
+          "1011": -0.019731968287138024
+        }
+      },
+      "extras": {
+        "chi": [
+          -0.18135032359137881,
+          -0.30375870221186,
+          -0.12216015499549537,
+          -0.20277978599801322,
+          -0.27720829037609834,
+          0.4785579731941807,
+          -0.03508418663015295,
+          -0.070865827272107,
+          0.30470742088239694,
+          0.1446806371100649,
+          -0.009854348962453241,
+          -0.019731968287138024
+        ],
+        "mean": -0.024570629761504537,
+        "sd": 0.23361507528416509,
+        "chi_zero_bound": 0.1
+      }
+    },
+    {
+      "id": "G3",
+      "arm": "positive",
+      "label": "G3",
+      "title": "Spindle detection, F1 vs inclusion threshold",
+      "class": "V",
+      "class_meaning": "recovery by an external, independently authored, published tool",
+      "runtime_tier": "slow",
+      "failable": false,
+      "status": "RECORD",
+      "is_pass": false,
+      "threshold": "(none at Tier 0)",
+      "threshold_standing": "absent",
+      "criterion_key": "gate_spindle_f1",
+      "provenance_provisional": true,
+      "claim": "Records the agreement curve. Sets no pass band: our ground truth has no label noise, so a realistic generator should score ABOVE the human ceiling, and forcing F1 down would mean injecting events too marginal to be spindles.",
+      "detail": "n2 @ Cz, 20 epochs x 6 seeds, median 34 injected vs 16 detected. All-event median F1 0.569. RECORD-ONLY: no acceptance tolerance exists. Quality stratification is unavailable; the former random prominence field is now an explicitly arbitrary inclusionTag.",
+      "duration_s": 25.606,
+      "metric": {
+        "kind": "scalar",
+        "unit": "F1 vs YASA, all injected events included",
+        "median": 0.5694271481942714,
+        "iqr": 0.10756493506493492,
+        "n_seeds": 6,
+        "per_seed": {
+          "1000": 0.5909090909090908,
+          "1001": 0.52,
+          "1002": 0.46428571428571436,
+          "1003": 0.547945205479452,
+          "1004": 0.6,
+          "1005": 0.6545454545454545
+        }
+      },
+      "extras": {
+        "channel": "Cz",
+        "epochs": 20,
+        "min_overlap": 0.2,
+        "f1_by_threshold": {
+          "0.0": 0.5694271481942714
+        },
+        "curves": {
+          "1000": [
+            {
+              "threshold": 0.0,
+              "n_injected": 28,
+              "n_detected": 16,
+              "tp": 13,
+              "precision": 0.8125,
+              "recall": 0.4642857142857143,
+              "f1": 0.5909090909090908
+            }
+          ],
+          "1001": [
+            {
+              "threshold": 0.0,
+              "n_injected": 35,
+              "n_detected": 15,
+              "tp": 13,
+              "precision": 0.8666666666666667,
+              "recall": 0.37142857142857144,
+              "f1": 0.52
+            }
+          ],
+          "1002": [
+            {
+              "threshold": 0.0,
+              "n_injected": 40,
+              "n_detected": 16,
+              "tp": 13,
+              "precision": 0.8125,
+              "recall": 0.325,
+              "f1": 0.46428571428571436
+            }
+          ],
+          "1003": [
+            {
+              "threshold": 0.0,
+              "n_injected": 52,
+              "n_detected": 21,
+              "tp": 20,
+              "precision": 0.9523809523809523,
+              "recall": 0.38461538461538464,
+              "f1": 0.547945205479452
+            }
+          ],
+          "1004": [
+            {
+              "threshold": 0.0,
+              "n_injected": 33,
+              "n_detected": 17,
+              "tp": 15,
+              "precision": 0.8823529411764706,
+              "recall": 0.45454545454545453,
+              "f1": 0.6
+            }
+          ],
+          "1005": [
+            {
+              "threshold": 0.0,
+              "n_injected": 34,
+              "n_detected": 21,
+              "tp": 18,
+              "precision": 0.8571428571428571,
+              "recall": 0.5294117647058824,
+              "f1": 0.6545454545454545
+            }
+          ]
+        },
+        "quality_stratification": "unavailable"
+      }
+    },
+    {
+      "id": "G3",
+      "arm": "null",
+      "label": "G3~null",
+      "title": "Spindle null \u2014 the same background without spindles must not be detected as spindles",
+      "class": "V",
+      "class_meaning": "recovery by an external, independently authored, published tool",
+      "runtime_tier": "slow",
+      "failable": true,
+      "status": "PASS",
+      "is_pass": true,
+      "threshold": "YASA run on the same background with graphoe...",
+      "threshold_standing": "derived",
+      "criterion_key": "gate_g3_null_fp_rate",
+      "provenance_provisional": false,
+      "claim": "Attributes YASA's detections to the injected events rather than to the background, by a paired contrast on a bit-identical background. Says nothing about whether the spindles look right \u2014 only that the detector is not firing on the noise.",
+      "detail": "n2 @ Cz, 20 epochs x 6 seeds, bit-identical background. median detections 16 with events vs 0 with them suppressed, against 34 injected. paired 6/6 (p=0.016, ok); false positives 0.000 of injected (< 0.2 ok). 'False-positive rate near zero' is not testable as written \u2014 no value of 'near' exists that would not be invented \u2014 so the paired contrast carries the claim and the raw counts are printed for a reader who wants to apply their own bound.",
+      "duration_s": 32.913,
+      "metric": {
+        "kind": "scalar",
+        "unit": "YASA detections on background with spindles suppressed",
+        "median": 0.0,
+        "iqr": 0.0,
+        "n_seeds": 6,
+        "per_seed": {
+          "1000": 0.0,
+          "1001": 0.0,
+          "1002": 0.0,
+          "1003": 0.0,
+          "1004": 0.0,
+          "1005": 0.0
+        }
+      },
+      "extras": {
+        "with_events": [
+          16,
+          15,
+          16,
+          21,
+          17,
+          21
+        ],
+        "suppressed": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "injected": [
+          28,
+          35,
+          40,
+          52,
+          33,
+          34
+        ],
+        "paired": {
+          "k": 6,
+          "n": 6,
+          "p": 0.015625
+        },
+        "fp_fraction": 0.0,
+        "max_fp_fraction": 0.2
+      }
+    }
+  ],
+  "verdict": "PASS"
+}

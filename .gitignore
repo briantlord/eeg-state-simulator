@@ -1,5 +1,7 @@
 node_modules/
 .venv/
+.venv311/
+.mne/
 __pycache__/
 *.pyc
 dist/

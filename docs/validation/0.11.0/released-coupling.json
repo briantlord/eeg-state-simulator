@@ -1,0 +1,335 @@
+{
+  "generatorVersion": "0.11.0",
+  "profile": "physiology-v1",
+  "options": {
+    "respirationMode": "natural",
+    "movementArtifact": true,
+    "amplitudeModulation": true,
+    "chiModulation": true,
+    "eventRespirationCoupling": true,
+    "infraSlowCortical": true,
+    "infraSlowModulation": true,
+    "lineNoise": false,
+    "lineFreqHz": 60,
+    "suppressGraphoelements": false,
+    "snrDb": 3.4836158752441406
+  },
+  "fingerprint": {
+    "registrySha256": "e3fb57710b6832961359f960644f34e908d518336c10f6188055e7227f1cb13b",
+    "projectionSha256": "0454a32c37f49967036111aaea4650092356796473043736a292f0587f5e3167",
+    "implementationSha256": "fff48a633a6c0035e37beb3d8cf0c37cd2d1d72c49a04217515da8d56fe9d2bf"
+  },
+  "calibrationSha256": "43ea8f1e7e524121f79b20097eaf81de6df4874b04c6f9b465671df78b5cc1ab",
+  "durationS": 300,
+  "channel": "Fz",
+  "reference": "linked-mastoid",
+  "rows": [
+    {
+      "state": "wake_ec",
+      "seed": 80001,
+      "injectedDepth": 0.15,
+      "on": {
+        "depth": 0.040214811497265066,
+        "maxPhase": 2.735559448842415
+      },
+      "off": {
+        "depth": 0.009808687699213066,
+        "maxPhase": 1.5018782321693378
+      },
+      "pairedChange": {
+        "depth": 0.038111640660841245,
+        "maxPhase": 2.980893885536923
+      }
+    },
+    {
+      "state": "wake_ec",
+      "seed": 80002,
+      "injectedDepth": 0.15,
+      "on": {
+        "depth": 0.05999891894279296,
+        "maxPhase": 2.3533568901365345
+      },
+      "off": {
+        "depth": 0.03782792933082046,
+        "maxPhase": 1.7551603966426168
+      },
+      "pairedChange": {
+        "depth": 0.03577408459571026,
+        "maxPhase": 2.9912255325582313
+      }
+    },
+    {
+      "state": "wake_ec",
+      "seed": 80003,
+      "injectedDepth": 0.15,
+      "on": {
+        "depth": 0.039169001551458874,
+        "maxPhase": -2.341480417283293
+      },
+      "off": {
+        "depth": 0.035536173707792065,
+        "maxPhase": -1.3223450421383962
+      },
+      "pairedChange": {
+        "depth": 0.036578908173794625,
+        "maxPhase": 2.9672826484156336
+      }
+    },
+    {
+      "state": "wake_ec",
+      "seed": 80004,
+      "injectedDepth": 0.15,
+      "on": {
+        "depth": 0.01953662941719745,
+        "maxPhase": -2.8241143858755158
+      },
+      "off": {
+        "depth": 0.018204741188199074,
+        "maxPhase": -0.6225325108824336
+      },
+      "pairedChange": {
+        "depth": 0.03365432320563936,
+        "maxPhase": 3.0069899041404153
+      }
+    },
+    {
+      "state": "wake_ec",
+      "seed": 80005,
+      "injectedDepth": 0.15,
+      "on": {
+        "depth": 0.03859098067371648,
+        "maxPhase": 2.704268982583683
+      },
+      "off": {
+        "depth": 0.01023425862481882,
+        "maxPhase": 1.3536229354997107
+      },
+      "pairedChange": {
+        "depth": 0.03770289621851188,
+        "maxPhase": 2.9723624303028675
+      }
+    },
+    {
+      "state": "wake_ec",
+      "seed": 80006,
+      "injectedDepth": 0.15,
+      "on": {
+        "depth": 0.06053029289424092,
+        "maxPhase": 3.0727840714065575
+      },
+      "off": {
+        "depth": 0.022340290247584584,
+        "maxPhase": -3.0270806112807094
+      },
+      "pairedChange": {
+        "depth": 0.03877878259543808,
+        "maxPhase": 2.9675703734472516
+      }
+    },
+    {
+      "state": "n2",
+      "seed": 80001,
+      "injectedDepth": 0.15,
+      "on": {
+        "depth": 0.14372927414754647,
+        "maxPhase": 2.962252753208082
+      },
+      "off": {
+        "depth": 0.15783725221943506,
+        "maxPhase": 2.8100305867143778
+      },
+      "pairedChange": {
+        "depth": 0.02690144188729751,
+        "maxPhase": -1.2759815430948815
+      }
+    },
+    {
+      "state": "n2",
+      "seed": 80002,
+      "injectedDepth": 0.15,
+      "on": {
+        "depth": 0.19484167647936498,
+        "maxPhase": -3.04099387700658
+      },
+      "off": {
+        "depth": 0.2008753444372663,
+        "maxPhase": 3.116093722824208
+      },
+      "pairedChange": {
+        "depth": 0.025649834753537756,
+        "maxPhase": -1.296269756547432
+      }
+    },
+    {
+      "state": "n2",
+      "seed": 80003,
+      "injectedDepth": 0.15,
+      "on": {
+        "depth": 0.22893680641905276,
+        "maxPhase": -2.7973952624603124
+      },
+      "off": {
+        "depth": 0.2289315224506393,
+        "maxPhase": -2.906144788035656
+      },
+      "pairedChange": {
+        "depth": 0.02488421592525283,
+        "maxPhase": -1.2811857267951725
+      }
+    },
+    {
+      "state": "n2",
+      "seed": 80004,
+      "injectedDepth": 0.15,
+      "on": {
+        "depth": 0.179706395423402,
+        "maxPhase": 3.0655203196371565
+      },
+      "off": {
+        "depth": 0.1896359349444542,
+        "maxPhase": 2.944332558071044
+      },
+      "pairedChange": {
+        "depth": 0.024463866467995494,
+        "maxPhase": -1.290329445925154
+      }
+    },
+    {
+      "state": "n2",
+      "seed": 80005,
+      "injectedDepth": 0.15,
+      "on": {
+        "depth": 0.16546461681232363,
+        "maxPhase": -2.7920817596321426
+      },
+      "off": {
+        "depth": 0.16593856775825996,
+        "maxPhase": -2.945401795608338
+      },
+      "pairedChange": {
+        "depth": 0.025384896762323788,
+        "maxPhase": -1.2793286219747007
+      }
+    },
+    {
+      "state": "n2",
+      "seed": 80006,
+      "injectedDepth": 0.15,
+      "on": {
+        "depth": 0.15892860320319196,
+        "maxPhase": -2.8520302033594644
+      },
+      "off": {
+        "depth": 0.16104665821178396,
+        "maxPhase": -3.008476333452174
+      },
+      "pairedChange": {
+        "depth": 0.025092931108234337,
+        "maxPhase": -1.2752069844615221
+      }
+    },
+    {
+      "state": "n3",
+      "seed": 80001,
+      "injectedDepth": 0.15,
+      "on": {
+        "depth": 0.2384624781408679,
+        "maxPhase": -2.930861127041053
+      },
+      "off": {
+        "depth": 0.23087657767821185,
+        "maxPhase": -3.0169862096860016
+      },
+      "pairedChange": {
+        "depth": 0.02157935588060407,
+        "maxPhase": -1.7619895862993133
+      }
+    },
+    {
+      "state": "n3",
+      "seed": 80002,
+      "injectedDepth": 0.15,
+      "on": {
+        "depth": 0.2032563165829438,
+        "maxPhase": -3.04764188225109
+      },
+      "off": {
+        "depth": 0.19918832436673545,
+        "maxPhase": 3.1398137795560217
+      },
+      "pairedChange": {
+        "depth": 0.01967964180036329,
+        "maxPhase": -1.7326802441135005
+      }
+    },
+    {
+      "state": "n3",
+      "seed": 80003,
+      "injectedDepth": 0.15,
+      "on": {
+        "depth": 0.1605819541214587,
+        "maxPhase": 3.1115762154464655
+      },
+      "off": {
+        "depth": 0.15836977205392733,
+        "maxPhase": 2.978374899887747
+      },
+      "pairedChange": {
+        "depth": 0.021341148628834267,
+        "maxPhase": -1.77102696813704
+      }
+    },
+    {
+      "state": "n3",
+      "seed": 80004,
+      "injectedDepth": 0.15,
+      "on": {
+        "depth": 0.2798189680437029,
+        "maxPhase": -2.909030483032646
+      },
+      "off": {
+        "depth": 0.27304923910599216,
+        "maxPhase": -2.9738126515770418
+      },
+      "pairedChange": {
+        "depth": 0.01914067688181194,
+        "maxPhase": -1.7319324190590835
+      }
+    },
+    {
+      "state": "n3",
+      "seed": 80005,
+      "injectedDepth": 0.15,
+      "on": {
+        "depth": 0.2102503634273756,
+        "maxPhase": -2.9417272023835532
+      },
+      "off": {
+        "depth": 0.20300768088198443,
+        "maxPhase": -3.0364488602692714
+      },
+      "pairedChange": {
+        "depth": 0.020859656331651606,
+        "maxPhase": -1.7724710124874863
+      }
+    },
+    {
+      "state": "n3",
+      "seed": 80006,
+      "injectedDepth": 0.15,
+      "on": {
+        "depth": 0.2111701611510257,
+        "maxPhase": -2.817055892372479
+      },
+      "off": {
+        "depth": 0.20359830743651638,
+        "maxPhase": -2.905084604828544
+      },
+      "pairedChange": {
+        "depth": 0.019755501709032463,
+        "maxPhase": -1.6832150400733
+      }
+    }
+  ],
+  "claim": "Record-only on/off sensitivity of the shipped slope estimator to released-strength chi modulation. Natural respiratory phase sampled at estimator-window centers. Other respiratory mechanisms remain enabled; nonzero off-arm coupling is not attributed to chi modulation. No recovery tolerance or physiological-validity threshold is established."
+}

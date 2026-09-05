@@ -6,6 +6,7 @@ the Python package behind, so a break here is a break in the upgrade path.
 """
 from __future__ import annotations
 
+import json
 import numpy as np
 import pytest
 
@@ -123,10 +124,16 @@ def test_sidecar_carries_injected_ground_truth(run):
     for field in (
         "chi", "knee", "snrDb", "chiModDepth", "chiModPhi0",
         "respFreq", "independentChiModFreq", "projectionWeights", "respMechanisms",
+        "respiration", "cardiac", "eventPhaseSummaries", "physiologyFile",
     ):
         assert field in truth, f"sidecar is missing ground-truth field {field!r}"
     # G4 needs chi modulation decoupled from respiration; the field must exist even when unused.
     assert truth["independentChiModFreq"] is None
+    physiology = json.loads((run.path / truth["physiologyFile"]).read_text(encoding="utf8"))
+    assert physiology["schemaVersion"] == run.manifest["schemaVersion"]
+    assert physiology["respiration"]["breaths"]
+    assert physiology["cardiac"]["rPeaksS"]
+    assert len(physiology["cardiac"]["rPeaksS"]) == len(physiology["cardiac"]["rrIntervalsS"])
 
 
 def test_aasm_reference_channels_are_present(run):

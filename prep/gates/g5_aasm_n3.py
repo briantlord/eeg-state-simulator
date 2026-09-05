@@ -59,6 +59,23 @@ def calibration() -> dict[str, Any]:
     return json.loads(CAL.read_text(encoding="utf8"))
 
 
+SCORER_VERSION = "central-halfwave-cascade-v2"
+
+
+def aasm_filtered(x: np.ndarray, fs: float) -> np.ndarray:
+    """Independent SciPy implementation of docs/Scoring-Contract.md."""
+    lo, hi = R.band_edges("gate_aasm_n3_band")
+    order = int(R.scalar_value("filter_order"))
+    sos = np.vstack([
+        sps.butter(order, lo, "highpass", fs=fs, output="sos"),
+        sps.butter(order, hi, "lowpass", fs=fs, output="sos"),
+    ])
+    padlen = 3 * (2 * len(sos) + 1)
+    if len(x) <= padlen or not np.all(np.isfinite(x)):
+        raise ValueError(f"scoring requires more than {padlen} finite samples")
+    return sps.sosfiltfilt(sos, x, padtype="odd", padlen=padlen)
+
+
 def aasm_fraction(sig: np.ndarray, channels: list[str], fs: float, scalp: str = "C3") -> float:
     """AASM N3 occupancy on a contralateral-mastoid derivation.
 
@@ -75,12 +92,10 @@ def aasm_fraction(sig: np.ndarray, channels: list[str], fs: float, scalp: str = 
         )
     x = sig[channels.index(scalp)] - sig[channels.index(ref)]
 
-    lo, hi = R.band_edges("gate_aasm_n3_band")
-    b, a = sps.butter(int(R.scalar_value("filter_order")), [lo / (fs / 2), hi / (fs / 2)], "bandpass")
-    y = sps.filtfilt(b, a, x)
+    y = aasm_filtered(x, fs)
 
     min_pp = R.scalar_value("gate_aasm_n3_min_amp")
-    crossings = np.flatnonzero(np.diff(np.signbit(y)))
+    crossings = np.flatnonzero(np.diff(y < 0))
     bounds = np.concatenate([[0], crossings + 1, [len(y)]])
     occupied = 0
     for s, e in zip(bounds[:-1], bounds[1:]):

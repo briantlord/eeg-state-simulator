@@ -4,10 +4,9 @@ Finding 18 fitted a frontal/occipital RATIO and matched it (0.256 against a real
 of two group means is a coarse target: many different topographies share it, including wrong ones.
 This compares the full 19-electrode profile.
 
-SHAPE IS COMPARED, NOT LEVEL. Our absolute prominence runs several times real -- that is
-`alpha_amp` against the background, a different parameter -- so each profile is normalised by its
-own maximum. Otherwise the comparison would be dominated by a scale factor nobody is asking about
-and the topography would be invisible underneath it.
+SHAPE IS COMPARED, NOT LEVEL. Absolute prominence is `alpha_amp` against the background, a
+different parameter, so each profile is normalised by its own maximum. Otherwise the comparison
+would be dominated by a scale factor and the topography would be invisible underneath it.
 
 WHAT WOULD COUNT AS A MISMATCH: a profile that is too flat (alpha everywhere, a pedestal rather
 than a posterior source), too peaked (no volume conduction, the original defect), or wrong in its
@@ -144,8 +143,8 @@ lat_o = abs(on[ORDER.index('O1')] - on[ORDER.index('O2')])
 print(f"\n  left/right asymmetry at O1 vs O2:  real {lat_r:.3f}   ours {lat_o:.3f}")
 
 print(f"""
-  READ THE NORMALISED COLUMNS, not the raw ones: our absolute prominence runs high because
-  alpha_amp sits high against the background, which is a different parameter from topography.
+  READ THE NORMALISED COLUMNS for topography. Absolute prominence is a separate alpha_amp
+  comparison and is neither fitted nor judged by this shape probe.
 
   Correlation {r_pearson:+.3f} over 19 electrodes with RMS {rms:.3f} is the headline. A profile
   that matched only on the frontal/occipital average would show a good ratio and a poor

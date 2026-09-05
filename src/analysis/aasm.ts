@@ -13,8 +13,16 @@
  * that would generate N3 to satisfy the check meant to test it, which is the circularity the
  * registry exists to expose.
  */
-import { bandpassSections, filtfilt } from '../core/dsp/biquad.ts';
+import { bandpassSections, filtfiltPadded } from '../core/dsp/biquad.ts';
 import { scalarValue, bandEdges, electrodeSet } from '../core/registry.ts';
+
+/** Operational slow-wave proxy; see docs/Scoring-Contract.md. */
+export const AASM_SCORER_VERSION = 'central-halfwave-cascade-v2';
+
+export function aasmFiltered(signal: Float64Array, fs: number): Float64Array {
+  const band = bandEdges('gate_aasm_n3_band');
+  return filtfiltPadded(signal, bandpassSections(band.lo, band.hi, fs, scalarValue('filter_order')));
+}
 
 export interface AasmResult {
   /** Fraction of the epoch occupied by qualifying slow-wave activity. */
@@ -30,7 +38,8 @@ export interface AasmResult {
 /**
  * Contralateral-mastoid derivation: C3 referenced to A2, or C4 to A1.
  *
- * AASM scores from a central derivation; C3-A2 is the conventional primary.
+ * This project's explicit operational proxy uses C3-A2. It does not claim that central
+ * derivations are the universal AASM primary montage; see docs/Scoring-Contract.md.
  */
 export function contralateralDerivation(
   channels: readonly Float64Array[],
@@ -72,19 +81,18 @@ export function aasmN3(
   scalp = 'C3',
 ): AasmResult {
   const { signal, name } = contralateralDerivation(channels, labels, scalp);
-  const band = bandEdges('gate_aasm_n3_band');
   const minFrac = scalarValue('gate_aasm_n3_min_fraction');
   const minPp = scalarValue('gate_aasm_n3_min_amp');
 
-  const x = Float64Array.from(signal);
-  filtfilt(x, bandpassSections(band.lo, band.hi, fs, scalarValue('filter_order')));
+  const x = aasmFiltered(signal, fs);
 
   // Zero crossings bound half-waves.
   let occupied = 0;
   let start = 0;
-  for (let i = 1; i < x.length; i++) {
-    const crossed = (x[i - 1]! <= 0) !== (x[i]! <= 0);
-    if (!crossed && i !== x.length - 1) continue;
+  for (let i = 1; i <= x.length; i++) {
+    const crossed = i === x.length || (x[i - 1]! < 0) !== (x[i]! < 0);
+    if (!crossed) continue;
+    if (i - start < 2) { start = i; continue; }
     let lo = Infinity;
     let hi = -Infinity;
     for (let j = start; j < i; j++) {

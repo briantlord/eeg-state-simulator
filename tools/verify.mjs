@@ -32,9 +32,20 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
  * better error than a silent skip.
  */
 function venvPython() {
-  for (const rel of ['.venv/Scripts/python.exe', '.venv/bin/python']) {
+  // Existence is not enough: a Windows venv stores the absolute base-interpreter path and can
+  // survive on disk after that interpreter has been uninstalled. Probe each candidate before
+  // selecting it so a stale venv cannot mask a working replacement or PATH interpreter.
+  for (const rel of [
+    '.venv311/Scripts/python.exe',
+    '.venv311/bin/python',
+    '.venv/Scripts/python.exe',
+    '.venv/bin/python',
+  ]) {
     const p = join(ROOT, rel);
-    if (existsSync(p)) return p;
+    if (existsSync(p)) {
+      const r = spawnSync(p, ['-c', 'import sys'], { stdio: 'ignore', shell: false });
+      if (r.status === 0) return p;
+    }
   }
   for (const name of ['python3', 'python']) {
     const r = spawnSync(name, ['-c', 'import sys'], { stdio: 'ignore', shell: false });
@@ -82,6 +93,12 @@ const STEPS = [
         : 'typescript not installed — run: npm install',
   },
   {
+    name: 'production build',
+    why: 'the shipped static bundle must compile as well as the source types',
+    cmd: process.execPath,
+    args: [join(ROOT, 'node_modules', 'vite', 'bin', 'vite.js'), 'build'],
+  },
+  {
     name: 'core tests',
     why: 'seam 4 non-perturbation, seam 7 branding, the exponent contract',
     cmd: process.execPath,
@@ -93,6 +110,12 @@ const STEPS = [
     cmd: PY,
     args: ['-m', 'pytest', 'prep/', '-q'],
     skipIf: () => (PY ? null : 'no .venv found — run: python -m venv .venv'),
+  },
+  {
+    name: 'browser integration',
+    why: 'visible measurements, full-band controls, and rendering must match the current signal',
+    cmd: process.execPath,
+    args: [join(ROOT, 'node_modules', '@playwright', 'test', 'cli.js'), 'test'],
   },
   {
     name: 'gate runner (all tiers)',
@@ -120,7 +143,20 @@ for (const step of STEPS) {
     continue;
   }
   console.log(`\n[36m▸[0m ${step.name}  [2m(${step.why})[0m`);
-  const r = spawnSync(step.cmd, step.args, { cwd: ROOT, stdio: 'inherit', shell: false });
+  const r = spawnSync(step.cmd, step.args, {
+    cwd: ROOT,
+    stdio: 'inherit',
+    shell: false,
+    // MNE otherwise reads/writes the interactive user's config under their home directory.
+    // Verification must be hermetic in CI and in restricted workspaces; `.mne/` is ignored.
+    env: {
+      ...process.env,
+      _MNE_FAKE_HOME_DIR: ROOT,
+      // The repository keeps a local link to the already fetched fsaverage data. Supplying it
+      // explicitly prevents a fixed-point check from attempting a network download.
+      SUBJECTS_DIR: join(ROOT, 'mne_data', 'MNE-fsaverage-data'),
+    },
+  });
   if (r.status !== 0) {
     console.error(`\n[31mFAIL[0m  ${step.name}`);
     console.error('Later steps are not run: their results would be meaningless.');

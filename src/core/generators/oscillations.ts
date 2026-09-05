@@ -339,3 +339,41 @@ function synthesizeEnvelope(
   }
   return env;
 }
+
+/**
+ * Unit-mean, bounded stochastic amplitude envelope for broadband source activity.
+ *
+ * This is intentionally the same low-passed-noise mechanism used for narrowband rhythms, but
+ * exposed without an OscillationParams wrapper.  Multiplying every distributed background mode
+ * by one envelope models slow changes in overall cortical activation while leaving their lead-
+ * field topographies and relative weights untouched.
+ */
+export function synthesizeStochasticEnvelope(
+  rng: Rng,
+  nSamples: number,
+  depth: number,
+  rateHz: number,
+  fs = scalarValue('fs'),
+): Float64Array {
+  const env = new Float64Array(nSamples);
+  for (let i = 0; i < nSamples; i++) env[i] = rng.normal();
+  filtfilt(env, [lowpass(rateHz, fs, 0.707), lowpass(rateHz, fs, 0.707)]); // @lit-ok Butterworth Q = 1/sqrt(2)
+
+  let mean = 0;
+  for (let i = 0; i < nSamples; i++) mean += env[i]!;
+  mean /= nSamples;
+  let variance = 0;
+  for (let i = 0; i < nSamples; i++) variance += (env[i]! - mean) ** 2;
+  const sd = Math.sqrt(variance / nSamples) || 1;
+
+  // Normalize mean-square to one, so adding temporal texture does not silently change the
+  // meaning of background_rms_uv or invalidate the amplitude calibration.
+  let sumSq = 0;
+  for (let i = 0; i < nSamples; i++) {
+    env[i] = 1 + depth * Math.tanh((env[i]! - mean) / sd);
+    sumSq += env[i]! * env[i]!;
+  }
+  const rms = Math.sqrt(sumSq / nSamples) || 1;
+  for (let i = 0; i < nSamples; i++) env[i] = env[i]! / rms;
+  return env;
+}

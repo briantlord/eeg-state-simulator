@@ -1,0 +1,12 @@
+{
+  "protocol": "state-realism-v2",
+  "frozen_on": "2026-09-04",
+  "source": "https://physionet.org/content/hmc-sleep-staging/1.1/",
+  "development_subjects": ["SN001", "SN002", "SN003", "SN004", "SN005", "SN006", "SN007", "SN008", "SN009", "SN010", "SN011", "SN012", "SN013", "SN015", "SN016", "SN017", "SN018", "SN019", "SN020"],
+  "heldout_subjects": ["SN021", "SN022", "SN023", "SN024", "SN025"],
+  "generated_seeds": [80001, 80002, 80003, 80004, 80005, 80006],
+  "generated_epochs": 10,
+  "minimum_real_epochs": 20,
+  "maximum_real_epochs": 120,
+  "policy": "Holdout subjects were absent from the workspace cache and named before download/analysis. Keep them outside the legacy fitting directory. Do not tune parameters or thresholds on these results. Report per-subject and per-seed distributions; no realism pass threshold is established."
+}

@@ -34,9 +34,9 @@ process.stdout.write(JSON.stringify({
   phase: [...r.respirationPhase],
   meanHr: r.truth.meanHrBpm,
   respFreq: r.truth.respFreqHz,
-  hrMeanRow: provisionalValue('hr_mean'),
+  hrMeanRow: scalarValue('hr_mean_n3'),
   rAmpRow: provisionalValue('ecg_r_amp'),
-  rsaRow: provisionalValue('rsa_depth'),
+  rsaRowMs: r.truth.rsaAmplitudeMs,
 }));
 '''
 f = ROOT / '.cardiac.mts'
@@ -118,7 +118,7 @@ p95 = float(np.percentile(null, 95))
 
 print(f"\n3. RESPIRATORY SINUS ARRHYTHMIA (respiration at {d['respFreq']:.2f} Hz)\n")
 print(f"   rate modulation locked to respiratory phase  {amp:.4f}  "
-      f"(rsa_depth row {d['rsaRow']})")
+      f"(requested RR amplitude {d['rsaRowMs']:.1f} ms)")
 print(f"   95th percentile of a phase-shuffled null     {p95:.4f}")
 print(f"   -> RSA present: {'YES' if amp > p95 else 'NO'}")
 

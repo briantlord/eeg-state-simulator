@@ -68,13 +68,13 @@ print("\n3. PHASE MEMORY")
 print(f"     autocorr e-folding     {tau:6.2f} s   = {tau*f_peak:.1f} cycles")
 print(f"     (bandpass noise gave 1.8 cycles; a genuine resonance keeps phase longer)")
 
-# --- 4. waveform symmetry -- the KNOWN GAP -------------------------------------
+# --- 4. waveform symmetry after analysis-band filtering -------------------------
 band = sps.filtfilt(b, a, x)
 pk_idx, _ = sps.find_peaks(band)
 tr_idx, _ = sps.find_peaks(-band)
 n = min(len(pk_idx), len(tr_idx))
-print("\n4. WAVEFORM SYMMETRY  (known gap: AR(2) is linear, so it cannot be asymmetric)")
+print("\n4. BAND-LIMITED PEAK/TROUGH SYMMETRY")
 print(f"     mean peak amplitude    {band[pk_idx[:n]].mean():6.2f} uV")
 print(f"     mean trough amplitude  {band[tr_idx[:n]].mean():6.2f} uV")
 print(f"     asymmetry ratio        {abs(band[pk_idx[:n]].mean()/band[tr_idx[:n]].mean()):6.3f}"
-      "      1.000 = perfectly symmetric; real alpha is not")
+      "      1.000 = symmetric by this coarse metric; use bycycle for the injected phase warp")

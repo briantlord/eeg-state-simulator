@@ -78,7 +78,9 @@ export function filtfilt(x: Float64Array, sections: Biquad[]): void {
 
 /**
  * Butterworth bandpass as a cascade: highpass at `lo`, lowpass at `hi`, each of `order`.
- * Matches the convention `scipy.signal.butter(order, [lo, hi], 'bandpass')` uses.
+ * This is NOT the frequency-transformed bandpass from scipy.signal.butter(order, [lo, hi]).
+ * Its SciPy equivalent concatenates butter(order, lo, 'highpass') and
+ * butter(order, hi, 'lowpass') SOS arrays.
  */
 export function bandpassSections(lo: number, hi: number, fs: number, order: number): Biquad[] {
   const qs = butterworthQs(order);
@@ -86,4 +88,42 @@ export function bandpassSections(lo: number, hi: number, fs: number, order: numb
     ...qs.map((q) => highpass(lo, fs, q)),
     ...qs.map((q) => lowpass(hi, fs, q)),
   ];
+}
+
+/**
+ * Odd-reflection, steady-state forward/reverse filtering. Scoring contract equivalent to
+ * scipy.signal.sosfiltfilt for even-order sections, with explicit padlen = 3*(2*sections+1).
+ * The unpadded filtfilt above remains available for existing synthesis/fixture contracts.
+ */
+export function filtfiltPadded(x: Float64Array, sections: Biquad[]): Float64Array {
+  const pad = 3 * (2 * sections.length + 1);
+  if (x.length <= pad || !x.every(Number.isFinite)) {
+    throw new Error(`filtfiltPadded requires more than ${pad} finite samples`);
+  }
+  const y = new Float64Array(x.length + 2 * pad);
+  y.set(x, pad);
+  for (let i = 0; i < pad; i++) {
+    y[i] = 2 * x[0]! - x[pad - i]!;
+    y[pad + x.length + i] = 2 * x[x.length - 1]! - x[x.length - 2 - i]!;
+  }
+  const pass = (): void => {
+    for (const s of sections) {
+      const input = y[0]!;
+      const output = input * (s.b0 + s.b1 + s.b2) / (1 + s.a1 + s.a2);
+      let z1 = output - s.b0 * input;
+      let z2 = s.b2 * input - s.a2 * output;
+      for (let i = 0; i < y.length; i++) {
+        const xn = y[i]!;
+        const yn = s.b0 * xn + z1;
+        z1 = s.b1 * xn - s.a1 * yn + z2;
+        z2 = s.b2 * xn - s.a2 * yn;
+        y[i] = yn;
+      }
+    }
+  };
+  pass();
+  y.reverse();
+  pass();
+  y.reverse();
+  return y.slice(pad, pad + x.length);
 }

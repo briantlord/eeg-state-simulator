@@ -18,6 +18,7 @@ jobs:
         with: { python-version: '3.12' }
       - run: npm ci
       - run: pip install -r requirements.txt
+      - run: npx playwright install --with-deps chromium
 
       # THE HEAD MODEL IS NOT IN THIS REPOSITORY. The fsaverage lead field is derived from
       # FreeSurfer and is scrubbed from history rather than redistributed (LICENSE-DATA.md), so CI
@@ -34,3 +35,12 @@ jobs:
         run: python -c "import mne; mne.datasets.fetch_fsaverage(verbose=True)"
 
       - run: npm run verify
+      - name: Preserve validation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-evidence
+          path: |
+            prep/out/report/
+            prep/out/browser-report/
+            prep/out/browser-results/

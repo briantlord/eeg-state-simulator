@@ -22,10 +22,31 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { EventList, GeneratedEvent } from '../core/types/event.ts';
 import type { StateId } from '../core/types/state.ts';
+import type { ComposeResult } from '../core/generators/compose.ts';
 import { GENERATOR_VERSION, scalarValue } from '../core/registry.ts';
 import { RNG_IDENTITY } from '../core/rng/xoshiro128pp.ts';
 
-export const EPOCH_SCHEMA_VERSION = 1;
+// v2 added the full aperiodic mixture. v3 added respiratory aperiodic loading/phase and
+// per-band periodic modulation. v4 adds respiratory event hazards and realized event-marker
+// phases. v5 adds realized respiratory, cardiac and event-phase summaries. v6 adds the
+// released cortical infra-slow source and modulation truth. Legacy primary fields stay so
+// older analyses remain meaningful.
+export const EPOCH_SCHEMA_VERSION = scalarValue('export_schema_version');
+
+type RespirationTruth = ComposeResult['truth']['respiration'];
+type CardiacTruth = ComposeResult['truth']['cardiac'];
+type EventPhaseSummary = ComposeResult['truth']['eventPhaseSummaries'];
+type InfraSlowTruth = ComposeResult['truth']['infraSlow'];
+
+/** Variable-length physiology is written once per run, never copied into every epoch. */
+export interface RunPhysiologyTruth {
+  readonly schemaVersion: number;
+  readonly respiration: RespirationTruth;
+  readonly cardiac: CardiacTruth;
+  readonly eventPhaseSummaries: EventPhaseSummary;
+  /** Complete source-level ISF truth, or null when the matched mechanism-off arm is used. */
+  readonly infraSlow: InfraSlowTruth | null;
+}
 
 /** Ground truth as INJECTED, not as recovered. The harness compares against this. */
 export interface InjectedTruth {
@@ -33,14 +54,58 @@ export interface InjectedTruth {
   readonly chi: number;
   /** Knee parameter k. Knee frequency is k^(1/chi). Encodes the ~20 Hz knee only (D3). */
   readonly knee: number;
+  /** Every aperiodic component actually synthesized, including its share of background variance. */
+  readonly aperiodicComponents: readonly {
+    chi: number;
+    knee: number;
+    rmsFraction: number;
+  }[];
   /** Mix parameter in dB relative to `snr_nominal`. */
   readonly snrDb: number;
   /** Respiration-chi modulation depth in chi units, 0 when the mechanism is off. */
   readonly chiModDepth: number;
-  /** phi_0 in chi(t) = chi_state + A*cos(phi_resp - phi_0). Reverses between wake and sleep. */
+  /** State-specific phi_0 in chi(t) = chi_state + A*cos(phi_resp - phi_0). */
   readonly chiModPhi0: number;
+  /** Lead-field-derived modulation-depth loading, in channel order. */
+  readonly chiSpatialLoading: readonly number[];
+  /** Periodic log-amplitude coupling actually applied to each represented rhythm. */
+  readonly periodicModulations: readonly {
+    generator: string;
+    band: readonly [number, number];
+    depth: number;
+    phi0: number;
+  }[];
   /** Respiration frequency in Hz. */
   readonly respFreq: number;
+  /** Respiratory event-hazard configuration; realized marker phase lives on each event. */
+  readonly respEventCoupling: {
+    enabled: boolean;
+    soPreferredPhase: number;
+    soHazardKappa: number;
+    fastSpindlePreferredPhase: number;
+    fastSpindleHazardKappa: number;
+    slowSpindleHazardKappa: number;
+  };
+  /** Compact run summary; the variable-length breath list lives in `physiologyFile`. */
+  readonly respiration: Omit<RespirationTruth, 'breaths'>;
+  /** Compact run summary; R peaks and RR intervals live in `physiologyFile`. */
+  readonly cardiac: Omit<CardiacTruth, 'rPeaksS' | 'rrIntervalsS'>;
+  /** Circular summaries of event markers whose respiratory phases are in the event list. */
+  readonly eventPhaseSummaries: EventPhaseSummary;
+  /**
+   * Compact ISF index. Per-mode amplitudes and modulation depths live once in
+   * `physiologyFile`, avoiding a large copy in every epoch sidecar.
+   */
+  readonly infraSlow: null | {
+    readonly fixture: boolean;
+    readonly profile: 'explicit_fixture' | 'provisional_release';
+    readonly extrapolated: boolean;
+    readonly sourceModeIds: readonly string[];
+    readonly modulationTargets: readonly string[];
+    readonly electrodeDriftEnabled: boolean;
+  };
+  /** Run-relative path to detailed physiology truth, stored once rather than per epoch. */
+  readonly physiologyFile: 'physiology.json';
   /**
    * Frequency of an INDEPENDENT chi modulator, decoupled from respiration. Non-null only in
    * the G4 fixture: harness section 5 requires modulating chi at f1 while respiration runs at
@@ -53,7 +118,7 @@ export interface InjectedTruth {
   /**
    * Which respiratory mechanisms were enabled (Build Plan 5.1 a/b/c).
    *
-   * FOUR FLAGS FOR THREE MECHANISMS, because (c) has two halves that behave differently
+   * FIVE FLAGS FOR FOUR MECHANISMS, because (c) has two halves that behave differently
    * enough that recording them as one would lose the distinction the sidecar exists to
    * preserve: `amplitudeModulation` moves 0.5-4 Hz power, which overlaps chi-hat's 2-8 Hz low
    * band and therefore produces a legitimate line at the respiratory rate, while
@@ -65,6 +130,7 @@ export interface InjectedTruth {
     rmbo: boolean;
     amplitudeModulation: boolean;
     chiModulation: boolean;
+    eventTiming: boolean;
   };
   /**
    * True when graphoelements were omitted from the channel mix (G3's matched null).
@@ -112,6 +178,13 @@ export interface RunManifest {
    */
   readonly registryDigest: string;
   readonly stateSourceKind: string;
+  readonly configuration?: { readonly profile: string; readonly options: Readonly<Record<string, unknown>> };
+  readonly provenance?: {
+    readonly registrySha256: string;
+    readonly projectionSha256: string;
+    readonly implementationSha256: string;
+    readonly calibrationSha256: string;
+  };
   readonly createdBy: string;
 }
 
@@ -169,6 +242,11 @@ export function writeManifest(runDir: string, manifest: RunManifest): void {
 export function writeEventList(runDir: string, list: EventList): void {
   mkdirSync(runDir, { recursive: true });
   writeFileSync(join(runDir, 'events.json'), JSON.stringify(list, null, 2) + '\n');
+}
+
+export function writePhysiologyTruth(runDir: string, truth: RunPhysiologyTruth): void {
+  mkdirSync(runDir, { recursive: true });
+  writeFileSync(join(runDir, 'physiology.json'), JSON.stringify(truth, null, 2) + '\n');
 }
 
 /** Samples per epoch, from the registry. */

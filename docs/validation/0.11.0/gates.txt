@@ -1,0 +1,157 @@
+==============================================================================
+  VALIDATION HARNESS  --  all tier
+  generator 0.11.0   registry e3fb57710b683296
+  2026-09-04T23:28:46+00:00
+==============================================================================
+
+  Toolchain
+    ok       specparam    2.0.0rc7      (pre-release)
+    ok       yasa         0.7.0
+    ok       mne          1.12.1
+    ok       numpy        1.26.4
+    ok       scipy        1.15.3
+
+  GATE      CLS  STATUS    N  METRIC                             THRESHOLD STANDING
+  --------------------------------------------------------------------------
+  G2        C    PASS     5  5 distinct digest(s)               chosen
+        threshold: bit-identical, within-platform and within-ve...
+        -> 5 seed(s) generated twice each, 2 epoch(s), state n3; capped from 6 seeds, 1 not run
+  G2~null   C    PASS     5  5 distinct digest(s)               chosen
+        threshold: bit-identical, within-platform and within-ve...
+        -> 5 seeds -> 5 distinct digests; 21 channels all distinct
+  G4        C    PASS    12  median 0.277215  IQR 0.03345       derived
+        threshold: PAIRED per seed. Detection arm: depth(f1) wi...
+        -> detection 12/12 (p=0.00024), selectivity 12/12 (p=0.00024); median depth f1=0.2772 vs f2=0.0391, ratio 7.09x. Injects g4_fixture_chi_mod_depth=2, 13x the shipped depth: says nothing about whether the SHIPPED coupling is recoverable. Runner supplied 6 seed(s); extended to g4_n_seeds=12 because the sign test's smallest achievable p is 2^-n and at n=6 one flipped seed would decide the gate.
+  G4~null   C    PASS    12  median 0.0391061  IQR 0.03303      derived
+        threshold: Exact binomial sign test on the paired per-s...
+        -> f2 5/12 (p=0.77, 1.000x, effect 0.0000 < floor); f2-f1 7/12 (p=0.77, 1.001x, effect 0.0010 < floor); f2+f1 7/12 (p=0.77, 0.999x, effect 0.0009 < floor). Mechanism (a) injects resp_artifact_amp ~5-25 uV at f2. Largest paired effect 0.0010 against the estimator's detection floor chi_est_mdd_resp = 0.048: leakage must be BOTH consistent (p < 0.05) and at least that large, because a paired sign test detects direction rather than magnitude. ABSENCE OF EVIDENCE either way -- this bounds leakage below the floor, it does not show it is zero.
+  G6        C    PASS     1  median 4  IQR nan                  derived
+        threshold: argmax over electrodes matches the topo_expe...
+        -> spindle_fast -> C3 (ok, expected one of C3/C4/Cz); spindle_slow -> Fz (ok, expected one of F3/Fz/F4); kc -> Fz (ok, expected one of Fz/F3/F4); alpha -> Pz (ok, expected one of O1/O2/Pz). alpha posterior/frontal ratio inf (gate_alpha_ratio gt 3) RECORDED ONLY -- that row is invented and routed to T1-M2, so it does not decide this verdict. 1 seed: the weights are a data file, identical across seeds.
+  G6~null   C    PASS     1  median 4  IQR nan                  derived
+        threshold: argmax over electrodes matches the topo_expe...
+        -> transposed topographies (spindle_fast<->kc, alpha<->spindle_slow): 4/4 comparisons broke. spindle_fast -> Fz (left C3/C4/Cz); spindle_slow -> Pz (left F3/Fz/F4); kc -> C3 (left Fz/F3/F4); alpha -> Fz (left O1/O2/Pz)
+  G5        C    RECORD   6  median 0.416667  IQR 0.2083        definitional
+        threshold: 0.2
+        -> pass fraction 0.44 over 6 held-out seed(s) x 6 epochs; calibration seed 20260728 excluded; snr_nominal = 3.4836158752441406 dB. RECORD-ONLY: no threshold on this fraction exists that would not be invented.
+  G5~null   C    PASS     6  median 0.416667  IQR 0.2083        derived
+        threshold: pass_fraction(N3 @ snr_nominal) > pass_fract...
+        -> N3 0.44 vs N2 0.00 (ok) and vs N3-6dB 0.03 (ok), 6 seed(s) x 6 epochs
+  G1a       V    RECORD   6  median 0.397616  IQR 0.1175        absent
+        threshold: (none at Tier 0)
+        -> Pz, 10 epochs x 6 seeds. [rem] injected χ=2.100: err +0.398 (IQR 0.045), knee 20.0 Hz -> 16.8 Hz | [n3] injected χ=3.400: err -1.206 (IQR 0.085), knee OUT OF BAND by design (1.00 Hz), unrecoverable in 2/6 fits. RECORD-ONLY: no tolerance exists and none may be derived from this spread. A DIFFERENT QUANTITY from G1b — never differenced against it.
+  G1a~null  V    PASS    12  median 0.000790396  IQR 0.01735    chosen
+        threshold: On synthetic white noise: |MEAN chi_hat| < 0...
+        -> white noise, 12 seeds x 300 s, MEANS tested (not per-seed): chi_hat +0.0015 +/- 0.0033 (|mean| < 0.1 ok), knee parameter -0.0897 (|mean| < 1.0 ok). Bounds are numerical resolution of 'returned zero', NOT the recovery tolerance the gate is missing; that stays absent until T1-M2. Synthetic white noise, so this checks the PSD-and-fit path, not the generator.
+  G1b       V    RECORD   6  median -0.527476  IQR 0.4042       absent
+        threshold: (none at Tier 0)
+        -> Pz, 10 epochs x 6 seeds. [rem] injected χ=2.100: err -0.527 (IQR 0.286) | [n3] injected χ=3.400: err -1.332 (IQR 0.117). The bias is EXPECTED and kept: a fixed-mode fit across the modelled knee is what the published narrowband exponents were fitted with. Its magnitude is set by the invented knee_freq_* rows, so it is reproduced in form but not in mechanism. RECORD-ONLY. A DIFFERENT QUANTITY from G1a — never differenced against it.
+  G1b~null  V    PASS    12  median -0.052975  IQR 0.3035       chosen
+        threshold: On synthetic white noise: |MEAN chi_hat| < 0...
+        -> white noise, 12 seeds x 300 s, MEAN tested (not per-seed): chi_hat -0.0246 +/- 0.0674 (|mean| < 0.1 ok). PER-SEED sd 0.234 over only 0.176 decades of leverage — larger than the chi spacing between adjacent states in the registry, so no state ordering is supportable from narrowband chi on a single 300 s record (Finding 14, constrains P10). Synthetic white noise: this checks the fit path, not the generator.
+  G3        V    RECORD   6  median 0.569427  IQR 0.1076        absent
+        threshold: (none at Tier 0)
+        -> n2 @ Cz, 20 epochs x 6 seeds, median 34 injected vs 16 detected. All-event median F1 0.569. RECORD-ONLY: no acceptance tolerance exists. Quality stratification is unavailable; the former random prominence field is now an explicitly arbitrary inclusionTag.
+  G3~null   V    PASS     6  median 0  IQR 0                    derived
+        threshold: YASA run on the same background with graphoe...
+        -> n2 @ Cz, 20 epochs x 6 seeds, bit-identical background. median detections 16 with events vs 0 with them suppressed, against 34 injected. paired 6/6 (p=0.016, ok); false positives 0.000 of injected (< 0.2 ok). 'False-positive rate near zero' is not testable as written — no value of 'near' exists that would not be invented — so the paired contrast carries the claim and the raw counts are printed for a reader who wants to apply their own bound.
+
+  What these results do and do not license
+  --------------------------------------------------------------------------
+    G2 [C] recovery by code in this repository -- self-consistency only
+        The implementation is self-consistent: one seed gives one output.
+        Says nothing about whether that output resembles EEG.
+
+    G2~null [C] recovery by code in this repository -- self-consistency only
+        Catches a seed that is not actually threaded through, and channels
+        that share a substream. Says nothing about the quality of the
+        randomness.
+
+    G4 [C] recovery by code in this repository -- self-consistency only
+        The only check that the filter demonstration measures coupling
+        rather than leakage from a tilt filter modulated at the respiratory
+        rate. Class C -- we wrote the estimator -- and still the most
+        important gate in Tier 0.
+        Depends on a pending or invented registry row -- no comparability
+        claim against published magnitudes may be made from this number.
+
+    G4~null [C] recovery by code in this repository -- self-consistency only
+        Establishes that respiratory leakage into χ̂ is not gross. ABSENCE
+        OF EVIDENCE: a paired sign test at this n cannot resolve a small
+        leak, and the measured effect is 0.2% of the null median. Says
+        nothing about the estimator's behaviour at other frequencies.
+
+    G6 [C] recovery by code in this repository -- self-consistency only
+        Tests the PROJECTION FILE against an expectation held independently
+        in the registry. Reading the expectation from the file being tested
+        would make this a check that argmax works.
+
+    G6~null [C] recovery by code in this repository -- self-consistency only
+        Confirms G6 reads the projection file and compares it against an
+        independent expectation, rather than comparing the file to itself.
+        Says nothing about whether the topographies are the right SHAPE —
+        only that they are centred somewhere the literature agrees with, and
+        that moving them breaks the gate.
+
+    G5 [C] recovery by code in this repository -- self-consistency only
+        POSITIVE ARM IS RECORD-ONLY (D9). Post-calibration this is largely a
+        regression check on the amplitude relationship. It is NOT evidence
+        that our N3 resembles real N3. The null carries the discriminative
+        weight.
+        RECORD-ONLY at Tier 0: captures a distribution, not a verdict.
+        Depends on a pending or invented registry row -- no comparability
+        claim against published magnitudes may be made from this number.
+
+    G5~null [C] recovery by code in this repository -- self-consistency only
+        Carries G5's verdict. Catches a criterion that everything passes --
+        which is not a criterion. Says nothing about whether our N3
+        resembles real N3.
+
+    G1a [V] recovery by an external, independently authored, published tool
+        Records the recovery error distribution for chi and k. Sets no
+        tolerance at Tier 0; the tolerance is derived at T1-M2 from
+        specparam bias and variance at our SNR and window.
+        RECORD-ONLY at Tier 0: captures a distribution, not a verdict.
+        Depends on a pending or invented registry row -- no comparability
+        claim against published magnitudes may be made from this number.
+
+    G1a~null [V] recovery by an external, independently authored, published tool
+        Checks the harness's own PSD-and-fit path against a signal whose
+        answer is known analytically. Says NOTHING about whether our
+        generator's chi is right, nor about the recovery error the gate
+        records — it is a wiring check, and the gate it guards is
+        record-only.
+
+    G1b [V] recovery by an external, independently authored, published tool
+        A DIFFERENT quantity from G1a, not a second estimate of the same
+        one. Its bias is structural and originates in the modelled 20 Hz
+        knee, so its magnitude is a function of the invented k_* rows -- not
+        evidence of comparability with published narrowband exponents.
+        RECORD-ONLY at Tier 0: captures a distribution, not a verdict.
+        Depends on a pending or invented registry row -- no comparability
+        claim against published magnitudes may be made from this number.
+
+    G1b~null [V] recovery by an external, independently authored, published tool
+        Checks the fixed-mode fit path against a known-zero signal, and
+        MEASURES the estimator's noise floor over 30–45 Hz. That floor
+        exceeds the chi spacing between adjacent states, which constrains
+        what any narrowband comparison can claim.
+
+    G3 [V] recovery by an external, independently authored, published tool
+        Records the agreement curve. Sets no pass band: our ground truth has
+        no label noise, so a realistic generator should score ABOVE the
+        human ceiling, and forcing F1 down would mean injecting events too
+        marginal to be spindles.
+        RECORD-ONLY at Tier 0: captures a distribution, not a verdict.
+        Depends on a pending or invented registry row -- no comparability
+        claim against published magnitudes may be made from this number.
+
+    G3~null [V] recovery by an external, independently authored, published tool
+        Attributes YASA's detections to the injected events rather than to
+        the background, by a paired contrast on a bit-identical background.
+        Says nothing about whether the spindles look right — only that the
+        detector is not firing on the noise.
+
+==============================================================================
+  VERDICT: PASS
+==============================================================================

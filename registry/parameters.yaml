@@ -42,7 +42,26 @@ schema_version: 1
 # keyed by (generator_version, toolchain), so for one commit a stale baseline could have compared
 # across incompatible generators silently. The rule is at the top of DECISIONS.md; writing the
 # decision entry is not a substitute for the bump, and nothing in the build enforced it.
-generator_version: "0.3.0"
+# 0.4.0: the stationary aperiodic background now carries a fitted, slow stochastic gain envelope.
+# Alpha's bistable damping and dwell are also fitted to EEGMAT temporal texture. These changes
+# affect every state and every golden output while preserving average RMS and topography. See
+# Findings 32-34.
+# 0.5.0: N3's aperiodic background is now a fitted two-timescale mixture. The second component
+# corrects the high-frequency tail and recovers the HMC knee while sharing chi_n3 and every
+# spatial mode with the original component. N3 golden outputs and epoch truth changed.
+# 0.6.0: respiration is now a resumable breath-to-breath controller. State-specific mean rate,
+# regularity, temporal memory, depth, I:E ratio and probabilistic pauses replace independent
+# lognormal periods wrapped around one fixed template. Live chunks preserve respiratory state,
+# and the mechanical artifact no longer inherits the N3 aperiodic-background gain.
+# 0.7.0: cardiac timing is now a resumable RR-domain controller. State-specific mean HR and SDNN
+# are fitted to 19 HMC nights; RSA is a separate depth-modulated RR component with literature
+# stage ratios. Live chunks preserve beat schedule, HRV state and ECG waveform tails.
+# 0.8.0: respiratory EEG coupling now uses the peak-inspiration-centred phase convention of its
+# source studies, exact state-specific aperiodic phase means, a lead-field-derived posterior
+# loading, breath-depth modulation and a power-preserving periodic gain distinct from slope.
+# 0.9.0: NREM slow-oscillation downstates and fast-spindle onsets now use separately specified,
+# count-preserving respiratory hazards. Slow spindles remain the matched negative-control path.
+generator_version: "0.11.0"
 
 # Seam 2. The canonical state set, enumerated once. Exported as StateId.
 # chi_n1 was missing from the source markdown although chi_direction and knee_present both
@@ -228,12 +247,18 @@ params:
       regenerating on every frame.
 
   export_schema_version:
-    value: {kind: scalar, v: 1}
+    value: {kind: scalar, v: 7}
     units: null
     standing: chosen
     source: {kind: none, rationale: "epoch-directory schema (seam 9)"}
     states: all
     section: "1. Sampling, display, infrastructure"
+    note: >-
+      v2 added the complete aperiodic component mixture. v3 added respiratory aperiodic
+      phase/loading and periodic band modulation. v4 added respiratory event-hazard
+      configuration and realized event-marker phases. v5 adds realized breath morphology,
+      variability, RR/HRV/RSA, and circular event-phase summaries; legacy primary fields remain
+      for older readers.
 
   rng_algorithm_ts:
     value: {kind: enum, options: ["xoshiro128++"]}
@@ -570,7 +595,8 @@ params:
   # Alpha as a damped stochastic oscillator, superseding the burst-envelope rows below.
   # See DECISIONS.md D13 and docs/Tier0-Estimator-Probe.md Finding 8.
   alpha_bandwidth_sharp:
-    value: {kind: scalar, v: 1.0}
+    value: {kind: pending}
+    provisional: {v: 0.7, basis: "fit jointly with alpha_bandwidth_broad and alpha_mode_dwell against EEGMAT Pz linked-ear temporal texture (Finding 33): envelope CV, bimodality, burst rate, burst duration and envelope memory; mean relative error 0.031 versus 0.143 before", expires_at_milestone: T1-M1, constrained_by: "do not fit against alpha prominence or topography; those constrain different rows"}
     units: Hz
     standing: invented
     source: {kind: none, rationale: "-3 dB bandwidth of the weakly damped (high-amplitude) alpha mode"}
@@ -585,7 +611,8 @@ params:
       rather than asserted.
 
   alpha_bandwidth_broad:
-    value: {kind: scalar, v: 6.0}
+    value: {kind: pending}
+    provisional: {v: 8.0, basis: "joint EEGMAT temporal-texture fit with alpha_bandwidth_sharp and alpha_mode_dwell (Finding 33); stronger damping in the low-amplitude mode increases the observed state contrast", expires_at_milestone: T1-M1, constrained_by: "do not fit against alpha prominence or topography"}
     units: Hz
     standing: invented
     source: {kind: none, rationale: "-3 dB bandwidth of the strongly damped (low-amplitude) alpha mode"}
@@ -597,11 +624,13 @@ params:
       low-amplitude states rather than diffusing about one mean (Freyer et al. 2009, 2011;
       mechanism a subcritical Hopf bifurcation). A single linear mode has a Rayleigh envelope
       -- measured CV 0.521 against Rayleigh's exact 0.523 -- which is precisely the
-      distribution that finding contradicts. With two modes the measured bimodality
-      coefficient is 0.580, above the 0.555 threshold; with one it is 0.434.
+      distribution that finding contradicts. In the matched output comparison the retained
+      two-mode fit gives a bimodality coefficient of 0.528 against 0.549 in EEGMAT; this is a
+      distributional comparison, not a thresholded claim that every record is bimodal.
 
   alpha_mode_dwell:
-    value: {kind: scalar, v: 1.25}
+    value: {kind: pending}
+    provisional: {v: 4.0, basis: "joint EEGMAT temporal-texture fit (Finding 33); raises median burst duration from 0.310 toward 0.348 s and lowers threshold-crossing rate from 38.5 toward 32.8/min", expires_at_milestone: T1-M1, constrained_by: "fit temporal state persistence, not oscillation amplitude"}
     units: s
     standing: invented
     source: {kind: none, rationale: "mean dwell time in each alpha amplitude mode"}
@@ -754,10 +783,11 @@ params:
     section: "4. Oscillations"
 
   delta_amp:
-    value: {kind: interval, lo: 100, hi: 200, meaning: uncertainty}
+    value: {kind: pending}
+    provisional: {v: 50, basis: "joint output-side fit with so_rate against 18 HMC subjects through the matched four-derivation YASA pipeline (Finding 34); separates continuous delta from discrete slow waves and reduces detected N3 slow-wave rate from 12.4/min toward 3.0/min", expires_at_milestone: T1-M1, constrained_by: "must be fitted against HMC morphology and band allocation, never against the AASM G5 amplitude threshold"}
     units: uV_pp
     standing: invented
-    source: {kind: none, rationale: "textbook range, matching neighbouring so_amp and kc_amp. Explicitly NOT derived from the 75 uV AASM criterion."}
+    source: {kind: none, rationale: "output-side HMC fit; explicitly not derived from the 75 uV AASM criterion"}
     states: [n3]
     section: "4. Oscillations"
     milestone: T1-M1
@@ -776,12 +806,24 @@ params:
       gate_aasm_n3_band, the aperiodic offset b has no registry row at all, and the
       interval-to-point reduction rule is unregistered with zero Dv rows in the registry.
       At least three further degrees of freedom remain. See Execution-Scheme section 7.
+      Finding 34 supersedes the invented 100-200 range with a 50 uV_pp continuous-delta
+      source fitted jointly with discrete slow-wave rate against HMC, independently of G5.
 
   so_freq:
     value: {kind: bound, op: lt, v: 1}
     units: Hz
     standing: invented
     source: {kind: none, rationale: "distinct from the AASM delta band; uncited"}
+    states: [n3]
+    section: "4. Oscillations"
+    milestone: T1-M1
+
+  so_rate:
+    value: {kind: pending}
+    provisional: {v: 9, basis: "joint output-side fit with delta_amp against HMC N3 slow-wave rate and morphology (Finding 34); source scheduler rate 9/min produces 2.33 YASA detections per channel-minute, inside real IQR 1.62-4.32", expires_at_milestone: T1-M1, constrained_by: "fit against independent HMC detections, not the generator event list or G5"}
+    units: "1/min"
+    standing: invented
+    source: {kind: none, rationale: "the source scheduler rate is not the same quantity as detector events per channel-minute; it is obtained by output-side inversion"}
     states: [n3]
     section: "4. Oscillations"
     milestone: T1-M1
@@ -810,6 +852,39 @@ params:
       against, so it belongs beside the amplitudes rather than in code.
       NOTE this row is in RMS while every oscillation amplitude is peak-to-peak; the
       conversion is amp_pp_to_rms.
+
+  background_gain_n3:
+    value: {kind: pending}
+    provisional: {v: 1.9, basis: "output-side fit against 18 HMC subjects after separating continuous delta from discrete slow waves (Finding 34): robust RMS 21.5 uV falls inside real IQR 18.6-23.4, YASA slow-wave rate 4.45/min sits at the real IQR edge 1.62-4.32, morphology remains matched, and exact G5 pass fraction 0.175 lies inside real HMC IQR 0.039-0.364", expires_at_milestone: T1-M1, constrained_by: "fit jointly to independent HMC amplitude, morphology and pass-fraction distributions, not the AASM threshold alone; event amplitude is held fixed"}
+    units: null
+    standing: invented
+    source: {kind: none, rationale: "state-specific aperiodic level required after delta_amp stopped carrying the entire N3 amplitude"}
+    states: [n3]
+    section: "4. Oscillations"
+    milestone: T1-M1
+    note: "Multiplies the complete N3 aperiodic background after spatial mixing and unit-RMS temporal modulation; does not scale spindles or slow-oscillation event morphology. Finding 35 subsequently added the fast-timescale component: the held-out G5 fraction moved to 0.083 but remains inside the real HMC IQR 0.039-0.364, so this gain was not circularly retuned."
+
+  background_fast_fraction_n3:
+    value: {kind: pending}
+    provisional: {v: 0.20, basis: "output-side two-timescale fit against 18 HMC subjects (Finding 35): 20% of N3 aperiodic variance in the fast component gives held-out delta/theta/alpha/sigma/beta fractions 0.827/0.100/0.038/0.020/0.012 against real 0.836/0.086/0.044/0.020/0.010", expires_at_milestone: T1-M1, constrained_by: "jointly fitted to the HMC broadband PSD and guarded by independently measured chi and knee IQRs; never fit to AASM thresholds or generator event labels"}
+    units: null
+    standing: invented
+    source: {kind: none, rationale: "source variance share obtained by output-side inversion; it is not a directly observed physiological fraction"}
+    states: [n3]
+    section: "3. Aperiodic background"
+    milestone: T1-M1
+    note: "Variance share, not amplitude share. Independent components receive sqrt(1-q) and sqrt(q) RMS scaling, preserving total aperiodic variance."
+
+  background_fast_knee_n3:
+    value: {kind: pending}
+    provisional: {v: 8.0, basis: "joint output-side grid fit with background_fast_fraction_n3 against 18 HMC subjects (Finding 35); a source knee of 8 Hz yields held-out output knee 1.35 Hz, inside the real HMC IQR 0.88-2.60, while output chi 2.38 remains inside 2.32-2.84", expires_at_milestone: T1-M1, constrained_by: "must be fitted jointly with the variance share through the HMC four-derivation pipeline; must not be identified with the separate unmodelled 45 Hz literature claim"}
+    units: Hz
+    standing: invented
+    source: {kind: none, rationale: "source timescale obtained by output-side inversion; HMC constrains the resulting scalp-spectrum knee, not this source knee directly"}
+    states: [n3]
+    section: "3. Aperiodic background"
+    milestone: T1-M1
+    note: "Uses chi_n3 rather than adding another exponent. The two components differ only in correlation timescale and independent realization; they share the same lead-field modes."
 
   amp_pp_to_rms:
     value: {kind: scalar, v: 2.828}
@@ -1060,6 +1135,32 @@ params:
       2-D near/far split, and a white-cortex source model. Some of it is model mismatch rather than
       scalp physiology, and it must not be cited as the latter.
 
+  background_envelope_depth:
+    value: {kind: pending}
+    provisional: {v: 0.35, basis: "output-side fit against robust CV of two-second band power across 19 scored HMC nights; 0.45 corrected the original 0.56-0.73x deficit but overshot N2 and REM, while one shared 0.35 avoids state-specific knobs", expires_at_milestone: T1-M1, constrained_by: "fit temporal band-power variability only; do not tune against spatial correlation, rank, or a gate threshold"}
+    units: null
+    standing: invented
+    source: {kind: none, rationale: "the mechanism is generic stochastic gain modulation; this depth is an output-side fit awaiting the completed sweep"}
+    states: all
+    section: "5. Topography and geometry"
+    milestone: T1-M1
+    note: >-
+      A bounded multiplier on the entire distributed aperiodic background, normalized to unit RMS.
+      It adds waxing and waning without changing average background power or lead-field weights.
+      Finding 32 found generated two-second band-power CV only 0.56-0.73x the real HMC median in
+      wake_ec, N1, N2 and REM. One shared depth is intentionally more parsimonious than a separate
+      intermittency parameter for every state and band.
+
+  background_envelope_rate:
+    value: {kind: scalar, v: 0.10}
+    units: Hz
+    standing: chosen
+    source: {kind: none, rationale: "sets changes on a several-second scale resolved by the two-second temporal-texture benchmark"}
+    states: all
+    section: "5. Topography and geometry"
+    milestone: T1-M1
+    note: "Envelope corner, not a physiological oscillation; the depth carries the fitted effect size."
+
   ap_axis_span:
     value: {kind: scalar, v: 180}
     units: mm
@@ -1140,6 +1241,15 @@ params:
   spindle_rate:   {value: {kind: interval, lo: 2,  hi: 5,  meaning: uncertainty}, units: "1/min", standing: invented, source: {kind: none, rationale: "uncited"}, states: [n2, n3], section: "6. Graphoelements", milestone: T1-M1, note: "States extended to N3 on import: DECISIONS/Build-Plan 4.1 parameterize SO-spindle coupling for N3 (so_spindle_pref_phase, so_spindle_strength) but spindle_rate existed only for N2, leaving the N3 spindle generator with no rate."}
   spindle_fast_freq: {value: {kind: interval, lo: 13, hi: 15, meaning: uncertainty}, units: Hz, standing: invented, source: {kind: none, rationale: "uncited; central-parietal"}, states: [n2], section: "6. Graphoelements", milestone: T1-M1}
   spindle_slow_freq: {value: {kind: interval, lo: 11, hi: 13, meaning: uncertainty}, units: Hz, standing: invented, source: {kind: none, rationale: "uncited; frontal"}, states: [n2], section: "6. Graphoelements", milestone: T1-M1}
+  spindle_fast_fraction:
+    value: {kind: pending}
+    provisional: {v: 0.20, basis: "four-point output-side sweep against HMC YASA center frequency (Finding 34); 0.20 yields N2 12.424 and N3 12.748 Hz against real 12.789 and 12.732, reducing mean relative error from 0.055 at the former 0.50 mixture to 0.015", expires_at_milestone: T1-M1, constrained_by: "fit detected frequency only while keeping the published fast/slow topographies and registered frequency ranges fixed"}
+    units: null
+    standing: invented
+    source: {kind: none, rationale: "the four HMC derivations preferentially detect central fast spindles, so the source mixture must be solved through the detector"}
+    states: [n2, n3]
+    section: "6. Graphoelements"
+    milestone: T1-M1
   kc_amp:         {value: {kind: interval, lo: 100, hi: 200, meaning: uncertainty}, units: uV_pp, standing: invented, source: {kind: none, rationale: "textbook range"}, states: [n2], section: "6. Graphoelements", milestone: T1-M1}
 
   kc_dur_min:
@@ -1222,38 +1332,81 @@ params:
   # 7. Respiration and coupling
   # =====================================================================
 
-  resp_rate_wake: {value: {kind: interval, lo: 12, hi: 18, meaning: uncertainty}, units: "1/min", standing: invented, source: {kind: none, rationale: "uncited"}, states: [wake_eo, wake_ec], section: "7. Respiration and coupling", milestone: T1-M1}
-  resp_rate_n2:   {value: {kind: interval, lo: 12, hi: 15, meaning: uncertainty}, units: "1/min", standing: invented, source: {kind: none, rationale: "uncited"}, states: [n2], section: "7. Respiration and coupling", milestone: T1-M1}
-  resp_rate_n3:   {value: {kind: interval, lo: 12, hi: 15, meaning: uncertainty}, units: "1/min", standing: invented, source: {kind: none, rationale: "uncited; most regular"}, states: [n3], section: "7. Respiration and coupling", milestone: T1-M1}
-  resp_rate_rem:  {value: {kind: interval, lo: 10, hi: 22, meaning: uncertainty}, units: "1/min", standing: invented, source: {kind: none, rationale: "irregularity is well established; magnitude uncited"}, states: [rem], section: "7. Respiration and coupling", milestone: T1-M1, note: "Source markdown gave the English word 'variable', which is not machine-readable. Widened interval plus resp_period_cv carries the irregularity."}
+  resp_rate_wake: {value: {kind: scalar, v: 16.8}, units: "1/min", standing: literature, source: {kind: citation, authors: "Gutierrez et al.", year: 2016, venue: "Physiological Reports"}, states: [wake_eo, wake_ec], section: "7. Respiration and coupling", note: "Mean spontaneous respiratory rate in 38 adults with AHI < 5; reported SD 2.4/min. The same wake mean is used for eyes open and closed because the study did not separate them."}
+  resp_rate_n1:   {value: {kind: scalar, v: 15.7}, units: "1/min", standing: literature, source: {kind: citation, authors: "Gutierrez et al.", year: 2016, venue: "Physiological Reports"}, states: [n1], section: "7. Respiration and coupling", note: "Group mean; reported SD 2.8/min."}
+  resp_rate_n2:   {value: {kind: scalar, v: 15.5}, units: "1/min", standing: literature, source: {kind: citation, authors: "Gutierrez et al.", year: 2016, venue: "Physiological Reports"}, states: [n2], section: "7. Respiration and coupling", note: "Group mean; reported SD 2.2/min."}
+  resp_rate_n3:   {value: {kind: scalar, v: 15.9}, units: "1/min", standing: literature, source: {kind: citation, authors: "Gutierrez et al.", year: 2016, venue: "Physiological Reports"}, states: [n3], section: "7. Respiration and coupling", note: "Group mean; reported SD 2.4/min. N3 is more regular, not necessarily slower than every other NREM stage."}
+  resp_rate_rem:  {value: {kind: scalar, v: 15.2}, units: "1/min", standing: literature, source: {kind: citation, authors: "Gutierrez et al.", year: 2016, venue: "Physiological Reports"}, states: [rem], section: "7. Respiration and coupling", note: "Group mean; reported SD 3.0/min. REM irregularity belongs in breath timing, not in a widened mean-rate interval."}
+
+  resp_subject_rate_cv:
+    value: {kind: pending}
+    provisional: {v: 0.143, basis: "wake group SD/mean (2.4/16.8) from Gutierrez et al. used as a stable subject-rate spread approximation", expires_at_milestone: T1-M1, constrained_by: "replace with a hierarchical repeated-state fit; cross-sectional spread is not proof of a stable within-subject phenotype"}
+    units: null
+    standing: invented
+    source: {kind: none, rationale: "the source reports cross-sectional spread, while the controller needs a stable subject effect"}
+    states: all
+    section: "7. Respiration and coupling"
+    milestone: T1-M1
 
   resp_ie_ratio: {value: {kind: interval, lo: 1.5, hi: 2.0, meaning: uncertainty}, units: null, standing: invented, source: {kind: none, rationale: "expiration:inspiration duration ratio; uncited"}, states: all, section: "7. Respiration and coupling", milestone: T1-M1, note: "Source markdown wrote '1:1.5 - 1:2'. Normalized to a numeric ratio."}
 
-  resp_pause_fraction:
-    value: {kind: scalar, v: 0.15}
-    units: null
-    standing: invented
-    source: {kind: none, rationale: "fraction of the breath period spent in inhalation and exhalation pauses"}
-    states: all
-    section: "7. Respiration and coupling"
-    milestone: T1-M1
-    note: >-
-      NeuroKit2's breathmetrics model interpolates inhalation and exhalation pauses, and the
-      Build Plan says to transcribe it rather than reinvent it. NeuroKit2 is not a dependency
-      here, so this implements the published description instead and the pause fraction is
-      invented. TODO(T1): validate against neurokit2.rsp_simulate directly -- the risk
-      register's mitigation for rebuilding solved generators is "transcribe, cite, validate
-      against the originals", and the third step is not done.
-
-  resp_period_cv:
+  resp_ie_ratio_cv:
     value: {kind: pending}
-    provisional: {v: 0.08, basis: "coefficient of variation of breath period; N3 most regular, REM most variable", expires_at_milestone: T1-M1, constrained_by: "must not be derived from G4's own output"}
+    provisional: {v: 0.10, basis: "breath-to-breath I:E ratio variability for the smallest non-repeating morphology prefix", expires_at_milestone: T1-M1, constrained_by: "validate feature distributions against BreathMetrics/NeuroKit2 and an external respiratory belt corpus"}
     units: null
     standing: invented
-    source: {kind: none, rationale: ""}
+    source: {kind: none, rationale: "uncalibrated morphology variability"}
     states: all
     section: "7. Respiration and coupling"
     milestone: T1-M1
+
+  resp_inhale_pause_probability:
+    value: {kind: scalar, v: 0.30}
+    units: null
+    standing: chosen
+    source: {kind: citation, authors: "Noto et al.", year: 2018, venue: "BreathMetrics reference implementation"}
+    states: all
+    section: "7. Respiration and coupling"
+    note: "Matches the reference implementation default. It is an interoperability choice, not a claim that every healthy cohort has this pause frequency."
+
+  resp_exhale_pause_probability:
+    value: {kind: scalar, v: 0.30}
+    units: null
+    standing: chosen
+    source: {kind: citation, authors: "Noto et al.", year: 2018, venue: "BreathMetrics reference implementation"}
+    states: all
+    section: "7. Respiration and coupling"
+    note: "Matches the reference implementation default. It is an interoperability choice, not a claim that every healthy cohort has this pause frequency."
+
+  resp_pause_duration_s:
+    value: {kind: scalar, v: 0.20}
+    units: s
+    standing: chosen
+    source: {kind: citation, authors: "Noto et al.", year: 2018, venue: "BreathMetrics reference implementation"}
+    states: all
+    section: "7. Respiration and coupling"
+    note: "Matches the reference implementation's average inhale- and exhale-pause length. This establishes feature parity with that simulator, not a universal physiological mean."
+
+  resp_period_cv_wake: {value: {kind: pending}, provisional: {v: 0.16, basis: "wake timing variability; state ordering anchored externally, magnitude provisional", expires_at_milestone: T1-M1, constrained_by: "fit inter-breath intervals from an external belt corpus, never G4 output"}, units: null, standing: invented, source: {kind: none, rationale: "state ordering is reported, exact CV not read out"}, states: [wake_eo, wake_ec], section: "7. Respiration and coupling", milestone: T1-M1}
+  resp_period_cv_n1:   {value: {kind: pending}, provisional: {v: 0.10, basis: "N1 lies between wake and stable NREM in respiratory regularity", expires_at_milestone: T1-M1, constrained_by: "fit inter-breath intervals from an external belt corpus, never G4 output"}, units: null, standing: invented, source: {kind: none, rationale: "exact CV not read out"}, states: [n1], section: "7. Respiration and coupling", milestone: T1-M1}
+  resp_period_cv_n2:   {value: {kind: pending}, provisional: {v: 0.08, basis: "stable NREM respiratory timing", expires_at_milestone: T1-M1, constrained_by: "fit inter-breath intervals from an external belt corpus, never G4 output"}, units: null, standing: invented, source: {kind: none, rationale: "exact CV not read out"}, states: [n2], section: "7. Respiration and coupling", milestone: T1-M1}
+  resp_period_cv_n3:   {value: {kind: pending}, provisional: {v: 0.06, basis: "N3 is the most regular state in the controller", expires_at_milestone: T1-M1, constrained_by: "fit inter-breath intervals from an external belt corpus, never G4 output"}, units: null, standing: invented, source: {kind: none, rationale: "exact CV not read out"}, states: [n3], section: "7. Respiration and coupling", milestone: T1-M1}
+  resp_period_cv_rem:  {value: {kind: pending}, provisional: {v: 0.14, basis: "REM restores irregular respiratory timing without changing its mean into a range", expires_at_milestone: T1-M1, constrained_by: "fit inter-breath intervals from an external belt corpus, never G4 output"}, units: null, standing: invented, source: {kind: none, rationale: "exact CV not read out"}, states: [rem], section: "7. Respiration and coupling", milestone: T1-M1}
+
+  resp_fast_tau_breaths: {value: {kind: pending}, provisional: {v: 2.0, basis: "short-memory timing state spanning roughly 6-16 s at normal rates", expires_at_milestone: T1-M1, constrained_by: "fit fluctuation structure from external inter-breath intervals"}, units: breaths, standing: invented, source: {kind: none, rationale: "AR(1) reduction of reported short-timescale structure"}, states: all, section: "7. Respiration and coupling", milestone: T1-M1}
+  resp_slow_tau_s: {value: {kind: pending}, provisional: {v: 120, basis: "one inspectable timescale inside the reported 50-200 s respiratory fluctuation range", expires_at_milestone: T1-M1, constrained_by: "replace if an external fluctuation gate rejects the two-timescale model"}, units: s, standing: invented, source: {kind: none, rationale: "model reduction of a broad reported range"}, states: all, section: "7. Respiration and coupling", milestone: T1-M1}
+  resp_fast_variance_fraction: {value: {kind: pending}, provisional: {v: 0.55, basis: "share of log-period variance assigned to the short-memory latent state", expires_at_milestone: T1-M1, constrained_by: "fit short/long fluctuation measures jointly against external belts"}, units: null, standing: invented, source: {kind: none, rationale: "uncalibrated latent variance allocation"}, states: all, section: "7. Respiration and coupling", milestone: T1-M1}
+  resp_slow_fraction_wake: {value: {kind: pending}, provisional: {v: 0.25, basis: "wake carries visible long-timescale respiratory structure", expires_at_milestone: T1-M1, constrained_by: "fit long-window fluctuation measures against external belts"}, units: null, standing: invented, source: {kind: none, rationale: "direction externally reported; magnitude provisional"}, states: [wake_eo, wake_ec], section: "7. Respiration and coupling", milestone: T1-M1}
+  resp_slow_fraction_n1: {value: {kind: pending}, provisional: {v: 0.10, basis: "transition between wake-like and stable NREM dynamics", expires_at_milestone: T1-M1, constrained_by: "fit long-window fluctuation measures against external belts"}, units: null, standing: invented, source: {kind: none, rationale: "magnitude provisional"}, states: [n1], section: "7. Respiration and coupling", milestone: T1-M1}
+  resp_slow_fraction_nrem: {value: {kind: pending}, provisional: {v: 0.03, basis: "N2/N3 receive little long-timescale respiratory variance", expires_at_milestone: T1-M1, constrained_by: "fit long-window fluctuation measures against external belts"}, units: null, standing: invented, source: {kind: none, rationale: "direction reported by Rostig and Zschocke; magnitude provisional"}, states: [n2, n3], section: "7. Respiration and coupling", milestone: T1-M1}
+  resp_slow_fraction_rem: {value: {kind: pending}, provisional: {v: 0.30, basis: "REM restores pronounced long-timescale respiratory structure", expires_at_milestone: T1-M1, constrained_by: "fit long-window fluctuation measures against external belts"}, units: null, standing: invented, source: {kind: none, rationale: "direction reported by Rostig and Zschocke; magnitude provisional"}, states: [rem], section: "7. Respiration and coupling", milestone: T1-M1}
+
+  resp_depth_cv_wake: {value: {kind: pending}, provisional: {v: 0.20, basis: "non-repeating wake breath depth", expires_at_milestone: T1-M1, constrained_by: "fit belt depth after normalization against external respiratory recordings"}, units: null, standing: invented, source: {kind: none, rationale: "uncalibrated belt-depth variability"}, states: [wake_eo, wake_ec], section: "7. Respiration and coupling", milestone: T1-M1}
+  resp_depth_cv_n1:   {value: {kind: pending}, provisional: {v: 0.16, basis: "transition-state depth variability", expires_at_milestone: T1-M1, constrained_by: "fit belt depth after normalization against external respiratory recordings"}, units: null, standing: invented, source: {kind: none, rationale: "uncalibrated belt-depth variability"}, states: [n1], section: "7. Respiration and coupling", milestone: T1-M1}
+  resp_depth_cv_n2:   {value: {kind: pending}, provisional: {v: 0.12, basis: "reduced NREM depth variability", expires_at_milestone: T1-M1, constrained_by: "fit belt depth after normalization against external respiratory recordings"}, units: null, standing: invented, source: {kind: none, rationale: "uncalibrated belt-depth variability"}, states: [n2], section: "7. Respiration and coupling", milestone: T1-M1}
+  resp_depth_cv_n3:   {value: {kind: pending}, provisional: {v: 0.08, basis: "most regular NREM depth variability", expires_at_milestone: T1-M1, constrained_by: "fit belt depth after normalization against external respiratory recordings"}, units: null, standing: invented, source: {kind: none, rationale: "uncalibrated belt-depth variability"}, states: [n3], section: "7. Respiration and coupling", milestone: T1-M1}
+  resp_depth_cv_rem:  {value: {kind: pending}, provisional: {v: 0.22, basis: "irregular REM breath depth", expires_at_milestone: T1-M1, constrained_by: "fit belt depth after normalization against external respiratory recordings"}, units: null, standing: invented, source: {kind: none, rationale: "uncalibrated belt-depth variability"}, states: [rem], section: "7. Respiration and coupling", milestone: T1-M1}
+  resp_depth_timing_correlation: {value: {kind: pending}, provisional: {v: 0.35, basis: "shared fast respiratory drive produces correlated period and depth without making them identical", expires_at_milestone: T1-M1, constrained_by: "fit period-depth association against external breath features"}, units: null, standing: invented, source: {kind: none, rationale: "uncalibrated latent coupling"}, states: all, section: "7. Respiration and coupling", milestone: T1-M1}
 
   resp_artifact_amp:
     value: {kind: interval, lo: 5, hi: 25, meaning: uncertainty}
@@ -1275,7 +1428,7 @@ params:
 
   resp_amp_mod_depth:
     value: {kind: pending}
-    provisional: {v: 0.35, basis: "depth of respiratory-phase modulation of low-frequency amplitude, 0-1", expires_at_milestone: T1-M1, constrained_by: "must not be derived from the coupling estimator the filter demo reads"}
+    provisional: {v: 0.35, basis: "low-band log-amplitude depth in the positive, power-preserving respiratory gain", expires_at_milestone: T1-M1, constrained_by: "read out periodic-power modulation from an external simultaneous EEG/respiration corpus; never fit the simulator's own coupling estimate"}
     units: null
     standing: invented
     source: {kind: none, rationale: "Kluger & Gross 2021 report respiration modulates band amplitude; depth not read out"}
@@ -1283,15 +1436,13 @@ params:
     section: "7. Respiration and coupling"
     milestone: T1-M1
     note: >-
-      The AMPLITUDE half of Build Plan 5.1(c), as distinct from the exponent half.
-      It was added on the expectation that a 0.5-1 Hz high-pass would remove it, because it
-      modulates the envelope of low-frequency content. MEASURED, THAT IS WRONG: retained
-      100-101% across the whole clinical cutoff range. A high-pass removes a CARRIER below its
-      cutoff; it does not remove amplitude modulation of a carrier that passes, and modulating
-      0.5-4 Hz delta at 0.25 Hz puts the sidebands around the delta band rather than at
-      0.25 Hz. Kept, and kept separately switchable, because it is a real physiological
-      mechanism and because its INSENSITIVITY is now the control in Demo 1 -- the row that
-      does not move while mechanism (a) collapses 99.8%. See Finding 10 (resolved).
+      Low-frequency PERIODIC-power coupling, distinct from the aperiodic-exponent path. R3
+      replaces the old linear 1 + d*cos gain with exp(m*cos)/sqrt(I0(2m)), so this row is the
+      log-amplitude concentration m and each breath preserves mean squared rhythm amplitude by
+      construction. The phase course is periodic_mod_phi0_low; breath depth scales the realized
+      value. A clinical high-pass does not remove this coupling because it removes carriers in
+      its stopband, not the respiratory sidebands around a passed rhythm. Its absolute magnitude
+      remains pending and must not be promoted from generated recovery. See Findings 10 and 39.
 
   chi_mod_depth:
     value: {kind: pending}
@@ -1304,47 +1455,101 @@ params:
     milestone: T1-M1
     note: "Routed to T1-M1 but the source names a specific figure — reading it out is an afternoon, not 8 days of corpus work. Flagged for early conversion to literature."
 
-  chi_mod_phase_wake:
-    value: {kind: procedure, text: "slope decreases in late inspiration, increases in late expiration"}
-    units: rad
-    standing: invented
-    source: {kind: none, rationale: "2025 respiratory-excitability study, N=23; author not recorded"}
-    states: [wake_eo, wake_ec, n1]
-    section: "7. Respiration and coupling"
-    milestone: T1-M1
-    note: "Re-standed literature -> invented: venue-less, author-less. Also note the value is a sentence with units 'rad' — 5.2's formula needs a number for phi_0, supplied by chi_mod_phi0_wake."
-
   chi_mod_phi0_wake:
-    value: {kind: pending}
-    provisional: {v: 3.14159265358979, basis: "phi_0 in chi(t) = chi_state + A*cos(phi_resp - phi_0); wake sense per chi_mod_phase_wake", expires_at_milestone: T1-M1, constrained_by: "sign must be verified against the tilt filter's measured convention, not assumed"}
+    value: {kind: scalar, v: 2.99}
     units: rad
-    standing: invented
-    source: {kind: none, rationale: ""}
-    states: [wake_eo, wake_ec, n1]
+    standing: literature
+    source: {kind: citation, authors: "Sánchez Corzo et al.", year: 2026, venue: "Progress in Neurobiology 256:102857"}
+    states: [wake_eo, wake_ec]
     section: "7. Respiration and coupling"
-    milestone: T1-M1
-    note: "Added on import: 5.2 states a formula requiring a numeric phi_0 per state, and no row supplied one."
+    note: "Group mean direction of maximum 1/f slope, 171.09 degrees, under the paper's phase convention: peak inspiration = 0, inspiration -pi..0, expiration 0..pi."
 
-  chi_mod_phi0_sleep:
-    value: {kind: pending}
-    provisional: {v: 0.0, basis: "REVERSED relative to wake, from N2 onward", expires_at_milestone: T1-M1, constrained_by: "the reversal is the artifact's signature behaviour; verify by measurement, not by sign inspection"}
+  chi_mod_phi0_n1: {value: {kind: scalar, v: -2.70}, units: rad, standing: literature, source: {kind: citation, authors: "Sánchez Corzo et al.", year: 2026, venue: "Progress in Neurobiology 256:102857"}, states: [n1], section: "7. Respiration and coupling", note: "Group mean direction -154.60 degrees; N1 remains wake-like."}
+  chi_mod_phi0_n2: {value: {kind: scalar, v: -1.33}, units: rad, standing: literature, source: {kind: citation, authors: "Sánchez Corzo et al.", year: 2026, venue: "Progress in Neurobiology 256:102857"}, states: [n2], section: "7. Respiration and coupling", note: "Group mean direction -76.43 degrees; the phase reversal begins in N2."}
+  chi_mod_phi0_n3: {value: {kind: scalar, v: -1.78}, units: rad, standing: literature, source: {kind: citation, authors: "Sánchez Corzo et al.", year: 2026, venue: "Progress in Neurobiology 256:102857"}, states: [n3], section: "7. Respiration and coupling", note: "Published as SWS; group mean direction -102.14 degrees."}
+  chi_mod_phi0_rem: {value: {kind: scalar, v: -1.45}, units: rad, standing: literature, source: {kind: citation, authors: "Sánchez Corzo et al.", year: 2026, venue: "Progress in Neurobiology 256:102857"}, states: [rem], section: "7. Respiration and coupling", note: "Group mean direction -83.33 degrees."}
+
+  periodic_mod_phi0_low:
+    value: {kind: scalar, v: 3.14159265358979}
     units: rad
-    standing: invented
-    source: {kind: none, rationale: ""}
-    states: [n2, n3, rem]
+    standing: derived
+    source: {kind: procedure, text: "Kluger & Gross 2021 report low-frequency amplitude highest at the beginning/end of a peak-inspiration-centred cycle and lowest at peak inspiration; the cosine encoding therefore peaks at pi."}
+    states: all
     section: "7. Respiration and coupling"
-    milestone: T1-M1
+    note: "The source is awake resting MEG. Applying this temporal form to sleep is an explicit provisional generalization, not a literature claim about sleep-stage magnitude."
 
-  chi_mod_phase_sleep:
-    value: {kind: procedure, text: "reversed relative to wake, from N2 onward"}
+  periodic_mod_phi0_high:
+    value: {kind: scalar, v: 0.0}
     units: rad
-    standing: invented
-    source: {kind: none, rationale: "ibid.; author not recorded"}
-    states: [n2, n3, rem]
+    standing: derived
+    source: {kind: procedure, text: "Kluger & Gross 2021 report that the high-frequency temporal modulation pattern reverses the low-frequency pattern; the cosine encoding therefore peaks at peak inspiration, phase zero."}
+    states: all
     section: "7. Respiration and coupling"
-    milestone: T1-M1
+    note: "Periodic and aperiodic phase courses are deliberately separate, as directly demonstrated by Kluger et al. 2023."
 
-  alpha_mod_depth:   {value: {kind: pending}, provisional: {v: 0.10, basis: "respiration modulation of alpha envelope", expires_at_milestone: T1-M1, constrained_by: ""}, units: null, standing: invented, source: {kind: none, rationale: "Kluger & Gross 2021 — not yet read out"}, states: all, section: "7. Respiration and coupling", milestone: T1-M1}
+  periodic_mod_depth_high: {value: {kind: pending}, provisional: {v: 0.10, basis: "smallest visible prefix for respiration modulation of alpha/beta log-amplitude", expires_at_milestone: T1-M1, constrained_by: "read out periodic peak-power modulation from an external simultaneous EEG/respiration corpus; never fit the simulator's own PAC estimate"}, units: null, standing: invented, source: {kind: none, rationale: "Kluger & Gross 2021 establish high-band modulation but the magnitude has not been converted to this log-amplitude parameter"}, states: all, section: "7. Respiration and coupling", milestone: T1-M1}
+
+  resp_so_pref_phase:
+    value: {kind: scalar, v: -0.164060949687467}
+    units: rad
+    standing: literature
+    source: {kind: citation, authors: "Schreiner et al.", year: 2023, venue: "Nature Communications 14:8351"}
+    states: [n3]
+    section: "7. Respiration and coupling"
+    note: "Mean respiratory phase of SO downstates across significant electrodes: -9.4 degrees, with peak inspiration at zero. The study pooled NREM; the generator applies SO events only in N3."
+
+  resp_so_resultant_length:
+    value: {kind: scalar, v: 0.51}
+    units: null
+    standing: literature
+    source: {kind: citation, authors: "Schreiner et al.", year: 2023, venue: "Nature Communications 14:8351"}
+    states: [n3]
+    section: "7. Respiration and coupling"
+    note: "Mean vector length reported for the preferred SO respiratory phase across significant electrodes. Used as the target of the event-level von Mises prefix; that translation is a modelling assumption."
+
+  resp_so_hazard_kappa:
+    value: {kind: scalar, v: 1.1910453273513}
+    units: null
+    standing: derived
+    source: {kind: procedure, text: "Unique non-negative solution of I1(kappa)/I0(kappa) = resp_so_resultant_length for a von Mises event hazard."}
+    states: [n3]
+    section: "7. Respiration and coupling"
+
+  resp_spindle_fast_pref_phase:
+    value: {kind: scalar, v: 0.295833308213039}
+    units: rad
+    standing: literature
+    source: {kind: citation, authors: "Schreiner et al.", year: 2023, venue: "Nature Communications 14:8351"}
+    states: [n2, n3]
+    section: "7. Respiration and coupling"
+    note: "Mean respiratory phase of fast-spindle onsets across significant electrodes: +16.95 degrees after peak inspiration. The paper pooled NREM, so one profile is used in N2 and N3."
+
+  resp_spindle_fast_resultant_length:
+    value: {kind: scalar, v: 0.52}
+    units: null
+    standing: literature
+    source: {kind: citation, authors: "Schreiner et al.", year: 2023, venue: "Nature Communications 14:8351"}
+    states: [n2, n3]
+    section: "7. Respiration and coupling"
+    note: "Mean vector length reported for fast-spindle onset phase across significant electrodes. Used as an event-level target provisionally."
+
+  resp_spindle_fast_hazard_kappa:
+    value: {kind: scalar, v: 1.22349789246669}
+    units: null
+    standing: derived
+    source: {kind: procedure, text: "Unique non-negative solution of I1(kappa)/I0(kappa) = resp_spindle_fast_resultant_length for a von Mises event hazard."}
+    states: [n2, n3]
+    section: "7. Respiration and coupling"
+
+  resp_spindle_slow_hazard:
+    value: {kind: absent, reason: "Schreiner et al. 2023 found no significant respiratory phase concentration for slow-spindle onsets (all corrected p > 0.05). R4 keeps this as the matched negative-control path rather than assigning a near-zero invented kappa. A 2024 full-night study reports a conflicting positive effect, so adopting a second profile requires an explicit corpus/source decision."}
+    units: null
+    standing: absent
+    source: {kind: citation, authors: "Schreiner et al.", year: 2023, venue: "Nature Communications 14:8351, Supplementary Figure 3"}
+    states: [n2, n3]
+    section: "7. Respiration and coupling"
+    note: "Absence means no injected respiratory hazard, not proof that biological slow spindles are universally uncoupled. Girin et al. 2024 report both slow and fast spindles during expiration in full-night PSG."
+
   nasal_oral_factor: {value: {kind: pending}, provisional: {v: 0.3,  basis: "oral breathing attenuates RMBO to this fraction", expires_at_milestone: T1-M1, constrained_by: ""}, units: null, standing: invented, source: {kind: none, rationale: "Zelano et al. 2016 shows attenuation; magnitude unread"}, states: all, section: "7. Respiration and coupling", milestone: T1-M1}
 
   chi_est_band:
@@ -1496,46 +1701,56 @@ params:
   # THE THIRD STEP OF THE MITIGATION IS NOT DONE: nothing here has been validated against
   # neurokit2.ecg_simulate or against a real ECG. TODO(T1-M5). No gate reads any of it.
 
-  hr_mean:
-    value: {kind: pending}
-    provisional: {v: 62, basis: "resting adult heart rate; slower in sleep than wake, not yet split by state", expires_at_milestone: T1-M5, constrained_by: "must not be derived from any HEP analysis that uses the R peaks it defines"}
-    units: 1/min
-    standing: invented
-    source: {kind: none, rationale: "uncited; a single resting value pending the state-conditional fit at T1-M5"}
-    states: all
-    section: "8. Cardiac"
-    milestone: T1-M5
-    note: >-
-      ONE VALUE FOR EVERY STATE, which is known to be wrong: heart rate falls through NREM and is
-      more variable in REM, exactly as respiration is (resp_rate_* is already state-conditional).
-      Registered as a single row rather than six invented ones so the gap is visible instead of
-      being dressed up as six independent measurements.
+  hr_mean_wake: {value: {kind: scalar, v: 68.3}, units: 1/min, standing: fitted, source: {kind: procedure, text: "Median across subjects of mean HR from quality-controlled ECG R-R intervals in 19 scored HMC nights; prep/reference/r2_hmc_cardiac.py."}, states: [wake_eo, wake_ec], section: "8. Cardiac", note: "HMC supplies scored nocturnal wake and cannot separate eyes open from eyes closed. Clinical-referral corpus; IQR 60.2-75.2 bpm."}
+  hr_mean_n1:   {value: {kind: scalar, v: 63.1}, units: 1/min, standing: fitted, source: {kind: procedure, text: "Median across subjects of mean HR from quality-controlled ECG R-R intervals in 19 scored HMC nights; prep/reference/r2_hmc_cardiac.py."}, states: [n1], section: "8. Cardiac", note: "Clinical-referral corpus; IQR 56.7-72.8 bpm."}
+  hr_mean_n2:   {value: {kind: scalar, v: 61.6}, units: 1/min, standing: fitted, source: {kind: procedure, text: "Median across subjects of mean HR from quality-controlled ECG R-R intervals in 19 scored HMC nights; prep/reference/r2_hmc_cardiac.py."}, states: [n2], section: "8. Cardiac", note: "Clinical-referral corpus; IQR 54.8-70.2 bpm."}
+  hr_mean_n3:   {value: {kind: scalar, v: 62.1}, units: 1/min, standing: fitted, source: {kind: procedure, text: "Median across subjects of mean HR from quality-controlled ECG R-R intervals in 19 scored HMC nights; prep/reference/r2_hmc_cardiac.py."}, states: [n3], section: "8. Cardiac", note: "Clinical-referral corpus; IQR 54.9-72.2 bpm."}
+  hr_mean_rem:  {value: {kind: scalar, v: 65.1}, units: 1/min, standing: fitted, source: {kind: procedure, text: "Median across subjects of mean HR from quality-controlled ECG R-R intervals in 19 scored HMC nights; prep/reference/r2_hmc_cardiac.py."}, states: [rem], section: "8. Cardiac", note: "Clinical-referral corpus; IQR 55.6-70.5 bpm."}
 
-  hr_sd:
-    value: {kind: pending}
-    provisional: {v: 3.0, basis: "beat-to-beat standard deviation of instantaneous rate, excluding the respiratory component", expires_at_milestone: T1-M5}
-    units: 1/min
-    standing: invented
-    source: {kind: none, rationale: "uncited; the non-respiratory part of heart-rate variability"}
-    states: all
-    section: "8. Cardiac"
-    milestone: T1-M5
-
-  rsa_depth:
-    value: {kind: pending}
-    provisional: {v: 0.08, basis: "fractional modulation of the RR interval by respiratory phase", expires_at_milestone: T1-M5, constrained_by: "must not be derived from any respiration-cardiac coupling measure it would then be used to validate"}
+  cardiac_subject_hr_cv:
+    value: {kind: scalar, v: 0.21}
     units: null
+    standing: fitted
+    source: {kind: procedure, text: "One parsimonious lognormal subject-phenotype CV fitted to the 0.19-0.23 cross-subject CV range across five HMC stages; prep/reference/r2_hmc_cardiac.py."}
+    states: all
+    section: "8. Cardiac"
+    note: "A seed keeps this multiplier across states. It captures between-subject rate spread, not beat-to-beat HRV."
+
+  rr_sdnn_wake: {value: {kind: scalar, v: 0.1175}, units: s, standing: fitted, source: {kind: procedure, text: "Median per-subject SDNN after ECG QRS detection and local RR quality control in 19 scored HMC nights; prep/reference/r2_hmc_cardiac.py."}, states: [wake_eo, wake_ec], section: "8. Cardiac", note: "IQR 0.0918-0.1374 s; total RR variability including RSA."}
+  rr_sdnn_n1:   {value: {kind: scalar, v: 0.1070}, units: s, standing: fitted, source: {kind: procedure, text: "Median per-subject SDNN after ECG QRS detection and local RR quality control in 19 scored HMC nights; prep/reference/r2_hmc_cardiac.py."}, states: [n1], section: "8. Cardiac", note: "IQR 0.0870-0.1344 s; total RR variability including RSA."}
+  rr_sdnn_n2:   {value: {kind: scalar, v: 0.0767}, units: s, standing: fitted, source: {kind: procedure, text: "Median per-subject SDNN after ECG QRS detection and local RR quality control in 19 scored HMC nights; prep/reference/r2_hmc_cardiac.py."}, states: [n2], section: "8. Cardiac", note: "IQR 0.0568-0.0969 s; total RR variability including RSA."}
+  rr_sdnn_n3:   {value: {kind: scalar, v: 0.0613}, units: s, standing: fitted, source: {kind: procedure, text: "Median per-subject SDNN after ECG QRS detection and local RR quality control in 19 scored HMC nights; prep/reference/r2_hmc_cardiac.py."}, states: [n3], section: "8. Cardiac", note: "IQR 0.0446-0.0767 s; total RR variability including RSA."}
+  rr_sdnn_rem:  {value: {kind: scalar, v: 0.0818}, units: s, standing: fitted, source: {kind: procedure, text: "Median per-subject SDNN after ECG QRS detection and local RR quality control in 19 scored HMC nights; prep/reference/r2_hmc_cardiac.py."}, states: [rem], section: "8. Cardiac", note: "IQR 0.0614-0.1102 s; total RR variability including RSA."}
+
+  rsa_rr_amp_rem:
+    value: {kind: pending}
+    provisional: {v: 0.030, basis: "REM reference amplitude in RR seconds; small enough that total generated SDNN can remain at the independent HMC target", expires_at_milestone: T1-M5, constrained_by: "fit against simultaneous ECG and respiration, never ECG-only HMC or the simulator's own RSA estimator"}
+    units: s
     standing: invented
-    source: {kind: none, rationale: "respiratory sinus arrhythmia is well established; the depth is uncited and varies strongly with age and state"}
+    source: {kind: none, rationale: "HMC has no respiration channel and the literature source supplies relative stage changes rather than an absolute RR amplitude"}
     states: all
     section: "8. Cardiac"
     milestone: T1-M5
-    note: >-
-      RESPIRATORY SINUS ARRHYTHMIA -- the heart speeds on inspiration and slows on expiration. It
-      is modelled because it is the reason the two new traces belong on the same screen: the ECG
-      is not independent of the respiration belt, and a viewer who watches both should be able to
-      see that. It is driven from the SAME respiratory phase the EEG mechanisms use, so the three
-      cannot drift apart.
+
+  rsa_relative_wake: {value: {kind: scalar, v: 0.90}, units: null, standing: literature, source: {kind: citation, authors: "Penzel et al.", year: 2016, venue: "Frontiers in Physiology 7:460"}, states: [wake_eo, wake_ec], section: "8. Cardiac", note: "RSA strength normalized to REM = 1.00 in Penzel et al. Table 1."}
+  rsa_relative_n1_n2: {value: {kind: scalar, v: 1.33}, units: null, standing: literature, source: {kind: citation, authors: "Penzel et al.", year: 2016, venue: "Frontiers in Physiology 7:460"}, states: [n1, n2], section: "8. Cardiac", note: "Light-sleep RSA strength normalized to REM = 1.00."}
+  rsa_relative_n3: {value: {kind: scalar, v: 1.37}, units: null, standing: literature, source: {kind: citation, authors: "Penzel et al.", year: 2016, venue: "Frontiers in Physiology 7:460"}, states: [n3], section: "8. Cardiac", note: "Deep-sleep RSA strength normalized to REM = 1.00."}
+  rsa_relative_rem: {value: {kind: scalar, v: 1.00}, units: null, standing: definitional, source: {kind: standard, name: "Penzel et al. 2016 normalization", clause: "REM reference equals one"}, states: [rem], section: "8. Cardiac"}
+
+  rsa_phase_offset:
+    value: {kind: pending}
+    provisional: {v: 0.0, basis: "RR is shortest during inspiration under the peak-inspiration-centred phase convention used by the EEG coupling literature", expires_at_milestone: T1-M5, constrained_by: "fit phase against simultaneous ECG and respiration; do not infer it from the generated belt"}
+    units: rad
+    standing: invented
+    source: {kind: none, rationale: "the sign of RSA is established but its phase course varies by subject and breathing pattern"}
+    states: all
+    section: "8. Cardiac"
+    milestone: T1-M5
+
+  cardiac_fast_variance_fraction: {value: {kind: pending}, provisional: {v: 0.10, basis: "share of non-respiratory RR variance assigned to the beat-scale latent state", expires_at_milestone: T1-M5, constrained_by: "fit RMSSD and SDNN jointly against external ECG; do not tune to visual beat jitter"}, units: null, standing: invented, source: {kind: none, rationale: "uncalibrated latent variance allocation"}, states: all, section: "8. Cardiac", milestone: T1-M5}
+  cardiac_fast_tau_beats: {value: {kind: pending}, provisional: {v: 2.0, basis: "short-memory non-respiratory RR process", expires_at_milestone: T1-M5, constrained_by: "fit RR autocorrelation against external ECG"}, units: beats, standing: invented, source: {kind: none, rationale: "uncalibrated AR(1) reduction"}, states: all, section: "8. Cardiac", milestone: T1-M5}
+  cardiac_slow_tau_s: {value: {kind: pending}, provisional: {v: 120, basis: "slow autonomic/arousal RR process on the same inspectable scale used by the respiratory controller", expires_at_milestone: T1-M5, constrained_by: "fit long-window HR fluctuation measures against external ECG"}, units: s, standing: invented, source: {kind: none, rationale: "uncalibrated AR(1) reduction"}, states: all, section: "8. Cardiac", milestone: T1-M5}
+  cardiac_rr_min_s: {value: {kind: scalar, v: 0.35}, units: s, standing: chosen, source: {kind: none, rationale: "numerical and physiological guard against a negative or implausibly short RR interval under combined latent excursions"}, states: all, section: "8. Cardiac"}
 
   ecg_r_amp:
     value: {kind: pending}
@@ -1571,6 +1786,368 @@ params:
       third step of the risk register's mitigation and it is TODO(T1-M5).
       A procedure row rather than fifteen scalars, because they are one model and fitting them
       independently would be meaningless.
+
+  # =====================================================================
+  # 8a. Infra-slow potentials and coupling
+  # =====================================================================
+  #
+  # ISF-0 registers only externally observed quantities and explicit absences. No row below is
+  # read by the generator yet, and generator_version therefore does not move. In particular,
+  # an infra-slow scalp potential is not assumed to be a cortical current dipole: projected
+  # cortical current, excitability modulation, respiration and electrode/DC drift are separate
+  # causal paths in the implementation contract.
+
+  isf_overview_duration_options:
+    value: {kind: enum, options: [120, 300, 600]}
+    units: s
+    standing: chosen
+    source: {kind: none, rationale: "Lazy full-band overview lengths: 120 s makes the mode usable on modest devices, while 300 s and 600 s expose progressively more of the sub-0.1 Hz time scale. These are display choices, not validation-record lengths."}
+    states: all
+    section: "8a. Infra-slow potentials and coupling"
+    note: >-
+      The 1250 s validation probe remains separate. At the 0.008 Hz lower edge these choices
+      contain 0.96, 2.4 and 4.8 cycles respectively, so the interface states that none replaces
+      the registered ten-cycle gate record.
+
+  isf_overview_rate:
+    value: {kind: scalar, v: 2}
+    units: Hz
+    standing: chosen
+    source: {kind: none, rationale: "Display-only summary rate: twenty samples per cycle at the 0.1 Hz upper ISF edge, after explicit anti-alias filtering."}
+    states: all
+    section: "8a. Infra-slow potentials and coupling"
+
+  isf_overview_antialias_hz:
+    value: {kind: scalar, v: 0.8}
+    units: Hz
+    standing: chosen
+    source: {kind: none, rationale: "Display-only anti-alias cutoff below the 1 Hz Nyquist limit of the 2 Hz overview; it preserves the complete registered 0.008-0.1 Hz band with margin."}
+    states: all
+    section: "8a. Infra-slow potentials and coupling"
+    note: "Applied equally to the raw and 0.1 Hz high-passed overview traces; it is not part of generated data or exported truth."
+
+  isf_spectrum_range:
+    value: {kind: interval, lo: 0.005, hi: 1, meaning: ui_domain}
+    units: Hz
+    standing: chosen
+    source: {kind: none, rationale: "Log-frequency domain for the full-band interface. The lower axis edge extends below the 0.008 Hz literature band; actual resolvable frequency remains limited by 1 / record duration and is stated in the interface."}
+    states: all
+    section: "8a. Infra-slow potentials and coupling"
+
+  isf_comparison_hpf:
+    value: {kind: scalar, v: 0.1}
+    units: Hz
+    standing: chosen
+    source: {kind: none, rationale: "Fixed comparison against the conventional lower edge already used by the ordinary filter panel; the purpose is to reveal what that high-pass removes, not to fit a physiological parameter."}
+    states: all
+    section: "8a. Infra-slow potentials and coupling"
+    note: "Zero-phase and the registry filter order, so the comparison is explicit and reproducible."
+
+  isf_band:
+    value: {kind: interval, lo: 0.008, hi: 0.1, meaning: band_edges}
+    units: Hz
+    standing: literature
+    source: {kind: citation, authors: "Väyrynen et al.", year: 2023, venue: "Clinical Neurophysiology 156:207-219"}
+    states: all
+    section: "8a. Infra-slow potentials and coupling"
+    note: >-
+      Full-band EEG definition used for the wake-versus-NREM comparison. This is distinct from
+      the 0.1-1 Hz slow range, the 0.2-2 Hz sleep slow-wave range, and the separately measured
+      respiratory rhythm. A conventional 0.1 Hz high-pass removes most of this direct voltage.
+
+  isf1_band:
+    value: {kind: interval, lo: 0.008, hi: 0.05, meaning: band_edges}
+    units: Hz
+    standing: literature
+    source: {kind: citation, authors: "Väyrynen et al.", year: 2023, venue: "Clinical Neurophysiology 156:207-219"}
+    states: all
+    section: "8a. Infra-slow potentials and coupling"
+    note: "Primary phase-amplitude-coupling band in the source study; periods span 20-125 s."
+
+  isf2_band:
+    value: {kind: interval, lo: 0.05, hi: 0.1, meaning: band_edges}
+    units: Hz
+    standing: literature
+    source: {kind: citation, authors: "Väyrynen et al.", year: 2023, venue: "Clinical Neurophysiology 156:207-219"}
+    states: all
+    section: "8a. Infra-slow potentials and coupling"
+    note: >-
+      Secondary band reported separately by the source study. The shared 0.05 Hz boundary is an
+      analysis convention; an implementation must not create a line or discontinuity there.
+
+  isf_probe_record_length:
+    value: {kind: scalar, v: 1250}
+    units: s
+    standing: derived
+    source: {kind: procedure, text: "Ten cycles at the 0.008 Hz lower edge: 10 / 0.008 = 1250 s. The live 15-60 s display is not an infra-slow validation record."}
+    states: all
+    section: "8a. Infra-slow potentials and coupling"
+
+  isf_temporal_model:
+    value: {kind: enum, options: [band_limited_power_law_state_space]}
+    units: null
+    standing: chosen
+    source: {kind: none, rationale: "ISF-1 comparison: the power-law state-space family matched the broad irregular-period prefix and exact chunk continuity without adding a resonance frequency, mixture weight or oscillator-Q parameter."}
+    states: all
+    section: "8a. Infra-slow potentials and coupling"
+    note: >-
+      MODEL FAMILY ONLY. The ISF-1 candidate fixture used representative internal settings to
+      compare forms, but none of those settings is promoted. The selected controller remains
+      unitless and outside composeState until ISF-2 supplies BEM source families.
+
+  isf_controller_rate:
+    value: {kind: scalar, v: 2}
+    units: Hz
+    standing: chosen
+    source: {kind: none, rationale: "Numerical controller rate: 20 samples per cycle at the 0.1 Hz upper edge, later interpolated to EEG fs; this is a computation choice, not a physiological frequency."}
+    states: all
+    section: "8a. Infra-slow potentials and coupling"
+
+  isf_temporal_exponent:
+    value: {kind: pending}
+    provisional: {v: 1.0, basis: "minimum-complexity 1/f controller used by the accepted ISF-1 broad irregular-period candidate; promoted as an explicit engineering prior, not an empirical spectral fit", expires_at_milestone: T1-M5, constrained_by: "replace from an external continuous full-band temporal spectrum spanning the registered ten-cycle record; never tune to the simulator's own period histogram"}
+    units: null
+    standing: invented
+    milestone: T1-M5
+    source: {kind: none, rationale: "No eligible public full-band record identifies the exponent; one is the parsimonious provisional member of the selected family."}
+    states: all
+    section: "8a. Infra-slow potentials and coupling"
+
+  isf_temporal_pole_count:
+    value: {kind: pending}
+    provisional: {v: 9, basis: "small numerical basis already characterized for the selected two-band state-space controller; poles approximate a continuum and are not physiological processes", expires_at_milestone: T1-M5, constrained_by: "replace with the smallest order meeting a registered analytic frequency-response convergence criterion"}
+    units: null
+    standing: invented
+    milestone: T1-M5
+    source: {kind: none, rationale: "Numerical approximation order pending a formal convergence sweep."}
+    states: all
+    section: "8a. Infra-slow potentials and coupling"
+
+  isf_resonance_fraction:
+    value: {kind: absent, reason: "A weak 0.02 Hz resonance can reproduce a commonly observed peak, but the literature does not show it is universal or identify its mixture weight. The accepted prefix therefore has no explicit resonant component."}
+    units: null
+    standing: absent
+    source: {kind: citation, authors: "Väyrynen et al.", year: 2023, venue: "Clinical Neurophysiology 156:207-219"}
+    states: all
+    section: "8a. Infra-slow potentials and coupling"
+
+  isf_spatial_model:
+    value: {kind: enum, options: [fsaverage_bem_patch_covariance_modes]}
+    units: null
+    standing: chosen
+    source: {kind: none, rationale: "ISF-2 reuses the existing anatomical forward-model seam: fixed-normal cortical sources in Desikan-Killiany patches, projected by the fsaverage three-shell BEM and represented by covariance eigenmodes."}
+    states: all
+    section: "8a. Infra-slow potentials and coupling"
+    note: >-
+      This selects a spatial representation, not a voltage amplitude. Every neural infra-slow
+      channel weight is generated by prep/leadfield/make_projection.py. The runtime does not
+      contain an electrode-level infra-slow topography.
+
+  isf_source_families:
+    value: {kind: enum, options: [frontomedial_association, sensorimotor, posterior_visual]}
+    units: null
+    standing: chosen
+    source: {kind: none, rationale: "Smallest broad anatomical basis spanning anterior association, central sensorimotor and posterior visual/association systems. Network-specific full-band components reject one global source; no external observation currently requires a fourth family."}
+    states: all
+    section: "8a. Infra-slow potentials and coupling"
+    note: >-
+      Atlas membership is fixed in prep/leadfield/make_projection.py before amplitude fitting.
+      The emitted projection IDs are isf_frontomedial, isf_sensorimotor and isf_posterior. The
+      number of modes per family is derived from patch_mode_variance and is not another parameter.
+
+  isf_lateral_family:
+    value: {kind: absent, reason: "A separate lateral-association family was an explicitly conditional fourth basis. The three-family anterior/central/posterior basis already supplies distinct BEM covariance modes, and no independent external observation currently requires another spatial degree of freedom."}
+    units: null
+    standing: absent
+    source: {kind: none, rationale: "Parsimony stop rule: add a source family only for an external observation the current anatomical basis cannot reproduce, never to tune rank, PC1 variance or channel correlation separately."}
+    states: all
+    section: "8a. Infra-slow potentials and coupling"
+
+  isf_modulation_gain_model:
+    value: {kind: enum, options: [lognormal_unit_mean_square]}
+    units: null
+    standing: derived
+    source: {kind: procedure, text: "For a unit-Gaussian infra-slow driver z and log-amplitude depth m, use g(z) = exp(m z - m^2). Then E[g^2] = exp(-2m^2) E[exp(2mz)] = 1 analytically, so coupling does not become a hidden carrier-power control."}
+    states: all
+    section: "8a. Infra-slow potentials and coupling"
+    note: >-
+      ISF-3 fixes the gain algebra only. The depth m, target-source map and preferred phase remain
+      absent. A finite record may have realized gain RMS different from one; truth records it.
+
+  isf_band_variance_fraction:
+    value: {kind: pending}
+    provisional: {v: 0.5, basis: "neutral equal-variance allocation between the registered ISF1 and ISF2 processes; this exposes rather than hides the unresolved band balance", expires_at_milestone: T1-M5, constrained_by: "fit from an external full-band spectrum under the registered band definitions, never from generated band powers"}
+    units: null
+    standing: invented
+    milestone: T1-M5
+    source: {kind: none, rationale: "No eligible public full-band spectrum identifies the split."}
+    states: all
+    section: "8a. Infra-slow potentials and coupling"
+
+  isf_modulation_target_map:
+    value: {kind: procedure, text: "In wake, modulate represented canonical rhythms through the nearest anatomical ISF family: posterior alpha and sensorimotor beta. Aggregate NREM uses one frontomedial controller family for its represented canonical rhythms, matching the reported frontal power emphasis without imposing a channel-space gain. Do not modulate the distributed aperiodic background, channel-local residuals or discrete events: doing so allowed the background alone to satisfy an AASM slow-wave criterion after the named slow-wave sources were attenuated. REM copies the wake anatomical rule as an explicit extrapolation."}
+    units: null
+    standing: chosen
+    source: {kind: none, rationale: "Smallest source-level map that makes broad fast-rhythm coupling executable while preserving the independent slow-wave null."}
+    states: all
+    section: "8a. Infra-slow potentials and coupling"
+
+  isf_pac_preferred_phase:
+    value: {kind: absent, reason: "A broadband stochastic infra-slow state has no universal sinusoidal phase origin, and the selected source does not identify a preferred phase for each cortical family and fast target under this controller."}
+    units: rad
+    standing: absent
+    source: {kind: none, rationale: "Estimate under an explicit external phase convention; do not choose the sign that maximizes recovered coupling."}
+    states: all
+    section: "8a. Infra-slow potentials and coupling"
+
+  isf_mechanism_arms:
+    value: {kind: procedure, text: "Matched seed and carrier arms: mechanism off; additive BEM voltage only; source-level mean-square-preserving modulation only; both; and a pi-inverted-driver modulation null. Respiration remains on an independent controller and substream."}
+    units: null
+    standing: chosen
+    source: {kind: none, rationale: "Separately switchable causal paths and matched nulls are an identifiability requirement, not a fitted physiological quantity."}
+    states: all
+    section: "8a. Infra-slow potentials and coupling"
+
+  isf_power_state_contrast:
+    value: {kind: procedure, text: "Compare aggregate NREM (N1-N3) with aggregate wake; require the externally reported direction NREM > wake for infra-slow relative power, broadly distributed with a frontal emphasis. Do not infer an ordering among N1, N2 and N3 from this source."}
+    units: null
+    standing: literature
+    source: {kind: citation, authors: "Väyrynen et al.", year: 2023, venue: "Clinical Neurophysiology 156:207-219"}
+    states: [wake_eo, wake_ec, n1, n2, n3]
+    section: "8a. Infra-slow potentials and coupling"
+
+  isf_pac_plv_wake_reference:
+    value: {kind: scalar, v: 0.178}
+    units: null
+    standing: literature
+    source: {kind: citation, authors: "Väyrynen et al.", year: 2023, venue: "Clinical Neurophysiology 156:207-219"}
+    states: [wake_eo, wake_ec]
+    section: "8a. Infra-slow potentials and coupling"
+    note: >-
+      Mean ISF1-phase-to-fast-amplitude PLV under the paper's estimator; reported SD 0.014. This
+      is an external reference metric, not a generator modulation depth and not interchangeable
+      with a PLV recovered under another filtering or surrogate pipeline.
+
+  isf_pac_plv_nrem_reference:
+    value: {kind: scalar, v: 0.211}
+    units: null
+    standing: literature
+    source: {kind: citation, authors: "Väyrynen et al.", year: 2023, venue: "Clinical Neurophysiology 156:207-219"}
+    states: [n1, n2, n3]
+    section: "8a. Infra-slow potentials and coupling"
+    note: >-
+      Aggregate-sleep mean under the paper's estimator; reported SD 0.022. The study does not
+      license separate N1, N2 and N3 values, and contains no REM anchor.
+
+  isf_pac_channel_fraction_wake:
+    value: {kind: interval, lo: 0.05, hi: 0.15, meaning: uncertainty}
+    units: null
+    standing: literature
+    source: {kind: citation, authors: "Väyrynen et al.", year: 2023, venue: "Clinical Neurophysiology 156:207-219"}
+    states: [wake_eo, wake_ec]
+    section: "8a. Infra-slow potentials and coupling"
+    note: "IQR across subjects of the fraction of electrodes with significant ISF-fast coupling under time-shifted surrogates."
+
+  isf_pac_channel_fraction_nrem:
+    value: {kind: interval, lo: 0.05, hi: 0.35, meaning: uncertainty}
+    units: null
+    standing: literature
+    source: {kind: citation, authors: "Väyrynen et al.", year: 2023, venue: "Clinical Neurophysiology 156:207-219"}
+    states: [n1, n2, n3]
+    section: "8a. Infra-slow potentials and coupling"
+    note: "Aggregate-sleep IQR; supports a wider spatial extent than wake, not a stage-by-stage ordering."
+
+  isf_cortical_rms_wake:
+    value: {kind: pending}
+    provisional: {v: 2.0, basis: "provisional aggregate cortical source budget chosen inside the plausible low-microvolt stationary scalp range; divided in variance across the three BEM families and debited from the existing background budget", expires_at_milestone: T1-M5, constrained_by: "replace from a DC-capable healthy corpus with an explicit source/origin model; do not fit total scalp RMS as if it were purely cortical"}
+    units: uV_rms
+    standing: invented
+    milestone: T1-M5
+    source: {kind: none, rationale: "Engineering prior; available studies establish the mechanism but do not identify cortical-source RMS."}
+    states: [wake_eo, wake_ec]
+    section: "8a. Infra-slow potentials and coupling"
+
+  isf_cortical_rms_nrem:
+    value: {kind: pending}
+    provisional: {v: 3.0, basis: "1.5x the provisional wake cortical budget so aggregate NREM exceeds wake without inventing an unsupported N1-N3 ladder; broad source families leave the topography to the BEM", expires_at_milestone: T1-M5, constrained_by: "preserve only the published aggregate NREM > wake direction until staged full-band source estimates exist"}
+    units: uV_rms
+    standing: invented
+    milestone: T1-M5
+    source: {kind: citation, authors: "Väyrynen et al.", year: 2023, venue: "Clinical Neurophysiology 156:207-219", note: "Literature anchors the direction and frontal emphasis, not the 1.5x magnitude."}
+    states: [n1, n2, n3]
+    section: "8a. Infra-slow potentials and coupling"
+
+  isf_cortical_rms_rem:
+    value: {kind: pending}
+    provisional: {v: 2.0, basis: "explicit wake-derived extrapolation used only to keep the REM state executable; no REM-specific amplitude claim", expires_at_milestone: T1-M5, constrained_by: "replace or remove when a healthy REM full-band source anchor is available; UI and truth must label this extrapolated"}
+    units: uV_rms
+    standing: invented
+    milestone: T1-M5
+    source: {kind: citation, authors: "Väyrynen et al.", year: 2023, venue: "Clinical Neurophysiology 156:207-219"}
+    states: [rem]
+    section: "8a. Infra-slow potentials and coupling"
+
+  isf_shared_source_fraction:
+    value: {kind: absent, reason: "Network-specific scalp components are reported, but no published number maps them to the shared-versus-local variance parameter of the proposed source controller."}
+    units: null
+    standing: absent
+    source: {kind: citation, authors: "Hiltunen et al.", year: 2014, venue: "Journal of Neuroscience 34:356-362"}
+    states: all
+    section: "8a. Infra-slow potentials and coupling"
+
+  isf_source_delay_s:
+    value: {kind: absent, reason: "Travelling infra-slow activity is evidence for nonzero spatial delay, but no delay distribution has been translated to this 19-electrode cortical-patch model."}
+    units: s
+    standing: absent
+    source: {kind: none, rationale: "Must be estimated from full-band multichannel recordings, not selected to make an animation look like a travelling wave."}
+    states: all
+    section: "8a. Infra-slow potentials and coupling"
+
+  isf_pac_depth_wake:
+    value: {kind: pending}
+    provisional: {v: 0.4, basis: "initial source-level log-amplitude search point from the characterized ISF-3 mechanism; output must be checked against the registered wake PLV and spatial-extent comparators", expires_at_milestone: T1-M5, constrained_by: "fit only through the complete forward model and the registered external estimator; PLV is not numerically interchangeable with depth"}
+    units: null
+    standing: invented
+    milestone: T1-M5
+    source: {kind: citation, authors: "Väyrynen et al.", year: 2023, venue: "Clinical Neurophysiology 156:207-219"}
+    states: [wake_eo, wake_ec]
+    section: "8a. Infra-slow potentials and coupling"
+
+  isf_pac_depth_nrem:
+    value: {kind: pending}
+    provisional: {v: 0.30, basis: "output-side calibration through the complete BEM and a Väyrynen-structured ISF1-to-fast-envelope PLV estimator: N2 mean PLV 0.205 against the aggregate-sleep reference 0.211, with 7/19 significant channels (0.368), one electrode above the reported 0.05-0.35 range at 19-channel granularity; one aggregate NREM depth avoids an unsupported N1-N3 ladder", expires_at_milestone: T1-M5, constrained_by: "record-only until replicated across seeds and an exact long-FIR estimator; do not tune stages separately or derive this number from a gate threshold"}
+    units: null
+    standing: invented
+    milestone: T1-M5
+    source: {kind: citation, authors: "Väyrynen et al.", year: 2023, venue: "Clinical Neurophysiology 156:207-219"}
+    states: [n1, n2, n3]
+    section: "8a. Infra-slow potentials and coupling"
+
+  isf_pac_depth_rem:
+    value: {kind: pending}
+    provisional: {v: 0.4, basis: "explicit wake-derived extrapolation; the selected healthy full-band study did not contain enough REM for a REM target", expires_at_milestone: T1-M5, constrained_by: "UI and truth must label this extrapolated; replace rather than tune visually when a REM anchor is available"}
+    units: null
+    standing: invented
+    milestone: T1-M5
+    source: {kind: none, rationale: "No healthy REM anchor; provisional value copies wake rather than inventing a REM contrast."}
+    states: [rem]
+    section: "8a. Infra-slow potentials and coupling"
+
+  electrode_dc_drift_rms:
+    value: {kind: absent, reason: "Electrode polarization, skin potentials and amplifier drift require a recording-system corpus specifying electrodes, gel, skin preparation and amplifier. ISF-5 implements only an explicit fixture path; its amplitude cannot be inferred from neural full-band power and must never satisfy an infra-slow neural gate."}
+    units: uV_rms
+    standing: absent
+    source: {kind: citation, authors: "Tallgren et al.", year: 2005, venue: "Clinical Neurophysiology 116:799-806"}
+    states: all
+    section: "8a. Infra-slow potentials and coupling"
+
+  reference_dc_drift_rms:
+    value: {kind: absent, reason: "A shared reference-electrode drift changes linked-mastoid and contralateral derivations, but its magnitude is montage-, electrode-, skin- and preparation-dependent. ISF-5 exposes an explicit fixture without promoting a universal value."}
+    units: uV_rms
+    standing: absent
+    source: {kind: citation, authors: "Tallgren et al.", year: 2005, venue: "Clinical Neurophysiology 116:799-806"}
+    states: all
+    section: "8a. Infra-slow potentials and coupling"
 
   # 9. Artifacts
   # =====================================================================
@@ -1625,6 +2202,18 @@ params:
   # 10. Filter and analysis controls
   # =====================================================================
 
+  hpf_default:
+    value: {kind: scalar, v: 0.005}
+    units: Hz
+    standing: chosen
+    source: {kind: none, rationale: "Opening display edge at the filter control floor: retains 97.7% amplitude at the named 0.008 Hz ISF lower edge under the default fourth-order zero-phase response, while keeping the high-pass visibly enabled as requested."}
+    states: all
+    section: "10. Filter and analysis controls"
+    note: >-
+      Where the panel's high-pass handle starts. It equals filter_ui_range.lo so the opening trace
+      retains the released infra-slow mechanism. The reader can raise it to demonstrate loss, and
+      can switch it off to distinguish a very low cutoff from no high-pass at all.
+
   lpf_default:
     value: {kind: scalar, v: 40}
     units: Hz
@@ -1639,17 +2228,19 @@ params:
       together.
 
   filter_ui_range:
-    value: {kind: interval, lo: 0.1, hi: 100, meaning: ui_domain}
+    value: {kind: interval, lo: 0.005, hi: 100, meaning: ui_domain}
     units: Hz
     standing: chosen
-    source: {kind: none, rationale: "the draggable frequency domain of the filter panel: from below every clinical high-pass to above every band this project measures, and inside the Nyquist of fs = 256"}
+    source: {kind: none, rationale: "the draggable frequency domain of the filter panel: below the 0.008 Hz infra-slow band edge to above every band this project measures, and inside the Nyquist of fs = 256"}
     states: all
     section: "10. Filter and analysis controls"
     note: >-
       A UI DOMAIN, not a signal parameter -- the accessor is `uiDomain`, which throws if this is
       read as band edges. It bounds what a reader can drag to, and nothing else. The low end sits
-      below hpf_options' 0.01 Hz setting deliberately: a cutoff a reader cannot reach is a cutoff
-      they cannot compare against, and the panel's whole point is comparison.
+      below both hpf_options' 0.01 Hz setting and the named 0.008 Hz infra-slow band deliberately:
+      a cutoff a reader cannot reach is a cutoff they cannot compare against, and the panel's
+      whole point is comparison. At finite display lengths, a selectable cutoff does not imply
+      that the live window contains enough cycles to estimate a response at that frequency.
 
   filter_order_options:
     value: {kind: enum, options: [2, 4, 8]}
@@ -1677,6 +2268,33 @@ params:
   welch_nperseg:  {value: {kind: scalar, v: 1024}, units: samples, standing: chosen, source: {kind: none, rationale: "4 s at fs=256; 0.25 Hz resolution"}, states: all, section: "10. Filter and analysis controls", note: "Added on import. 7 mandates a Welch PSD and 8 budgets 5.0 ms per second for it, but no Welch settings were registered — and they determine recovered chi as much as band and mode do."}
   welch_noverlap: {value: {kind: scalar, v: 512}, units: samples, standing: chosen, source: {kind: none, rationale: "50% overlap"}, states: all, section: "10. Filter and analysis controls", note: "Added on import."}
   welch_window:   {value: {kind: enum, options: [hann]}, units: null, standing: chosen, source: {kind: none, rationale: ""}, states: all, section: "10. Filter and analysis controls", note: "Added on import."}
+
+  spectrum_low_min_segments:
+    value: {kind: scalar, v: 4}
+    units: segments
+    standing: chosen
+    source: {kind: none, rationale: "Display-estimator variance control: four 50%-overlapped windows produce a usable slow-frequency trend from the 90 s live buffer without presenting a single periodogram as stable physiology."}
+    states: all
+    section: "10. Filter and analysis controls"
+    note: "At fs=256 and display_buffer_s=90 this selects radix-2 windows of 8192 samples (32 s), giving 0.03125 Hz resolution. It is a display estimator, not a generator parameter."
+
+  spectrum_low_smooth_radius_bins:
+    value: {kind: scalar, v: 2}
+    units: bins
+    standing: chosen
+    source: {kind: none, rationale: "Two adjacent bins on each side give a five-bin triangular frequency average after long-window Welch; enough to suppress residual estimator teeth without fitting a parametric curve or erasing broad sub-1-Hz structure."}
+    states: all
+    section: "10. Filter and analysis controls"
+    note: "A display-estimator setting only; frequencies are unchanged and the unresolved region remains explicit. At the 32 s live estimator this is a compact 0.15625 Hz support, with greatest weight at the centre bin."
+
+  spectrum_hybrid_blend:
+    value: {kind: interval, lo: 0.5, hi: 1, meaning: band_edges}
+    units: Hz
+    standing: chosen
+    source: {kind: none, rationale: "Smooth handoff from the long-window slow-frequency estimate to ordinary four-second Welch across the upper slow-wave range."}
+    states: all
+    section: "10. Filter and analysis controls"
+    note: "The overlap is blended in log power with smoothstep; neither edge is a physiological boundary."
 
   specparam_peak_width_limits: {value: {kind: interval, lo: 1, hi: 12, meaning: band_edges}, units: Hz, standing: chosen, source: {kind: none, rationale: "specparam algorithm_settings; in 2.0 these moved out of the constructor"}, states: all, section: "10. Filter and analysis controls", note: "Added on import. Seam 7's premise is that an exponent is a (value, band, mode) tuple, but the fit settings shape the recovered value too and were registered nowhere."}
   specparam_max_n_peaks:       {value: {kind: scalar, v: 6}, units: null, standing: chosen, source: {kind: none, rationale: "specparam algorithm_settings"}, states: all, section: "10. Filter and analysis controls", note: "Added on import."}
@@ -1875,7 +2493,7 @@ params:
     note: >-
       REPLACES the exact-binomial-against-5% construction, which D12 measured as false: the
       per-seed false-exceedance rate of a percentile null is a function of respiration
-      regularity, not of the percentile, and ran 0.317 at N3-like resp_period_cv. Pairing
+      regularity, not of the percentile, and ran 0.317 at the provisional resp_period_cv_n3. Pairing
       removes the dependency entirely — the seed is its own control, so seed-to-seed variance
       cancels instead of having to be modelled.
       THE NULL ARM IS ABSENCE OF EVIDENCE and the report says so: it establishes that leakage

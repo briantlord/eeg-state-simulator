@@ -2473,6 +2473,94 @@ Reproduce: `prep/reference/t2m1_injected_coupling.py`.
 
 ---
 
+# Finding 32 — real EEG waxes and wanes; the background did not `[T1-M1]`
+
+The first full state-output comparison used 19 scored HMC nights, bounded to 120 epochs per
+state and subject, and matched the generator to HMC's four contralateral-mastoid derivations.
+Both arms received the same 0.3–35 Hz analysis filter. Values were summarized within subject
+before taking the corpus median.
+
+Absolute scale was already broadly credible: generated robust RMS ranged from **0.79× to 1.14×**
+the real median across wake, N1, N2, N3 and REM. The clearest shared defect was temporal rather
+than spectral: robust CV of two-second band power was only **0.56–0.73× real** in wake, N1, N2
+and REM. The aperiodic process was stationary for the full record.
+
+## One mechanism, not a parameter per band
+
+A bounded low-passed-noise envelope now multiplies the complete distributed aperiodic background.
+It is normalized to unit RMS, so `background_rms_uv` keeps its meaning. Because the same envelope
+multiplies every spatial mode and the independent-equivalent channel component after they are
+mixed, it changes temporal gain without changing lead-field weights or the fitted local variance
+share. A single depth is used for every state and band.
+
+The first depth tried, 0.45, corrected the original deficit but overshot N2 and REM. The retained
+depth, **0.35**, gives:
+
+| state | delta CV real / generated | alpha CV real / generated | sigma CV real / generated |
+|---|---:|---:|---:|
+| wake EC | 0.865 / 0.629 | 0.674 / 0.523 | 0.614 / 0.539 |
+| N1 | 0.737 / 0.668 | 0.643 / 0.550 | 0.618 / 0.592 |
+| N2 | 0.749 / 0.716 | 0.593 / 0.624 | 0.640 / 0.665 |
+| REM | 0.644 / 0.586 | 0.517 / 0.503 | 0.535 / 0.587 |
+
+Wake alpha remains less intermittent than real. That residual belongs to alpha's bistable
+oscillator, not to the broadband envelope; raising the global depth until alpha matched would
+make N2 and REM worse and repeat the counterbalancing-metrics failure D19 was written to stop.
+
+## What was not fitted
+
+HMC wake, N1 and REM are overwhelmingly delta-heavy relative to the generator, while EEGMAT
+resting wake is not. HMC is a clinical sleep-referral corpus recorded overnight, and this first
+table does not decide whether that disagreement is physiology, acquisition, artifact, or model.
+No band amplitude or knee moved. N2 is the cleanest spectral comparison and is already reasonably
+close; N3 remains too spectrally pure, with almost no non-delta power. Those are separate next
+problems.
+
+The full seven-check verification suite passes. Average-reference wake spatial error remains
+0.104 and effective rank remains 5.43 against 5.36 real, confirming that the temporal fix did not
+buy its result by retuning the lead field.
+
+Reproduce: `prep/reference/t1m1_state_realism.py`.
+
+---
+
+# Finding 33 — alpha's damping states were too similar and too brief `[T1-M1]`
+
+Finding 32 left one specific residual: wake alpha remained less intermittent than the real
+resting recordings even after broadband temporal texture was corrected. The comparison was moved
+to the appropriate corpus: eight PhysioNet EEGMAT eyes-closed resting records, Pz, linked-ear,
+against eight equal-duration generated seeds.
+
+Before fitting, generated alpha had envelope CV 0.606 against 0.682 real, threshold-defined bursts
+at 39.0/min against 32.8/min, median burst duration 0.310 s against 0.348 s, and envelope memory
+0.223 s against 0.284 s. Its envelope distribution was also less bimodal. Every discrepancy said
+the same thing: high- and low-amplitude damping states were insufficiently separated and switched
+too quickly.
+
+An eight-point joint sweep varied only the sharp-mode bandwidth, broad-mode bandwidth and mean
+dwell. Alpha amplitude, peak frequency, waveform shape and lead-field patch were fixed. The
+retained values are **0.7 Hz / 8 Hz / 4 s**, replacing 1 Hz / 6 Hz / 1.25 s. Mean relative error
+over envelope CV, bimodality, burst rate, burst duration and envelope memory fell from **0.143 to
+0.031**.
+
+| metric | EEGMAT median [IQR] | generated median [IQR] |
+|---|---:|---:|
+| envelope CV | 0.682 [0.636–0.772] | 0.643 [0.604–0.675] |
+| robust envelope CV | 0.698 [0.634–0.744] | 0.679 [0.645–0.697] |
+| bimodality coefficient | 0.549 [0.486–0.592] | 0.528 [0.503–0.538] |
+| burst rate (/min) | 32.8 [25.7–35.3] | 33.5 [31.0–35.3] |
+| median burst duration (s) | 0.348 [0.323–0.394] | 0.340 [0.317–0.367] |
+| envelope memory (s) | 0.284 [0.240–0.562] | 0.297 [0.273–0.346] |
+
+The values are source parameters obtained by output-side inversion, not copies of the measured
+observables. The burst threshold is each record's 75th percentile, so occupancy is fixed by
+definition and is deliberately not presented as a fitted result.
+
+Reproduce: `prep/reference/t1m1_alpha_temporal.py` and
+`prep/reference/t1m1_alpha_temporal_sweep.py`.
+
+---
+
 # Finding 31 — the directed measure fails its own null, so there is no directed gate
 
 Finding 30 established an injected connection that dwPLI detects (112× on, at chance off,
@@ -2526,3 +2614,750 @@ None of that is done. The injected coupling of Finding 30 stands on its own as t
 gate would use.
 
 Reproduce: `prep/reference/t2m1_injected_coupling.py`.
+
+---
+
+# Finding 34 — N3 was continuous delta masquerading as slow-wave events `[T1-M1]`
+
+YASA was run on the same four contralateral-mastoid derivations in 19 scored HMC nights and six
+generated seeds. Real epochs retained five seconds of their actual neighboring signal on each
+side; those margins were excluded from detections, so filtering had context without joins being
+counted as events.
+
+N2 spindle morphology was already close. Generated versus real medians were 0.684 versus 0.711 s,
+51.4 versus 53.4 µV, 8.5 versus 9 oscillations, and 0.65 versus 0.85 detections/channel/minute.
+The clear failure was N3 slow waves: **12.4 versus 3.0 detections/channel/minute**, 1.015 versus
+1.291 s duration, and 0.986 versus 0.775 Hz.
+
+## The matched null changed the mechanism
+
+Suppressing every scheduled graphoelement left **11.6 detections/minute**. The scheduled slow
+waves were not the cause. The continuous delta oscillator itself crossed YASA's morphology
+threshold repeatedly, so changing event rate would have tuned a component the detector was barely
+reading.
+
+A joint output-side sweep separated the components:
+
+- continuous `delta_amp`: 150 → **50 µV peak-to-peak**;
+- scheduled `so_rate`: implicit ~33 → **9/minute**;
+- retain the existing theta process in N3 rather than declaring N3 delta-only;
+- N3 aperiodic background gain: **1.9**, separately from event amplitude.
+
+The resulting slow waves measure 4.45/minute (real IQR 1.62–4.32), 1.310 s (real 1.291),
+0.764 Hz (real 0.775), 99.3 µV peak-to-peak (real 97.6), and 197.9 µV/s slope (real 209.3).
+Robust N3 RMS is 22.3 µV against 20.9 real. The exact G5 algorithm, when applied to genuine HMC,
+passes a median 0.228 of N3 epochs and 0.014 of N2 epochs; generated N3 now passes 0.28 across the
+gate's held-out seeds, versus 0 for N2 and 0.11 after the −6 dB null attenuation.
+
+**Superseded by Finding 35 for generator v0.5.0:** the two-timescale background moves the held-out
+N3 fraction to 0.083, still inside HMC's 0.039–0.364 IQR; N2 remains 0 and the −6 dB N3 arm is
+0.028. `background_gain_n3` and `snr_nominal` were not retuned after that independent spectral
+fit.
+
+The old G5 null used only three seeds. At a real pass fraction near 0.2, eighteen epochs can easily
+contain no passes and turn a valid strict ordering into a tie. It now uses every held-out seed the
+runner supplies; this changes power, not the criterion.
+
+## Spindles and the remaining residual
+
+The equal fast/slow spindle draw was also measurable: generated center frequency was 13.56–13.79
+Hz versus 12.73–12.79 real. Holding both anatomical systems and frequency ranges fixed, a sweep
+set `spindle_fast_fraction` to **0.20**. Output is now 12.42 Hz in N2 and 12.75 Hz in N3.
+
+N3 remains too spectrally pure: 95.3% delta versus 83.6% real, despite the large improvements in
+amplitude and event morphology. That is left standing. A flatter second aperiodic component can
+address the high-frequency tail and missing N3 knee together; adding separate alpha, beta and
+sigma amplitude knobs merely to fill the PSD would recreate the counterbalancing-metrics problem.
+
+K-complexes also remain unanchored: HMC has stage labels but no K-complex event labels, and YASA
+has no dedicated K-complex detector. Generic N2 slow waves were not relabeled as K-complexes.
+
+Reproduce: `prep/reference/t1m1_sleep_events.py`, `t1m1_n3_slow_wave_sweep.py`,
+`t1m1_n3_theta_probe.py`, `t1m1_hmc_aasm.py`, and `t1m1_spindle_mix_sweep.py`.
+
+---
+
+# Finding 35 — one faster aperiodic timescale repairs N3 without band knobs `[T1-M1]`
+
+Finding 34 left N3 at 95.3% delta against 83.6% in HMC, with no recoverable knee. The first
+candidate was deliberately the smallest state-continuity model: retain an independent N2-like
+background under N3. It failed structurally. As its variance share rose, band allocation improved,
+but recovered chi fell from 2.71 to 2.10 and no physical knee appeared. Enough N2-like power to
+matter would contradict the independently measured N3 exponent.
+
+The retained model instead sums two N3 aperiodic processes with the **same** asymptotic exponent
+and lead-field modes but different knees. Their RMS amplitudes are split by `sqrt(1-q)` and
+`sqrt(q)`, so total aperiodic variance is preserved. A joint grid over fast knee and `q` selected
+8 Hz and 0.20 using HMC RMS plus delta, theta, alpha, sigma and beta fractions. The HMC exponent
+and knee were pre-specified guards, not extra weights on the same spectrum; no AASM threshold or
+generator event label entered the fit.
+
+Held-out validation used six new seeds of ten minutes each through HMC's four contralateral-
+mastoid derivations:
+
+| metric | HMC median | generated |
+|---|---:|---:|
+| robust RMS (uV) | 20.94 | 22.57 |
+| delta fraction | 0.836 | 0.827 |
+| theta fraction | 0.086 | 0.100 |
+| alpha fraction | 0.044 | 0.038 |
+| sigma fraction | 0.020 | 0.020 |
+| beta fraction | 0.010 | 0.012 |
+| recovered chi | 2.59 [2.32-2.84] | 2.38 |
+| recovered knee (Hz) | 1.74 [0.88-2.60] | 1.35 |
+
+Mean relative error across the six direct scale/allocation observables is 0.097, versus 0.563 for
+the one-component model. The residuals are now balanced rather than all pointing toward missing
+faster power. This is the intended stopping rule: do not add per-band controls to erase them.
+
+The model changes exported truth. `chi` and `knee` still identify the primary component for old
+readers, while epoch schema v2 records the complete `aperiodicComponents` mixture and variance
+shares. The old, weakly sourced 45 Hz row remains unmodelled and is not the fitted 8 Hz source
+timescale.
+
+Reproduce: `prep/reference/t1m1_n3_background_mix.py`.
+
+The full v0.5.0 gate regression passes. G5 records 0.083 for N3 against 0 for N2 and 0.028 after
+−6 dB attenuation, preserving its strict matched-null contrast. The positive fraction is lower
+than v0.4.0's 0.28 but remains inside the real HMC IQR; no amplitude parameter was retuned to move
+it back toward the median.
+
+---
+
+# Finding 36 — respiration has a carrier but no physiology around it `[R0]`
+
+The respiration-realism work began with a no-output-change baseline: 600 s per state, three
+seeds, with movement artifact, low-band amplitude modulation and exponent modulation each run in
+a paired mechanism-off arm. The probe reads analytic respiratory phase rather than recovering it
+from the belt. R0 changes no generator or registry value.
+
+| state | rate/min | IBI CV | IBI lag 1 | long DFA | depth CV | power below 0.1 Hz / carrier | RSA (ms) | RSA R2 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| wake EO | 15.12 | 0.086 | 0.000 | 0.425 | **0.000** | 3.0e-4 | 80.1 | 0.585 |
+| wake EC | 15.02 | 0.078 | -0.100 | 0.492 | **0.000** | 4.7e-4 | 82.0 | 0.576 |
+| N1 | 14.99 | 0.079 | 0.022 | 0.561 | **0.000** | 4.2e-4 | 78.3 | 0.556 |
+| N2 | 13.42 | 0.082 | -0.099 | 0.538 | **0.000** | 7.7e-4 | 81.1 | 0.570 |
+| N3 | 13.59 | 0.079 | -0.077 | 0.491 | **0.000** | 5.5e-4 | 79.7 | 0.580 |
+| REM | 16.15 | 0.077 | -0.020 | 0.500 | **0.000** | 2.8e-4 | 78.4 | 0.563 |
+
+## The static appearance has one cause, not several
+
+`resp_period_cv` is one global 0.08 draw from an independent lognormal distribution. The output
+is exactly that: every state has CV near 0.08, lag-one correlation near zero and a long-scale DFA
+exponent near the 0.5 expected from uncorrelated variation. Breath depth is literally constant.
+Power below 0.1 Hz is 0.03–0.08% of carrier power, so there is no meaningful infraslow envelope
+around the respiratory cycle.
+
+The state rate rows are carrying a distinction that the dynamics do not. N2/N3 are conspicuously
+slower, but REM is not more serially structured and N3 is not more regular. This is the opposite
+allocation of model complexity from the external PSG literature: mean sleep-stage rates are
+similar, while regularity and long-timescale organization distinguish them.
+
+## RSA is substantial and state-blind
+
+The current ECG has 78–82 ms fitted RR modulation in every state. Respiratory phase alone explains
+56–59% of RR variance because the only competitor is independent 3 bpm beat noise. That is enough
+to be visually meaningful, but it is not a state model: the same `hr_mean`, `hr_sd` and
+`rsa_depth` drive every state. It also exposes a registry/code mismatch. The row describes a
+fractional RR modulation while `cardiac.ts` multiplies instantaneous HR and then inverts it.
+
+## One respiratory mechanism is accidentally inside another
+
+The movement artifact was measured two ways: first by independently projecting the registered
+artifact through linked mastoids to Fz, and then by subtracting paired full-generator records.
+Observed/expected was 0.976–0.977 in every state except N3, where it was **1.857**.
+
+The cause is composition order. Movement artifact enters `out` before the fitted broadband
+background envelope is applied. That later loop multiplies all of `out`, not only cortical
+background, so it amplitude-modulates a mechanical artifact. N3 then applies
+`background_gain_n3` = 1.9 to it as well. The resulting respiration-locked Fz component is
+17.63 uV in N3 versus 9.27 uV elsewhere, despite one state-independent artifact amplitude and
+topography. This is a causal-layer bug, not a parameter to fit around.
+
+## The neural effects exist, but their current magnitudes are not claims
+
+Low-band envelope modulation recovered an output effect of 0.126 in N1, 0.058 in N2, 0.188 in N3
+and 0.137 in REM; wake is zero because no sub-alpha state rhythm is modulated. The provisional
+source multiplier is still the unfitted `1 + 0.35 cos(phi)`, and it does not preserve mean squared
+power.
+
+Against a requested exponent depth of 0.15, the paired output effect recovered by the shipped
+2–40 Hz estimator was only 0.010–0.052 depending on state. This does not estimate the source
+depth—it combines generator transfer, spatial mixture, oscillatory interference and estimator
+floor—but it establishes what the current page can actually resolve. The requested value must not
+be presented as the observed modulation.
+
+## The 90-second boundary is a physiological reset
+
+At a live segment roll, the next respiratory phase starts from zero. Median phase error was
+0.72–2.86 radians by state. Tapering the next belt from zero converts the raw reset into a visible
+join rather than making it continuous, and independently restarting beat scheduling makes the RR
+interval spanning the join wrong by 178–241 ms. The ECG voltage itself is usually near zero at
+the boundary, so a sample-discontinuity check alone would falsely pass it.
+
+## Event phase is currently a null
+
+There is no respiratory input to event scheduling. With enough events, the injected phase
+distributions are accordingly flat: N3 slow oscillations had pooled resultant length 0.048
+(n = 266), N2 slow spindles 0.051 (n = 97), and N3 slow spindles 0.050 (n = 105). Sparse fast
+spindles produced larger chance resultants (0.267 and 0.278), demonstrating why their apparent
+angles cannot be read as coupling without a matched phase null and adequate event count.
+
+These measurements define R1's scope: introduce continuous subject/state respiratory dynamics,
+separate artifact from the cortical envelope, and preserve phase and RR state across chunks.
+They do not authorize moving any magnitude row yet.
+
+Reproduce:
+`node --experimental-strip-types --no-warnings prep/reference/r0_respiration_baseline.mts --duration 600 --seeds 3`.
+
+---
+
+# Finding 37 — R1 replaces respiratory jitter with respiratory state `[R1]`
+
+R1 changes the causal model, not just the belt drawing. A seed now defines one subject-rate
+phenotype. Each state applies a literature group mean to that phenotype, while a serializable
+controller carries the current breath, fast and slow timing latents, depth, morphology and RNG
+state. The stateless exporter and stateful live stream are wrappers around the same transition.
+
+Direct characterization over 20 seeds × 600 s gives:
+
+| state | group-mean rate/min | IBI CV | IBI lag 1 | depth CV | inhale pause | exhale pause | pause duration | median E:I |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| wake EO | 16.86 | 0.148 | 0.490 | 0.198 | 0.295 | 0.288 | 0.199 s | 1.75 |
+| wake EC | 16.66 | 0.143 | 0.474 | 0.202 | 0.319 | 0.292 | 0.199 s | 1.74 |
+| N1 | 15.66 | 0.096 | 0.364 | 0.162 | 0.289 | 0.316 | 0.199 s | 1.74 |
+| N2 | 15.44 | 0.078 | 0.312 | 0.121 | 0.307 | 0.294 | 0.199 s | 1.74 |
+| N3 | 15.92 | 0.059 | 0.340 | 0.080 | 0.286 | 0.320 | 0.199 s | 1.74 |
+| REM | 15.49 | 0.124 | 0.543 | 0.222 | 0.294 | 0.290 | 0.199 s | 1.73 |
+
+The rate targets are Gutierrez et al.'s 16.8/15.7/15.5/15.9/15.2 group means for
+wake/N1/N2/N3/REM; the 20-seed means recover them without encoding REM irregularity as a rate
+range. N3 is now most regular, while wake and REM carry more timing and depth variability. The
+old output had IBI CV 0.077–0.086 in every state, lag-one correlations around zero, and depth CV
+exactly zero.
+
+## Feature parity is explicit and limited
+
+BreathMetrics/NeuroKit2 supplies a useful independent simulator anchor, not a normal-population
+distribution. Its default inhale-pause probability, exhale-pause probability and mean pause
+duration are 0.30, 0.30 and 0.20 s. R1 realizes 0.286–0.320 and 0.199 s across states. Variable
+depth and E:I ratio are also present, and every breath is assembled from separate inhale,
+post-inhale pause, exhale and post-exhale pause segments. This is feature parity, not pixel
+similarity and not evidence that those defaults are physiological constants.
+
+## Continuity is an invariant, not a tolerance
+
+Splitting a record at an arbitrary sample, serializing the state through JSON, and resuming it
+produces **zero maximum sample error** in both belt and analytic phase relative to one whole-record
+call. The browser's actual prefetch-and-roll path passes the same invariant. The prior live phase
+error was 0.72–2.86 radians; it is now exactly zero. No empirical threshold is needed because
+these are two executions of the same deterministic state machine.
+
+## The causal-layer bug is removed
+
+Paired mechanism-on/off composition now gives observed/expected movement-artifact gain 1.000 in
+all states. Before R1, N3 measured 1.857 because the mechanical artifact was accidentally inside
+the stochastic cortical envelope and then inherited `background_gain_n3` = 1.9. The artifact is
+now projected only after those background operations. No artifact amplitude was retuned.
+
+## What did not move
+
+The ECG and EEG coupling equations still consume the same belt/phase interface. The post-change
+probe still finds roughly 76–81 ms state-blind RSA, and the RR interval spanning a live join is
+still wrong by roughly 100–200 ms because cardiac scheduling has no resumable state. That is the
+R2 baseline, not an R1 defect to mask. Neural modulation magnitudes and respiratory event hazards
+also remain untouched for R3 and R4.
+
+Reproduce the direct controller result:
+`node --experimental-strip-types --no-warnings prep/reference/r1_respiration_controller.mts`.
+
+Reproduce the paired downstream mechanisms:
+`node --experimental-strip-types --no-warnings prep/reference/r0_respiration_baseline.mts --duration 600 --seeds 3 --output prep/out/r1_respiration_characterization.json`.
+
+---
+
+# Finding 38 — R2 makes cardiac timing physiological and continuous `[R2]`
+
+The ECG is no longer a PQRST picture laid over independently restarted beat times. One
+serializable cardiac controller now carries the subject phenotype, next beat, preceding interval,
+fast and slow non-respiratory HRV states, and RNG snapshot. It schedules RR intervals directly
+from state mean RR, respiration phase and depth, and correlated residual HRV. Whole-record export,
+arbitrary chunks and the browser's live prefetch path all use that controller.
+
+## The state targets are empirical, but the RSA magnitude is not
+
+The same QRS detector was applied to all usable ECG epochs from 19 HMC nights. Aggregating within
+subject before across subjects gives:
+
+| state | HMC HR, median [IQR] bpm | HMC SDNN, median [IQR] ms | HMC RMSSD, median [IQR] ms |
+|---|---:|---:|---:|
+| wake | 68.3 [60.2–75.2] | 117.5 [91.8–137.4] | 37.9 [31.9–52.3] |
+| N1 | 63.1 [56.7–72.8] | 107.0 [87.0–134.4] | 35.4 [30.2–63.1] |
+| N2 | 61.6 [54.8–70.2] | 76.7 [56.8–96.9] | 41.6 [29.6–55.8] |
+| N3 | 62.1 [54.9–72.2] | 61.3 [44.6–76.7] | 37.6 [28.4–51.1] |
+| REM | 65.1 [55.6–70.5] | 81.8 [61.4–110.2] | 36.3 [25.2–52.2] |
+
+HMC contains ECG but no respiration, so these records cannot estimate RSA. Penzel et al.'s
+literature ratios establish NREM > REM > wake as a relative direction only. The registered 30 ms
+REM RR amplitude remains `pending`; generated recovery cannot elevate its standing.
+
+## The controller recovers its specified behavior without metric chasing
+
+Twenty seeds × 1,200 seconds per state produce:
+
+| state | generated HR bpm | generated SDNN ms | HMC target ms | RMSSD ms | fitted RSA ms | requested RSA ms | RSA R² |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| wake EO | 70.4 | 106.6 | 117.5 | 43.9 | 25.9 | 27.0 | 0.027 |
+| wake EC | 67.7 | 104.1 | 117.5 | 45.7 | 26.3 | 27.0 | 0.030 |
+| N1 | 63.5 | 100.4 | 107.0 | 52.8 | 38.8 | 39.9 | 0.077 |
+| N2 | 62.6 | 68.5 | 76.7 | 47.6 | 37.9 | 39.9 | 0.149 |
+| N3 | 64.2 | 54.5 | 61.3 | 47.6 | 38.9 | 41.1 | 0.250 |
+| REM | 65.8 | 73.1 | 81.8 | 39.8 | 29.0 | 30.0 | 0.076 |
+
+Every generated HR, SDNN and RMSSD entry is inside its HMC IQR. That is the acceptance result;
+the controller is not retuned to make every generated median equal every empirical median. Fitted
+RSA amplitude recovers the requested RR-domain amplitude and the variance left over after RSA is
+assigned to independent correlated HRV in quadrature.
+
+## Chunk continuity now includes the waveform, not just the beat list
+
+P waves begin before an R peak and T waves extend after it. Preserving only `nextBeat` therefore
+did not suffice: an early renderer let a future interval alter the Gaussian tails already emitted
+in the preceding chunk, producing up to 51 µV error despite identical R peaks. The final renderer
+uses the preceding interval for the causal pre-R half and the scheduled interval for the post-R
+half. Whole versus arbitrary-chunk ECG, JSON checkpoint/resume, and the actual 90-second live roll
+now have zero sample error, zero R-peak-time error and zero spanning-RR error.
+
+The legacy morphology probe still finds P–Q–R–S–T in order with signs `+ − + − +`, a dominant
+approximately 1,000 µV R wave, and respiratory locking above a phase-shuffled null. This is a
+display-plausibility guard, not validation of diagnostic morphology; wave widths and amplitudes
+remain a later corpus task.
+
+Reproduce the HMC fit:
+`.venv311/Scripts/python.exe prep/reference/r2_hmc_cardiac.py`.
+
+Reproduce the direct controller characterization:
+`node --experimental-strip-types --no-warnings prep/reference/r2_cardiac_controller.mts`.
+
+Reproduce the composed and live-path result:
+`node --experimental-strip-types --no-warnings prep/reference/r0_respiration_baseline.mts --duration 600 --seeds 3 --output prep/out/r2_cardiorespiratory_characterization.json`.
+
+---
+
+# Finding 39 — R3 separates respiratory slope and rhythm coupling `[R3]`
+
+The old respiratory EEG path had one global phase, one spatially uniform exponent change and a
+linear multiplier applied only to low-frequency state rhythms. It encoded neither the published
+wake-to-sleep phase shift nor the posterior weighting of the slope effect; its linear gain also
+changed mean squared rhythm power. R3 replaces those structural shortcuts rather than tuning them
+against the coupling estimator.
+
+## External facts determine phase and anatomy determines the scalp map
+
+Respiratory phase now follows the convention used by Kluger et al. and Sánchez Corzo et al.:
+peak inspiration is zero, inspiration is negative, and expiration positive. The five registered
+maximum-slope directions are direct literature values: wake 2.99 rad, N1 -2.70, N2 -1.33, N3
+-1.78 and REM -1.45. Thus N1 remains wake-like and the phase reversal begins in N2 instead of
+being imposed at the wake/sleep boundary.
+
+Kluger et al. report a widespread but posterior-weighted aperiodic effect. The implementation
+therefore defines one posterior cortical modulation patch and projects it through the same
+three-shell BEM as the rhythms. Root-sum-square power across the patch's signed modes gives the
+nonnegative modulation strength. Its independent fixed-point loading peaks at Pz; Fz/Pz is
+0.321, with frontal values around one third of posterior rather than an absent frontal effect.
+
+## Matched recovery preserves the intended invariants
+
+Three paired seeds × 180 seconds per state, differing only in the tested mechanism, give:
+
+| state | recovered slope depth | slope phase error | recovered Fz/Pz | recovered periodic depth | periodic phase error | total RMS ratio |
+|---|---:|---:|---:|---:|---:|---:|
+| wake EO | 0.101 | 1.2° | 0.319 | 0.010 | 1.1° | 1.0000 |
+| wake EC | 0.104 | 1.8° | 0.331 | 0.080 | 1.4° | 1.0001 |
+| N1 | 0.114 | 1.0° | 0.300 | 0.043 | 2.5° | 1.0000 |
+| N2 | 0.091 | 3.6° | 0.271 | 0.071 | 1.2° | 0.9999 |
+| N3 | 0.083 | 4.2° | 0.256 | 0.058 | 0.3° | 0.9998 |
+| REM | 0.109 | 1.3° | 0.306 | 0.010 | 9.9° | 0.9999 |
+
+Across all 19 channels, the recovered slope-depth topography correlates **0.999** with the BEM
+loading computed without looking at the generated EEG. This is the spatial acceptance result;
+the simulator's own spread supplies no threshold. Restoring each aperiodic channel to its
+pre-tilt RMS and using a Bessel-normalized exponential periodic gain leave total EEG RMS within
+0.02% and mean band amplitude at 1.000 of the matched mechanism-off record.
+
+Periodic depth varies by state because the readout follows a represented rhythm at Pz: a weak
+rhythm has a small observable modulation even when its source uses the same pending gain. That is
+not a reason to counter-tune every state. The absolute source depths remain provisional because
+the cited work establishes their existence and phase courses but has not yet been converted into
+the generator's log-amplitude and chi units.
+
+Reproduce:
+`node --experimental-strip-types --no-warnings prep/reference/r3_eeg_coupling.mts`.
+
+---
+
+# Finding 40 — R4 conditions NREM event timing without changing source rates `[R4]`
+
+R4 is a conditional point-process change, not another waveform modulation. For each event class,
+the existing homogeneous Poisson scheduler draws the count. A separate named RNG stream assigns
+respiratory phases to those events. This makes the strongest rate invariant possible: the on and
+off arms have the same count for every seed, not merely equal rates in expectation.
+
+## Natural breathing requires phase-indexed sampling
+
+The first implementation used `exp(kappa cos(phi-mu))` as a clock-time rejection weight. It
+recovered the registered resultant lengths but missed the means by 0.19 rad for N2 fast spindles
+and 0.31 rad for N3 SOs. The cause was not random error: unequal I:E timing means respiratory
+phase has unequal clock-time exposure. The final implementation draws a von Mises phase and then
+selects uniformly among samples carrying it. This removes morphology as a hidden phase offset.
+
+Five seeds × 3,600 seconds produce:
+
+| state | injected marker | n | recovered phase | target | error | R | mechanism-off R |
+|---|---|---:|---:|---:|---:|---:|---:|
+| N2 | fast-spindle onset | 233 | 0.344 | 0.296 | +0.048 | 0.498 | 0.148 |
+| N2 | slow-spindle onset | 918 | 1.464 | — | — | 0.169 | 0.169 |
+| N3 | SO downstate | 2,686 | -0.169 | -0.164 | -0.005 | 0.517 | 0.158 |
+| N3 | fast-spindle onset | 235 | 0.182 | 0.296 | -0.113 | 0.512 | 0.191 |
+| N3 | slow-spindle onset | 928 | 1.688 | — | — | 0.163 | 0.163 |
+
+Every paired count is exact. N2 and N3 slow-spindle events are unchanged in onset, duration and
+amplitude; their nonzero raw R is respiratory phase exposure, not an injected hazard. This is why
+the matched off arm is more informative than demanding that a phase-shuffled raw distribution be
+flat.
+
+## The external detector recovers ordering, with visible estimator bias
+
+YASA was run on the complete volume-conducted mixture at Fz for SO/slow-spindle events and C3 for
+fast spindles. Detections were greedily matched to injected events by temporal overlap before the
+detector's own onset or negative-peak marker was phased:
+
+| state | detected marker | off n / R | on n / R | on phase |
+|---|---|---:|---:|---:|
+| N2 | fast-spindle onset | 91 / 0.145 | 89 / 0.513 | +0.410 |
+| N2 | slow-spindle onset | 113 / 0.234 | 113 / 0.234 | +2.122 |
+| N3 | SO negative peak | 667 / 0.142 | 599 / 0.458 | -0.059 |
+| N3 | fast-spindle onset | 33 / 0.019 | 30 / 0.549 | +0.799 |
+
+The external ordering is correct: SO negative peaks occur before peak inspiration and fast-
+spindle detections after it; the N2 slow-spindle control is exactly unchanged. YASA's N3 onset is
+later than injected truth because the event is nested in a large slow wave and detection begins
+after the source envelope starts. That error belongs to the estimator. Counter-shifting the
+generator until YASA printed +0.296 would violate the circularity rule.
+
+The source-rate invariant is exact, while matched YASA counts move by -2% for N2 fast spindles and
+about -10% for N3 SO/fast events because concentrating events in respiratory windows increases
+overlap and detector merging. No rate row was retuned: the N3 slow-wave detector rate moves toward,
+not away from, the previously measured HMC interval.
+
+Schreiner et al. 2023 provide the shipped inhalation-centred profile and a negative slow-spindle
+result. Girin et al. 2024 report a conflicting full-night profile—both spindle classes during
+expiration and slow waves near phase transitions. R4 therefore establishes one named profile,
+not a universal respiratory law.
+
+Reproduce injected truth:
+`node --experimental-strip-types --no-warnings prep/reference/r4_event_hazards.mts`.
+
+Reproduce external recovery:
+`.venv311/Scripts/python.exe prep/reference/r4_event_recovery.py`.
+
+---
+
+# Finding 41 — R5 closes the respiratory truth and interaction contract `[R5]`
+
+R5 changes no default signal parameter. It makes the causal model inspectable and adds two
+restrained UI contrasts. Epoch schema v5 now carries realized breath morphology, period/depth
+variability, I:E and pause fractions; R peaks, RR intervals, SDNN, RMSSD, requested and recovered
+RSA; and circular summaries of every respiratory event marker. Variable-length arrays are stored
+once in run-level `physiology.json`, while compact epoch truth points to that file. Unit tests
+recompute those values from the raw controller arrays and require exact equality. Short records
+use `null`, not a JSON `NaN` collapse.
+
+The paired release audit removes each mechanism one at a time from identical seeds. Two seeds ×
+120 seconds per state gave:
+
+| state | natural period CV | regular CV | movement Δ RMS (µV) | periodic-gain Δ RMS | slope Δ RMS | event-timing Δ RMS |
+|---|---:|---:|---:|---:|---:|---:|
+| wake EO | 0.139 | 0.000 | 6.942 | 0.124 | 0.447 | 0.000 |
+| wake EC | 0.172 | 0.000 | 6.624 | 0.235 | 0.424 | 0.000 |
+| N1 | 0.081 | 0.000 | 6.723 | 0.927 | 0.408 | 0.000 |
+| N2 | 0.080 | 0.000 | 6.829 | 0.980 | 0.479 | 0.862 |
+| N3 | 0.058 | 0.000 | 6.769 | 2.765 | 0.938 | 13.345 |
+| REM | 0.098 | 0.000 | 7.022 | 0.999 | 0.408 | 0.000 |
+
+Every mechanism changes the waveform in each state where it is defined. Event timing is exactly
+inert outside N2/N3, and turning it off preserves every event count exactly. The large N3
+event-timing difference is not a power gain: large slow waves are moved in time, so pointwise
+subtraction is large even though the event set is unchanged. These marginal differences are
+diagnostics, not realism tolerances.
+
+No pending magnitude changed standing. In particular, recovery of a value from generated signal
+does not become empirical evidence for the value used to generate it.
+
+Reproduce:
+`node --experimental-strip-types --no-warnings prep/reference/r5_release_integration.mts`.
+
+---
+
+# Finding 42 — ISF-0 freezes an infra-slow contract without inventing a source `[ISF-0]`
+
+The shipped aperiodic FFT reaches below 0.1 Hz and the background has a 0.10 Hz stochastic gain
+envelope, but neither is a named infra-slow physiological source. Generated truth contains no
+infra-slow source, phase, topography, delay or mechanism-off arm. ISF-0 leaves that output
+unchanged and records the distinction instead of relabelling an incidental spectral tail.
+
+The external specification now fixes three analysis bands: 0.008-0.1 Hz overall, ISF1 at
+0.008-0.05 Hz and ISF2 at 0.05-0.1 Hz. A derived 1,250-second probe spans ten cycles at the lower
+edge; the ordinary 15-60 second display is explicitly not a validation record. The wake and NREM
+PLV values of 0.178 and 0.211 are registered as estimator-specific reference metrics, not as
+generator modulation depths. The accepted state claim is aggregate NREM > wake. No N1/N2/N3
+ladder and no REM profile are inferred.
+
+Ten load-bearing quantities remain `absent`: cortical RMS in wake, NREM and REM; shared-source
+fraction; source delay; PAC depth in wake, NREM and REM; electrode/DC-drift RMS; and the separately
+represented reference/DC-drift RMS. This is the prefix-not-placeholder result. Assigning plausible
+values now would let the proposed stochastic
+controller validate numbers selected for itself and would also force the complete full-band scalp
+potential through a cortical dipole model despite unresolved BBB, vascular, glial and recording
+contributions.
+
+The I0 structural probe passes: ISF1 and ISF2 exactly partition the full band, the record spans ten
+lower-edge cycles, all nine unknowns remain unreadable, the projection file contains no ISF source
+IDs, generated truth makes no ISF claim, and `generator_version` remains 0.9.0. D26 freezes the
+three future paths—BEM-projected cortical current, power-preserving excitability modulation and
+non-BEM electrode drift—while respiration remains independent.
+
+Reproduce:
+`node --experimental-strip-types --no-warnings prep/reference/isf0_contract.mts`.
+
+---
+
+# Finding 43 — ISF-1 selects a temporal form without selecting its physiology `[ISF-1]`
+
+The current continuous generator is not empty below 0.1 Hz, but that energy is an incidental tail
+of existing aperiodic and rhythmic processes rather than a named infra-slow source. In 1,250-second
+linked-mastoid records, its 0.008-0.1 Hz RMS ranges from 0.489 to 4.215 µV across states and its
+ratio to 0.1-1 Hz RMS ranges from 0.097 to 0.143. Frequency-domain spatial effective rank ranges
+from 4.10 to 5.00. These values describe the current output; they are not targets and were not used
+to select an infra-slow amplitude.
+
+Three causal, unit-variance temporal candidates were then compared outside `composeState`: a
+power-law state-space process, a damped-oscillator bank, and a power-law process with a weak
+resonance. Each was observed through the same causal 0.008-0.1 Hz limiter and tested over twenty
+seeds at a 2 Hz controller rate. All three preserved state exactly under arbitrary chunking. Their
+median full-band spectral entropies were nearly identical (0.834-0.838), largest-bin shares were
+0.076-0.082, and low-band upward-crossing periods broadly overlapped. The hybrid's 0.02 Hz peak
+was manufactured by its fixture rather than required by external evidence.
+
+ISF-1 therefore selects the smallest adequate temporal family: a causal, band-limited power-law
+state process. It does **not** promote the comparison fixture's exponent, pole count, resonance,
+amplitude, source count, topography, state gains or coupling depths. Those quantities remain absent
+until the corresponding empirical or structural step. The selected controller rate is 2 Hz, which
+provides ten samples at the 0.1 Hz upper edge while keeping long validation records inexpensive.
+This is a software architecture decision, not a claim that physiology is sampled at 2 Hz.
+
+Reproduce the current-output boundary:
+`node --experimental-strip-types --no-warnings prep/reference/isf1_current_baseline.mts`.
+
+Reproduce the isolated candidate comparison:
+`node --experimental-strip-types --no-warnings prep/reference/isf1_temporal_candidates.mts`.
+
+---
+
+# Finding 44 — ISF-2 adds BEM source bases without adding a signal `[ISF-2]`
+
+Three bilateral anatomical families were added to the projection producer: frontomedial
+association, sensorimotor and posterior visual/association cortex. They contain 3,126, 2,960 and
+3,967 fixed-normal fsaverage cortical sources and retain 6, 7 and 7 covariance eigenmodes at the
+existing `patch_mode_variance`. Every mode follows the same three-shell BEM path as the established
+rhythms. No electrode-space infra-slow topography, channel phase or channel delay exists.
+
+Independent unit-variance mode drivers produce linked-mastoid power maxima at Fz, C3 and Pz. The
+three families individually have effective ranks 1.365, 2.607 and 2.120. Their equal-variance sum
+has effective rank 3.480, PC1 variance fraction 0.410 and median absolute channel correlation
+0.313; near- and far-distance-quartile correlations are 0.699 and 0.276. Referencing covariance
+before versus after projection agrees to a maximum residual of `8.9e-16`.
+
+None of those covariance summaries was fitted. Equal family variance exists only in this
+unit-variance characterization and must not become a physiological loading because its summaries
+happen to resemble earlier recordings. The conditional fourth lateral family remains absent: no
+external observation requires it, and adding it to tune covariance would count the same evidence
+several times.
+
+The projection file now contains the undriven spatial bases, while cortical RMS, source sharing,
+delay, stage gain and coupling depth remain absent. `composeState` emits no infra-slow truth and no
+sample changes; `generator_version` therefore remains 0.9.0.
+
+Reproduce:
+`.venv311/Scripts/python.exe prep/reference/isf2_source_families.py`.
+
+---
+
+# Finding 45 — ISF-3 makes additive voltage and excitability independently falsifiable `[ISF-3]`
+
+The selected two-band state-space controller now has a causal runtime implementation. It runs at
+2 Hz, linearly interpolates to EEG rate, stores no typed arrays or non-JSON values in checkpoints,
+and is exactly sample-identical under whole-record and arbitrary chunk generation. ISF1 and ISF2
+can be selected independently without perturbing their underlying draws. Unit stationary variance
+is derived from the state-space impulse energy rather than measured from generated spread.
+
+An explicit fixture-only compositor path connects that controller to the ISF-2 BEM modes and to
+named continuous cortical carriers. Additive current reconstructed independently from the
+posterior modes agrees with the complete-mixture difference to `1.3e-14 µV`. The additive
+contribution inside the combined arm agrees with additive-only minus off to `3.2e-14 µV`, showing
+that enabling modulation does not redraw or rescale the additive mechanism.
+
+The source gain is `exp(mz - m²)`, which gives `E[g²] = 1` for unit-Gaussian `z`. A finite record
+still reports realized gain RMS rather than pretending the ensemble identity holds exactly in
+every window. An independent estimator—Pz alpha bandpass, Hilbert amplitude and LS log-envelope
+loading on known ISF truth—gave:
+
+| arm | recovered loading | alpha RMS (µV) |
+|---|---:|---:|
+| off | 0.075 | 4.546 |
+| additive only | 0.075 | 4.546 |
+| modulation only | 0.357 | 4.617 |
+| both | 0.357 | 4.617 |
+| π-inverted driver | -0.197 | 4.254 |
+
+These values demonstrate identifiability at one deliberately visible fixture depth; they are not
+physiological estimates, recovery thresholds or a mapping from published PLV to generator depth.
+The residual off-arm loading and finite-record RMS differences are printed rather than tuned away.
+
+Respiration remains a separate cause: changing the matched belt rate from 10 to 20 breaths/min
+leaves every EEG sample bit-identical when respiratory EEG mechanisms are disabled. In the probe,
+the ISF-driver/belt correlation is 0.0095. Band variance split, target map, preferred phase,
+amplitudes, shared fraction, delay and all state depths remain absent.
+
+The executable path has no defaults and is absent from the UI/exporter. Default samples and truth
+remain unchanged at generator 0.9.0.
+
+Reproduce:
+`node --experimental-strip-types --no-warnings prep/reference/isf3_mechanism_arms.mts`.
+
+---
+
+# Finding 46 — ISF-4 holds at the source-amplitude estimand `[ISF-4]`
+
+Four external candidates were audited against the pre-registered 1,250-second full-band probe.
+The primary healthy wake/NREM study uses DC-coupled 256-channel EEG and the correct 0.008-0.1 Hz
+analysis, but its published result is relative power from 10-minute records and its raw data are
+not public. OpenNeuro ds005385 supplies a large DC-amplifier healthy-wake corpus, but each condition
+is 180 seconds (1.44 cycles at 0.008 Hz). OpenNeuro ds007987 supplies raw 128-channel wake EEG in
+300-second runs (2.4 cycles), while its public acquisition description does not state an exact
+high-pass. Neither contains sleep.
+
+OpenNeuro ds003768 is the closest public sleep candidate: raw 0-250 Hz EEG, scored W/N1/N2/N3 and
+15-minute runs. Those runs still provide only 7.2 cycles at the lower edge, and the raw signal was
+acquired inside an active MRI scanner. Gradient and ballistocardiogram artifacts must be removed;
+the derived signal used for staging was subsequently filtered at 0.3-35 Hz and cannot validate
+infraslow voltage. The dataset therefore remains useful for stage annotations and method work,
+not for absolute full-band calibration.
+
+No candidate is eligible to fit the requested BEM amplitude for a deeper reason: a scalp electrode
+measures the sum of projected cortical current, BBB/vascular and respiratory physiology,
+skin/electrode polarization and reference behavior. The BEM term is only one member of that sum.
+Matching it to total scalp RMS would manufacture a source attribution rather than estimate one.
+
+The audit therefore returns `HOLD_NOT_IDENTIFIABLE`. No generator value changes. Cortical RMS,
+source sharing/delay, band balance and modulation depths remain absent; published relative power,
+PLV and coupled-channel extent remain external comparators. A unit test makes that boundary
+executable so a later total-scalp fit cannot silently populate source parameters.
+
+Reproduce:
+`node --experimental-strip-types --no-warnings prep/reference/isf4_external_evidence.mts`.
+
+---
+
+# Finding 47 — ISF-5 makes recording drift separable by cause `[ISF-5]`
+
+Recording drift now has an executable observation-layer path without acquiring a physiological
+default. Each generated lead receives an independent broad stochastic fixture directly in
+electrode space. A second shared fixture reaches only A1/A2, representing a mastoid-reference
+problem whose scalp consequence is produced by the ordinary reference operator. Neither path
+calls the BEM projection seam or stores an electrode topography.
+
+The causal location is pinned exactly. Matched on/off subtraction recovers the independently
+synthesized electrode additions to machine rounding. Turning only the common mastoid term on
+leaves as-generated scalp, average-reference and Laplacian samples bit-identical; every linked-
+mastoid and contralateral scalp sample changes by the negative common-reference waveform. Drift-
+only truth contains zero cortical source modes and zero modulation targets, so it cannot satisfy
+the neural source-projection or coupling gates by being large.
+
+For characterization, a deliberately visible fixture requested 1 uV independent-channel RMS and
+0.7 uV common-reference RMS over 120 seconds. Its effective rank was 9.18 as generated, 3.63 under
+linked mastoids, 4.28 contralaterally, 8.82 under average reference and 7.02 under Laplacian. A
+posterior cortical ISF fixture measured 1.60 under linked mastoids. These are consequences of the
+two mechanisms and the selected reference, not rank targets.
+
+At linked-mastoid Fz, a 1 Hz zero-phase high-pass reduced fixture RMS from 1.398 to 0.00738 uV,
+retaining 0.0053. That similarity to filtering direct cortical voltage is why filter response
+cannot identify origin. The truth distinction survives even when both waveforms disappear.
+
+Electrode and reference drift amplitudes remain separately absent. Omitting the fixture keeps
+default samples and infra-slow truth unchanged at generator 0.9.0.
+
+Reproduce:
+`node --experimental-strip-types --no-warnings prep/reference/isf5_recording_drift.mts`.
+
+---
+
+# Finding 48 — the full-band release view exposes time without inventing origin `[ISF-6]`
+
+The release interface now generates each 120, 300 or 600 second overview as one continuous
+record. It does not concatenate the live scroll's 90-second buffers and therefore cannot turn a
+presentation crossfade into apparent infra-slow activity. The complete-record spectrum has
+plotted bin spacing 0.00781, 0.00195 and 0.000977 Hz respectively, while the interface separately
+states the honest fundamental resolutions of 0.00833, 0.00333 and 0.00167 Hz. The distinction is
+load-bearing: zero padding densifies frequency bins but does not create observed cycles.
+
+For the release wake-eyes-closed fixture at linked-mastoid Fz, the 2 Hz anti-aliased overview had
+DC-retaining RMS 6.67, 6.53 and 6.76 uV over 120, 300 and 600 seconds. The fixed 0.1 Hz comparison
+high-pass retained 0.979, 0.980 and 0.984 of that RMS; the removed waveform itself measured 1.10,
+1.09 and 0.99 uV RMS. This is a useful negative result: the released generator contains only a
+modest direct sub-0.1 Hz contribution. The interface does not enlarge it or silently activate a
+fixture to make the demonstration more dramatic.
+
+Every overview reported `namedInfraSlowTruth = false`. The projected-cortical, excitability and
+recording-drift controls remain independently visible but disabled because their RMS/depth rows
+remain absent. Generator 0.9.0 and export schema v5 are therefore unchanged. In browser QA, a
+600-second record generated in 1.79 seconds, both canvases rendered, cached electrode switching
+worked, and no console warning or error was emitted.
+
+The complete registry/projection/literal/type/test/harness/gate verification passed: 287 registry
+rows, 94 projection entries, 95 core tests, 36 harness tests, and all failable G1-G6 arms. This
+closes I0-I7 for the implemented prefix without claiming that the still-unidentified causal
+amplitudes have been calibrated.
+
+Reproduce:
+`node --experimental-strip-types --no-warnings prep/reference/isf6_release_integration.mts`.
+
+# Finding 49 — stabilization reconciles integration and exposes remaining model differences
+
+The 4 September 2026 workspace review found a calibration that failed its saved-value replay,
+incompatible TypeScript/Python filtering, different browser/export defaults, stale spectrum
+updates, endpoint-seek and display-polarity errors, random quality labels, a short-record hang,
+artificial joins in the real-data analysis, and an unexposed continuous overview. Generator
+0.11.0 repairs these contracts and adds regressions; details and retained evidence are in
+[Stabilization 0.11.0](Stabilization-0.11.0.md).
+
+The calibrated scalar is 3.4836158752441406 dB; its stored fixture replays occupancy
+0.20338541666666668. The nine-check verification passes. G5 still records only 0.44 qualifying
+N3 epochs over held-out seeds, and G3 all-event median F1 is 0.569. The random event tag is no
+longer interpreted as morphology quality. No acceptance threshold was relaxed.
+
+Five previously uncached HMC nights were reserved before analysis, publisher-checksummed, and
+kept outside the legacy fitting directory. Continuous preprocessing and within-epoch analysis
+replace filtering across artificial stage joins. Against six generated seeds, held-out N3 delta
+fraction is 0.866 versus generated 0.870; N1 is 0.693 versus 0.135 and REM is 0.591 versus 0.097.
+The corrected development corpus also shows the N1/REM disagreement. These are descriptive
+comparisons with a clinical cohort and four derivations, not physiological acceptance bounds.
+
+At the released exponent-modulation depth of 0.15, a new paired full-mixture probe finds N2 median
+estimated coupling depth 0.17259 with the mechanism on and 0.17779 with it off. Other respiratory
+mechanisms remain active. A nonzero phase-locked readout therefore cannot be attributed solely to
+exponent modulation. This record-only result complements the intentionally enlarged G4 fixture.
+
+Reproduce with `npm run verify`, `python -m prep.reference.t1m1_state_realism --cohort development`,
+`python -m prep.reference.t1m1_state_realism --cohort holdout`, and
+`node --experimental-strip-types --no-warnings prep/reference/released_coupling.mts`.

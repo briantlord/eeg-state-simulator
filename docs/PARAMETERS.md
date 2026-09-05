@@ -4,7 +4,7 @@
 > Regenerate with `npm run registry:emit`; `npm run registry:check` fails the build if
 > this file and the registry have drifted apart. See `tools/registry/GRAMMAR.md`.
 
-Generator version `0.3.0` · schema `1`
+Generator version `0.11.0` · schema `1`
 
 **Code reads the registry. No scientific constant may appear in source or UI copy that
 is absent from it** — a Tier 0 acceptance check, **enforced by `tools/lint/literals.mjs`**
@@ -46,7 +46,7 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 | `display_sensitivity_options` | 3 or 5 or 7 or 10 or 15 or 20 or 30 or 50 | uV/mm | `chosen` | sensitivity steps offered by the control; clinical machines step similarly | all |
 | `display_window_options` | 5 or 10 or 15 or 30 or 60 | s | `chosen` | time-base steps offered by the control; 30 s is the AASM epoch and the default | all |
 | `display_buffer_s` | 90 | s | `chosen` | length of the live streaming buffer the display scrolls through | all |
-| `export_schema_version` | 1 | — | `chosen` | epoch-directory schema (seam 9) | all |
+| `export_schema_version` | 7 | — | `chosen` | epoch-directory schema (seam 9) | all |
 | `rng_algorithm_ts` | xoshiro128++ | — | `chosen` | 32-bit state, native in typed arrays; see DECISIONS D2 | all |
 | `n_seeds` | 20 | — | `chosen` | provisional; to be set from observed variance — power analysis, not circularity | all |
 
@@ -67,6 +67,8 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 **`display_sensitivity_options`.** Changing sensitivity is NOT autoscaling. The scale is always stated and always the same for every channel and every state, so the amplitude difference between N3 delta and waking alpha survives; the reader is choosing a ruler, not having one chosen for them per epoch.
 
 **`display_buffer_s`.** "Real-time generation is not in question. Do not architect around synthesis cost; the streaming buffer exists for CONTINUITY, not throughput." 90 s at 256 Hz over 21 channels is ~39 MB, which is the cost of keeping a scroll-back window in memory rather than regenerating on every frame.
+
+**`export_schema_version`.** v2 added the complete aperiodic component mixture. v3 added respiratory aperiodic phase/loading and periodic band modulation. v4 added respiratory event-hazard configuration and realized event-marker phases. v5 adds realized breath morphology, variability, RR/HRV/RSA, and circular event-phase summaries; legacy primary fields remain for older readers.
 
 **`rng_algorithm_ts`.** Source markdown offered 'xoshiro128++ or PCG32'. An unresolved disjunction is not a value; xoshiro128++ selected so seam 4 is pinned.
 
@@ -120,6 +122,8 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 | `k_rem` | — *(pending T1-M1; runs on 539.7131)* | — | `invented` |  | rem |
 | `fit_band_broad` | 1–45 *(band_edges)* | Hz | `chosen` | one of eleven bands in use in the literature; ours by choice | all |
 | `fit_band_narrow` | 30–45 *(band_edges)* | Hz | `literature` | Lendner et al. 2020, *eLife* | all |
+| `background_fast_fraction_n3` | — *(pending T1-M1; runs on 0.2)* | — | `invented` | source variance share obtained by output-side inversion; it is not a directly observed physiological fraction | n3 |
+| `background_fast_knee_n3` | — *(pending T1-M1; runs on 8)* | Hz | `invented` | source timescale obtained by output-side inversion; HMC constrains the resulting scalp-spectrum knee, not this source knee directly | n3 |
 
 **`chi_inband_slope`.** THE QUANTITY A READER MEASURES, which is not the quantity `chi_*` stores. `chi_*` is the ASYMPTOTIC exponent: the slope the spectrum approaches far above the knee. Any fit over a finite band that contains or sits below the knee returns something shallower, because below a knee the spectrum is flat. THE GAP IS LARGE AND WAS UNRECORDED. chi_wake_ec at its old 1.1 with a 12 Hz knee predicts an in-band slope of 0.303 over 1-20 Hz; the generator measured 0.31, agreeing with its own parameters exactly. It was compared against a real 0.99 and read as a threefold generator error for three sessions. It was two different quantities. Build Plan 3.7 warned that a published exponent is a joint function of method, band, knee model, reference and acquisition; the warning was written and then compared across anyway. NO STATE ORDERING MAY BE CLAIMED FROM THIS QUANTITY. See chi_direction.
 
@@ -135,6 +139,10 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 
 **`knee_freq_high_unmodelled`.** Re-standed literature -> invented, same reason. Registered so the acceptance check can authorize it in copy; nothing generates it.
 
+**`background_fast_fraction_n3`.** Variance share, not amplitude share. Independent components receive sqrt(1-q) and sqrt(q) RMS scaling, preserving total aperiodic variance.
+
+**`background_fast_knee_n3`.** Uses chi_n3 rather than adding another exponent. The two components differ only in correlation timescale and independent realization; they share the same lead-field modes.
+
 ## 4. Oscillations
 
 | Key | Value | Units | Standing | Source | States |
@@ -142,9 +150,9 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 | `alpha_band` | 8–12 *(band_edges)* | Hz | `chosen` | conventional band edges; no single standard fixes them | wake_ec, rem |
 | `alpha_peak` | 10 | Hz | `invented` | individual peak varies 8-13; no fitted value | wake_ec |
 | `alpha_amp` | 10.29–25.71 *(uncertainty)* | uV_pp | `invented` | textbook range, not a measurement under a known pipeline | wake_ec |
-| `alpha_bandwidth_sharp` | 1 | Hz | `invented` | -3 dB bandwidth of the weakly damped (high-amplitude) alpha mode | wake_ec, rem |
-| `alpha_bandwidth_broad` | 6 | Hz | `invented` | -3 dB bandwidth of the strongly damped (low-amplitude) alpha mode | wake_ec, rem |
-| `alpha_mode_dwell` | 1.25 | s | `invented` | mean dwell time in each alpha amplitude mode | wake_ec, rem |
+| `alpha_bandwidth_sharp` | — *(pending T1-M1; runs on 0.7)* | Hz | `invented` | -3 dB bandwidth of the weakly damped (high-amplitude) alpha mode | wake_ec, rem |
+| `alpha_bandwidth_broad` | — *(pending T1-M1; runs on 8)* | Hz | `invented` | -3 dB bandwidth of the strongly damped (low-amplitude) alpha mode | wake_ec, rem |
+| `alpha_mode_dwell` | — *(pending T1-M1; runs on 4)* | s | `invented` | mean dwell time in each alpha amplitude mode | wake_ec, rem |
 | `alpha_burst_dur` | 0.5–2 *(uncertainty)* | s | `invented` | conventional description of posterior alpha runs; uncited | wake_ec, rem |
 | `alpha_burst_rate` | 20–30 *(uncertainty)* | 1/min | `invented` | uncited; set from a target duty cycle rather than observed directly | wake_ec, rem |
 | `alpha_burst_duty_note` | duty cycle = alpha_burst_dur * alpha_burst_rate / 60; the two rows are not independent | — | `chosen` | records the constraint linking the two burst rows | wake_ec, rem |
@@ -157,10 +165,12 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 | `theta_band` | 4–7 *(band_edges)* | Hz | `chosen` | conventional band edges | n2, rem |
 | `theta_amp` | 15–40 *(uncertainty)* | uV_pp | `invented` | textbook range | n2, rem |
 | `delta_band` | 0.5–2 *(band_edges)* | Hz | `definitional` | AASM Manual for the Scoring of Sleep and Associated Events — slow wave activity band | n3 |
-| `delta_amp` | 100–200 *(uncertainty)* | uV_pp | `invented` | textbook range, matching neighbouring so_amp and kc_amp. Explicitly NOT derived from the 75 uV AASM criterion. | n3 |
+| `delta_amp` | — *(pending T1-M1; runs on 50)* | uV_pp | `invented` | output-side HMC fit; explicitly not derived from the 75 uV AASM criterion | n3 |
 | `so_freq` | <1 | Hz | `invented` | distinct from the AASM delta band; uncited | n3 |
+| `so_rate` | — *(pending T1-M1; runs on 9)* | 1/min | `invented` | the source scheduler rate is not the same quantity as detector events per channel-minute; it is obtained by output-side inversion | n3 |
 | `so_amp` | 100–200 *(uncertainty)* | uV_pp | `invented` | uncited | n3 |
 | `background_rms_uv` | 6–10 *(uncertainty)* | uV | `invented` | broadband RMS of the aperiodic background | all |
+| `background_gain_n3` | — *(pending T1-M1; runs on 1.9)* | — | `invented` | state-specific aperiodic level required after delta_amp stopped carrying the entire N3 amplitude | n3 |
 | `amp_pp_to_rms` | 2.828 | — | `invented` | peak-to-peak to RMS for a quasi-sinusoidal rhythm: 2*sqrt(2) | all |
 | `osc_carrier_flatten` | 0.75 | — | `invented` | exponent alpha in dividing the carrier by its own smoothed envelope^alpha before imposing burst structure | all |
 | `filter_order` | 4 | — | `chosen` | Butterworth bandpass | all |
@@ -169,7 +179,7 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 
 **`alpha_bandwidth_sharp`.** Damping, not filter width. A damped oscillator's bandwidth IS its damping: r = exp(-pi*B/fs). Narrow means weakly damped, long phase memory, a genuine oscillation; wide means heavily damped and noise-like. One parameter spans both regimes, which is what makes "alpha is a real oscillation, unlike the rest of the signal" expressible rather than asserted.
 
-**`alpha_bandwidth_broad`.** The second mode exists because alpha amplitude is BISTABLE, bursting between high- and low-amplitude states rather than diffusing about one mean (Freyer et al. 2009, 2011; mechanism a subcritical Hopf bifurcation). A single linear mode has a Rayleigh envelope -- measured CV 0.521 against Rayleigh's exact 0.523 -- which is precisely the distribution that finding contradicts. With two modes the measured bimodality coefficient is 0.580, above the 0.555 threshold; with one it is 0.434.
+**`alpha_bandwidth_broad`.** The second mode exists because alpha amplitude is BISTABLE, bursting between high- and low-amplitude states rather than diffusing about one mean (Freyer et al. 2009, 2011; mechanism a subcritical Hopf bifurcation). A single linear mode has a Rayleigh envelope -- measured CV 0.521 against Rayleigh's exact 0.523 -- which is precisely the distribution that finding contradicts. In the matched output comparison the retained two-mode fit gives a bimodality coefficient of 0.528 against 0.549 in EEGMAT; this is a distributional comparison, not a thresholded claim that every record is bimodal.
 
 **`alpha_burst_dur`.** SUPERSEDED by the damped-oscillator model (DECISIONS D13). Alpha burst structure now EMERGES from bistable damping rather than being imposed by an envelope, so nothing reads this row. Retained rather than deleted because the burst-envelope machinery still exists for rhythms whose damping is unfitted, and because deleting it would erase the record of why it was tried.
 
@@ -181,9 +191,11 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 
 **`alpha_shape_rdsym`.** 0.5 is symmetric; below 0.5 is a steeper rise, above is a steeper decay. Stated as the MEASURED QUANTITY rather than as a signed deviation, because the deviation form was got wrong twice in one sitting -- the registry note inverted the formula, and independently the implementation used a phase warp that produced no asymmetry at all while appearing to. A parameter that IS the measurement cannot be misread, and test/oscillations.test.ts pins it against the generated signal. BOTH THE MAGNITUDE AND THE DIRECTION ARE UNFITTED. The shape literature reports log sharpness and steepness ratios per cycle, not rdsym for occipital alpha specifically, and no source consulted gives a direction for posterior alpha. 0.42 is a mild steeper rise, chosen to be visibly non-sinusoidal without asserting a direction the data does not support. T1-M2 fits it against a corpus with bycycle.
 
-**`delta_amp`.** Given a Tier 0 value on import; see Execution-Scheme D10. Left blank, this row and snr_nominal are under-determined by one degree of freedom and the calibration absorbs it, setting delta amplitude from the 75 uV figure through the back door — the exact circularity D5 exists to close, re-entering through the one row D5's prose leaves empty. The AASM number appears in gate_aasm_n3 and nowhere else. UNITS CORRECTED to uV_pp on review: the textbook 100-200 figure for slow waves is peak-to-peak, and it had been placed on a row declared in plain uV. Read as peak it is 200-400 uV p-p, which at snr_null_offset = -6 dB still clears the 75 uV criterion — so G5's null could not have failed, and under D9 that null is G5's only failable arm. D10's claim that fixing this row "makes snr_nominal a genuine single-scalar solve" is FALSE and is withdrawn: so_amp (100-200 uV, so_freq < 1 Hz) also lands inside gate_aasm_n3_band, the aperiodic offset b has no registry row at all, and the interval-to-point reduction rule is unregistered with zero Dv rows in the registry. At least three further degrees of freedom remain. See Execution-Scheme section 7.
+**`delta_amp`.** Given a Tier 0 value on import; see Execution-Scheme D10. Left blank, this row and snr_nominal are under-determined by one degree of freedom and the calibration absorbs it, setting delta amplitude from the 75 uV figure through the back door — the exact circularity D5 exists to close, re-entering through the one row D5's prose leaves empty. The AASM number appears in gate_aasm_n3 and nowhere else. UNITS CORRECTED to uV_pp on review: the textbook 100-200 figure for slow waves is peak-to-peak, and it had been placed on a row declared in plain uV. Read as peak it is 200-400 uV p-p, which at snr_null_offset = -6 dB still clears the 75 uV criterion — so G5's null could not have failed, and under D9 that null is G5's only failable arm. D10's claim that fixing this row "makes snr_nominal a genuine single-scalar solve" is FALSE and is withdrawn: so_amp (100-200 uV, so_freq < 1 Hz) also lands inside gate_aasm_n3_band, the aperiodic offset b has no registry row at all, and the interval-to-point reduction rule is unregistered with zero Dv rows in the registry. At least three further degrees of freedom remain. See Execution-Scheme section 7. Finding 34 supersedes the invented 100-200 range with a 50 uV_pp continuous-delta source fitted jointly with discrete slow-wave rate against HMC, independently of G5.
 
 **`background_rms_uv`.** Added on measurement. It had been a bare literal (20) inside compose.ts — exactly the hidden constant the acceptance check exists to forbid, in the file that sets the denominator of every SNR in the project. It is also the scale `snr_nominal` is solved against, so it belongs beside the amplitudes rather than in code. NOTE this row is in RMS while every oscillation amplitude is peak-to-peak; the conversion is amp_pp_to_rms.
+
+**`background_gain_n3`.** Multiplies the complete N3 aperiodic background after spatial mixing and unit-RMS temporal modulation; does not scale spindles or slow-oscillation event morphology. Finding 35 subsequently added the fast-timescale component: the held-out G5 fraction moved to 0.083 but remains inside the real HMC IQR 0.039-0.364, so this gain was not circularly retuned.
 
 **`amp_pp_to_rms`.** Added on measurement, and the measurement is worth recording. Feeding the textbook oscillation ranges to the generator AS RMS gave wake_ec an alpha source at 35 uV RMS against a 20 uV background — 1.75x the entire broadband signal — and G1a's recovered chi was +1.22 off the injected value, against -0.03 to +0.11 for the states with no strong oscillation. The generator was correct; the number handed to it was not. Textbook figures for a visible rhythm are peak-to-peak. 2*sqrt(2) is exact for a sinusoid; narrowband filtered noise has a higher crest factor, so this OVERSTATES the RMS somewhat and is marked invented rather than derived. T1-M1 must fit amplitude distributions directly and retire this conversion instead of refining it.
 
@@ -204,6 +216,8 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 | `cortical_coherence_mm` | — *(pending T1-M1; runs on 40)* | mm | `invented` | no source consulted gives a cortical coherence length for a specific rhythm at this resolution; it is the ONE spatial shape parameter left after the lead field replaced 31 | all |
 | `patch_mode_variance` | 0.99 | — | `chosen` | how much of a patch's spatial variance the retained eigenmodes must carry; a truncation tolerance, not a physical quantity | all |
 | `channel_local_share` | — *(pending T1-M1; runs on 0.2)* | — | `invented` | an independent-EQUIVALENT share under this model, not a measured physiological quantity; part of it is certainly model mismatch | all |
+| `background_envelope_depth` | — *(pending T1-M1; runs on 0.35)* | — | `invented` | the mechanism is generic stochastic gain modulation; this depth is an output-side fit awaiting the completed sweep | all |
+| `background_envelope_rate` | 0.1 | Hz | `chosen` | sets changes on a several-second scale resolved by the two-second temporal-texture benchmark | all |
 | `ap_axis_span` | 180 | mm | `invented` | anterior-posterior extent used for the travel delay in 3.5 | n3 |
 | `so_travel_v` | 1–7 *(uncertainty)* | m/s | `literature` | Massimini et al. 2004, *J Neurosci* | n3 |
 | `topo_expect_spindle_fast` | C3/C4/Cz | — | `literature` | AASM Manual for the Scoring of Sleep and Associated Events — central maximum for fast spindles | n2 |
@@ -234,6 +248,10 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 
 **`channel_local_share`.** REAL EEG IS LESS SPATIALLY CORRELATED THAN A LEAD FIELD PREDICTS, and nothing in the source model can produce that. Coherence between sources only ever RAISES inter-channel correlation; only signal that is independent per electrode lowers it. Measured under average reference: the parameter-free lead field gives near-pair 0.553 and far-pair 0.376 against a real 0.413 and 0.257, and a 0.20 independent share brings them to 0.403 and 0.302 -- mean relative error 0.125 against 0.250 for the 31-row Gaussian mixture it replaces (Finding 20). NOT AMPLIFIER NOISE. `sensor_noise_rms` is 1.5 uV against a 20 uV background, 0.56% of variance. This is the non-neural signal a real scalp recording carries independently at each site: local muscle tone, skin potential, electrode drift, contact impedance. IT CARRIES THE BACKGROUND'S APERIODIC EXPONENT rather than being white. White noise at 20% of variance would flatten the measured spectrum and move chi, turning a spatial fix into a spectral defect. HONESTY ABOUT THE NUMBER: it is what the montage needs given fsaverage as a template head, a 2-D near/far split, and a white-cortex source model. Some of it is model mismatch rather than scalp physiology, and it must not be cited as the latter.
 
+**`background_envelope_depth`.** A bounded multiplier on the entire distributed aperiodic background, normalized to unit RMS. It adds waxing and waning without changing average background power or lead-field weights. Finding 32 found generated two-second band-power CV only 0.56-0.73x the real HMC median in wake_ec, N1, N2 and REM. One shared depth is intentionally more parsimonious than a separate intermittency parameter for every state and band.
+
+**`background_envelope_rate`.** Envelope corner, not a physiological oscillation; the depth carries the fitted effect size.
+
 **`topo_expect_alpha`.** Re-sourced on import, not re-standed. In the source markdown this row read 'clinical convention (posterior dominant rhythm)' — naming neither author/year nor standard, which the registry's own discipline calls a contradiction on its face. It is the row G6 reads and D6 built the gate around its independence, so the violation sat on the load-bearing path. AASM does define the posterior dominant rhythm, so the standard is nameable and the literature standing survives.
 
 **`so_travel_v_used`.** so_travel_v is a literature INTERVAL (Massimini et al. 2004, 1-7 m/s); the generator needs a point. Registered separately rather than silently taking a midpoint inside the code, so the reduction is visible and can be replaced by a per-event draw once Dv rows exist. At 3 m/s across ap_axis_span = 180 mm the frontal-to-occipital delay is 60 ms, which is what makes the wave visibly sweep.
@@ -248,6 +266,7 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 | `spindle_rate` | 2–5 *(uncertainty)* | 1/min | `invented` | uncited | n2, n3 |
 | `spindle_fast_freq` | 13–15 *(uncertainty)* | Hz | `invented` | uncited; central-parietal | n2 |
 | `spindle_slow_freq` | 11–13 *(uncertainty)* | Hz | `invented` | uncited; frontal | n2 |
+| `spindle_fast_fraction` | — *(pending T1-M1; runs on 0.2)* | — | `invented` | the four HMC derivations preferentially detect central fast spindles, so the source mixture must be solved through the detector | n2, n3 |
 | `kc_amp` | 100–200 *(uncertainty)* | uV_pp | `invented` | textbook range | n2 |
 | `kc_dur_min` | 0.5 | s | `definitional` | AASM Manual for the Scoring of Sleep and Associated Events — minimum K-complex duration | n2 |
 | `kc_rate` | 1–3 *(uncertainty)* | 1/min | `invented` | uncited | n2 |
@@ -268,41 +287,105 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 
 | Key | Value | Units | Standing | Source | States |
 |---|---|---|---|---|---|
-| `resp_rate_wake` | 12–18 *(uncertainty)* | 1/min | `invented` | uncited | wake_eo, wake_ec |
-| `resp_rate_n2` | 12–15 *(uncertainty)* | 1/min | `invented` | uncited | n2 |
-| `resp_rate_n3` | 12–15 *(uncertainty)* | 1/min | `invented` | uncited; most regular | n3 |
-| `resp_rate_rem` | 10–22 *(uncertainty)* | 1/min | `invented` | irregularity is well established; magnitude uncited | rem |
+| `resp_rate_wake` | 16.8 | 1/min | `literature` | Gutierrez et al. 2016, *Physiological Reports* | wake_eo, wake_ec |
+| `resp_rate_n1` | 15.7 | 1/min | `literature` | Gutierrez et al. 2016, *Physiological Reports* | n1 |
+| `resp_rate_n2` | 15.5 | 1/min | `literature` | Gutierrez et al. 2016, *Physiological Reports* | n2 |
+| `resp_rate_n3` | 15.9 | 1/min | `literature` | Gutierrez et al. 2016, *Physiological Reports* | n3 |
+| `resp_rate_rem` | 15.2 | 1/min | `literature` | Gutierrez et al. 2016, *Physiological Reports* | rem |
+| `resp_subject_rate_cv` | — *(pending T1-M1; runs on 0.143)* | — | `invented` | the source reports cross-sectional spread, while the controller needs a stable subject effect | all |
 | `resp_ie_ratio` | 1.5–2 *(uncertainty)* | — | `invented` | expiration:inspiration duration ratio; uncited | all |
-| `resp_pause_fraction` | 0.15 | — | `invented` | fraction of the breath period spent in inhalation and exhalation pauses | all |
-| `resp_period_cv` | — *(pending T1-M1; runs on 0.08)* | — | `invented` |  | all |
+| `resp_ie_ratio_cv` | — *(pending T1-M1; runs on 0.1)* | — | `invented` | uncalibrated morphology variability | all |
+| `resp_inhale_pause_probability` | 0.3 | — | `chosen` | Noto et al. 2018, *BreathMetrics reference implementation* | all |
+| `resp_exhale_pause_probability` | 0.3 | — | `chosen` | Noto et al. 2018, *BreathMetrics reference implementation* | all |
+| `resp_pause_duration_s` | 0.2 | s | `chosen` | Noto et al. 2018, *BreathMetrics reference implementation* | all |
+| `resp_period_cv_wake` | — *(pending T1-M1; runs on 0.16)* | — | `invented` | state ordering is reported, exact CV not read out | wake_eo, wake_ec |
+| `resp_period_cv_n1` | — *(pending T1-M1; runs on 0.1)* | — | `invented` | exact CV not read out | n1 |
+| `resp_period_cv_n2` | — *(pending T1-M1; runs on 0.08)* | — | `invented` | exact CV not read out | n2 |
+| `resp_period_cv_n3` | — *(pending T1-M1; runs on 0.06)* | — | `invented` | exact CV not read out | n3 |
+| `resp_period_cv_rem` | — *(pending T1-M1; runs on 0.14)* | — | `invented` | exact CV not read out | rem |
+| `resp_fast_tau_breaths` | — *(pending T1-M1; runs on 2)* | breaths | `invented` | AR(1) reduction of reported short-timescale structure | all |
+| `resp_slow_tau_s` | — *(pending T1-M1; runs on 120)* | s | `invented` | model reduction of a broad reported range | all |
+| `resp_fast_variance_fraction` | — *(pending T1-M1; runs on 0.55)* | — | `invented` | uncalibrated latent variance allocation | all |
+| `resp_slow_fraction_wake` | — *(pending T1-M1; runs on 0.25)* | — | `invented` | direction externally reported; magnitude provisional | wake_eo, wake_ec |
+| `resp_slow_fraction_n1` | — *(pending T1-M1; runs on 0.1)* | — | `invented` | magnitude provisional | n1 |
+| `resp_slow_fraction_nrem` | — *(pending T1-M1; runs on 0.03)* | — | `invented` | direction reported by Rostig and Zschocke; magnitude provisional | n2, n3 |
+| `resp_slow_fraction_rem` | — *(pending T1-M1; runs on 0.3)* | — | `invented` | direction reported by Rostig and Zschocke; magnitude provisional | rem |
+| `resp_depth_cv_wake` | — *(pending T1-M1; runs on 0.2)* | — | `invented` | uncalibrated belt-depth variability | wake_eo, wake_ec |
+| `resp_depth_cv_n1` | — *(pending T1-M1; runs on 0.16)* | — | `invented` | uncalibrated belt-depth variability | n1 |
+| `resp_depth_cv_n2` | — *(pending T1-M1; runs on 0.12)* | — | `invented` | uncalibrated belt-depth variability | n2 |
+| `resp_depth_cv_n3` | — *(pending T1-M1; runs on 0.08)* | — | `invented` | uncalibrated belt-depth variability | n3 |
+| `resp_depth_cv_rem` | — *(pending T1-M1; runs on 0.22)* | — | `invented` | uncalibrated belt-depth variability | rem |
+| `resp_depth_timing_correlation` | — *(pending T1-M1; runs on 0.35)* | — | `invented` | uncalibrated latent coupling | all |
 | `resp_artifact_amp` | 5–25 *(uncertainty)* | uV | `invented` | amplitude of the mechanical respiratory movement artifact; uncited | all |
 | `resp_amp_mod_depth` | — *(pending T1-M1; runs on 0.35)* | — | `invented` | Kluger & Gross 2021 report respiration modulates band amplitude; depth not read out | all |
 | `chi_mod_depth` | — *(pending T1-M1; runs on 0.15)* | — | `invented` | Kluger et al. 2023 Fig. 2 reports this but the value has not been read out | all |
-| `chi_mod_phase_wake` | slope decreases in late inspiration, increases in late expiration | rad | `invented` | 2025 respiratory-excitability study, N=23; author not recorded | wake_eo, wake_ec, n1 |
-| `chi_mod_phi0_wake` | — *(pending T1-M1; runs on 3.14159265358979)* | rad | `invented` |  | wake_eo, wake_ec, n1 |
-| `chi_mod_phi0_sleep` | — *(pending T1-M1; runs on 0)* | rad | `invented` |  | n2, n3, rem |
-| `chi_mod_phase_sleep` | reversed relative to wake, from N2 onward | rad | `invented` | ibid.; author not recorded | n2, n3, rem |
-| `alpha_mod_depth` | — *(pending T1-M1; runs on 0.1)* | — | `invented` | Kluger & Gross 2021 — not yet read out | all |
+| `chi_mod_phi0_wake` | 2.99 | rad | `literature` | Sánchez Corzo et al. 2026, *Progress in Neurobiology 256:102857* | wake_eo, wake_ec |
+| `chi_mod_phi0_n1` | -2.7 | rad | `literature` | Sánchez Corzo et al. 2026, *Progress in Neurobiology 256:102857* | n1 |
+| `chi_mod_phi0_n2` | -1.33 | rad | `literature` | Sánchez Corzo et al. 2026, *Progress in Neurobiology 256:102857* | n2 |
+| `chi_mod_phi0_n3` | -1.78 | rad | `literature` | Sánchez Corzo et al. 2026, *Progress in Neurobiology 256:102857* | n3 |
+| `chi_mod_phi0_rem` | -1.45 | rad | `literature` | Sánchez Corzo et al. 2026, *Progress in Neurobiology 256:102857* | rem |
+| `periodic_mod_phi0_low` | 3.14159265358979 | rad | `derived` | Kluger & Gross 2021 report low-frequency amplitude highest at the beginning/end of a peak-inspiration-centred cycle and lowest at peak inspiration; the cosine encoding therefore peaks at pi. | all |
+| `periodic_mod_phi0_high` | 0 | rad | `derived` | Kluger & Gross 2021 report that the high-frequency temporal modulation pattern reverses the low-frequency pattern; the cosine encoding therefore peaks at peak inspiration, phase zero. | all |
+| `periodic_mod_depth_high` | — *(pending T1-M1; runs on 0.1)* | — | `invented` | Kluger & Gross 2021 establish high-band modulation but the magnitude has not been converted to this log-amplitude parameter | all |
+| `resp_so_pref_phase` | -0.164060949687467 | rad | `literature` | Schreiner et al. 2023, *Nature Communications 14:8351* | n3 |
+| `resp_so_resultant_length` | 0.51 | — | `literature` | Schreiner et al. 2023, *Nature Communications 14:8351* | n3 |
+| `resp_so_hazard_kappa` | 1.1910453273513 | — | `derived` | Unique non-negative solution of I1(kappa)/I0(kappa) = resp_so_resultant_length for a von Mises event hazard. | n3 |
+| `resp_spindle_fast_pref_phase` | 0.295833308213039 | rad | `literature` | Schreiner et al. 2023, *Nature Communications 14:8351* | n2, n3 |
+| `resp_spindle_fast_resultant_length` | 0.52 | — | `literature` | Schreiner et al. 2023, *Nature Communications 14:8351* | n2, n3 |
+| `resp_spindle_fast_hazard_kappa` | 1.22349789246669 | — | `derived` | Unique non-negative solution of I1(kappa)/I0(kappa) = resp_spindle_fast_resultant_length for a von Mises event hazard. | n2, n3 |
+| `resp_spindle_slow_hazard` | — *(absent)* | — | `absent` | Schreiner et al. 2023, *Nature Communications 14:8351, Supplementary Figure 3* | n2, n3 |
 | `nasal_oral_factor` | — *(pending T1-M1; runs on 0.3)* | — | `invented` | Zelano et al. 2016 shows attenuation; magnitude unread | all |
 | `tilt_n_poles` | 12 | — | `derived` | Measured: 4 cascaded log-spaced pole-zero pairs per decade over 0.1-115 Hz gives peak-to-peak ripple of ~15% of delta-chi across 1-45 Hz, and relative ripple is depth-independent. 1/decade gives ~100%; 8/decade gives ~10% for double the sections. See docs/Tier0-Estimator-Probe.md Finding 4. | all |
 | `tilt_pole_spacing` | logarithmic, 4 pole-zero pairs per decade across 0.1-115 Hz (1 decade of pad either side of the 1-45 Hz band) | — | `chosen` | a first-order shelf cannot give uniform slope change across the band | all |
 | `tilt_mod_settling_ratio` | — *(absent)* | — | `absent` | The chosen interpolation scheme is the one whose G4 f2 coupling sits below the surrogate null. Compared as a documented experiment at T0-M4. | all |
 
-**`resp_rate_rem`.** Source markdown gave the English word 'variable', which is not machine-readable. Widened interval plus resp_period_cv carries the irregularity.
+**`resp_rate_wake`.** Mean spontaneous respiratory rate in 38 adults with AHI < 5; reported SD 2.4/min. The same wake mean is used for eyes open and closed because the study did not separate them.
+
+**`resp_rate_n1`.** Group mean; reported SD 2.8/min.
+
+**`resp_rate_n2`.** Group mean; reported SD 2.2/min.
+
+**`resp_rate_n3`.** Group mean; reported SD 2.4/min. N3 is more regular, not necessarily slower than every other NREM stage.
+
+**`resp_rate_rem`.** Group mean; reported SD 3.0/min. REM irregularity belongs in breath timing, not in a widened mean-rate interval.
 
 **`resp_ie_ratio`.** Source markdown wrote '1:1.5 - 1:2'. Normalized to a numeric ratio.
 
-**`resp_pause_fraction`.** NeuroKit2's breathmetrics model interpolates inhalation and exhalation pauses, and the Build Plan says to transcribe it rather than reinvent it. NeuroKit2 is not a dependency here, so this implements the published description instead and the pause fraction is invented. TODO(T1): validate against neurokit2.rsp_simulate directly -- the risk register's mitigation for rebuilding solved generators is "transcribe, cite, validate against the originals", and the third step is not done.
+**`resp_inhale_pause_probability`.** Matches the reference implementation default. It is an interoperability choice, not a claim that every healthy cohort has this pause frequency.
+
+**`resp_exhale_pause_probability`.** Matches the reference implementation default. It is an interoperability choice, not a claim that every healthy cohort has this pause frequency.
+
+**`resp_pause_duration_s`.** Matches the reference implementation's average inhale- and exhale-pause length. This establishes feature parity with that simulator, not a universal physiological mean.
 
 **`resp_artifact_amp`.** Build Plan 5.1(a): "Respiratory movement artifact. Mechanical, at the respiratory rate. GENUINE ARTIFACT; high-passing it out is correct." This is the mechanism a clinical high-pass actually destroys, and its absence is why the filter demonstration showed 93% -> 91% across the whole cutoff range (Finding 10). It sits AT the respiratory rate, i.e. below every hpf_options cutoff except 0.01 Hz, so a 0.5-1 Hz high-pass removes it essentially completely. That is the filter working correctly, and it is half the lesson: high-pass filtering trades a known artifact for a known distortion.
 
-**`resp_amp_mod_depth`.** The AMPLITUDE half of Build Plan 5.1(c), as distinct from the exponent half. It was added on the expectation that a 0.5-1 Hz high-pass would remove it, because it modulates the envelope of low-frequency content. MEASURED, THAT IS WRONG: retained 100-101% across the whole clinical cutoff range. A high-pass removes a CARRIER below its cutoff; it does not remove amplitude modulation of a carrier that passes, and modulating 0.5-4 Hz delta at 0.25 Hz puts the sidebands around the delta band rather than at 0.25 Hz. Kept, and kept separately switchable, because it is a real physiological mechanism and because its INSENSITIVITY is now the control in Demo 1 -- the row that does not move while mechanism (a) collapses 99.8%. See Finding 10 (resolved).
+**`resp_amp_mod_depth`.** Low-frequency PERIODIC-power coupling, distinct from the aperiodic-exponent path. R3 replaces the old linear 1 + d*cos gain with exp(m*cos)/sqrt(I0(2m)), so this row is the log-amplitude concentration m and each breath preserves mean squared rhythm amplitude by construction. The phase course is periodic_mod_phi0_low; breath depth scales the realized value. A clinical high-pass does not remove this coupling because it removes carriers in its stopband, not the respiratory sidebands around a passed rhythm. Its absolute magnitude remains pending and must not be promoted from generated recovery. See Findings 10 and 39.
 
 **`chi_mod_depth`.** Routed to T1-M1 but the source names a specific figure — reading it out is an afternoon, not 8 days of corpus work. Flagged for early conversion to literature.
 
-**`chi_mod_phase_wake`.** Re-standed literature -> invented: venue-less, author-less. Also note the value is a sentence with units 'rad' — 5.2's formula needs a number for phi_0, supplied by chi_mod_phi0_wake.
+**`chi_mod_phi0_wake`.** Group mean direction of maximum 1/f slope, 171.09 degrees, under the paper's phase convention: peak inspiration = 0, inspiration -pi..0, expiration 0..pi.
 
-**`chi_mod_phi0_wake`.** Added on import: 5.2 states a formula requiring a numeric phi_0 per state, and no row supplied one.
+**`chi_mod_phi0_n1`.** Group mean direction -154.60 degrees; N1 remains wake-like.
+
+**`chi_mod_phi0_n2`.** Group mean direction -76.43 degrees; the phase reversal begins in N2.
+
+**`chi_mod_phi0_n3`.** Published as SWS; group mean direction -102.14 degrees.
+
+**`chi_mod_phi0_rem`.** Group mean direction -83.33 degrees.
+
+**`periodic_mod_phi0_low`.** The source is awake resting MEG. Applying this temporal form to sleep is an explicit provisional generalization, not a literature claim about sleep-stage magnitude.
+
+**`periodic_mod_phi0_high`.** Periodic and aperiodic phase courses are deliberately separate, as directly demonstrated by Kluger et al. 2023.
+
+**`resp_so_pref_phase`.** Mean respiratory phase of SO downstates across significant electrodes: -9.4 degrees, with peak inspiration at zero. The study pooled NREM; the generator applies SO events only in N3.
+
+**`resp_so_resultant_length`.** Mean vector length reported for the preferred SO respiratory phase across significant electrodes. Used as the target of the event-level von Mises prefix; that translation is a modelling assumption.
+
+**`resp_spindle_fast_pref_phase`.** Mean respiratory phase of fast-spindle onsets across significant electrodes: +16.95 degrees after peak inspiration. The paper pooled NREM, so one profile is used in N2 and N3.
+
+**`resp_spindle_fast_resultant_length`.** Mean vector length reported for fast-spindle onset phase across significant electrodes. Used as an event-level target provisionally.
+
+**`resp_spindle_slow_hazard`.** Absence means no injected respiratory hazard, not proof that biological slow spindles are universally uncoupled. Girin et al. 2024 report both slow and fast spindles during expiration in full-night PSG.
 
 **`tilt_n_poles`.** Resolves pending decision P2. MUST be realized as second-order sections: direct-form transfer-function realization of this cascade overflows to non-finite values at this order (Finding 3). The PSD exponent is -2g where zeros sit at pole * D^g; pin that sign with a unit test, because it is the sign that silently inverts the wake/sleep reversal.
 
@@ -334,19 +417,131 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 
 | Key | Value | Units | Standing | Source | States |
 |---|---|---|---|---|---|
-| `hr_mean` | — *(pending T1-M5; runs on 62)* | 1/min | `invented` | uncited; a single resting value pending the state-conditional fit at T1-M5 | all |
-| `hr_sd` | — *(pending T1-M5; runs on 3)* | 1/min | `invented` | uncited; the non-respiratory part of heart-rate variability | all |
-| `rsa_depth` | — *(pending T1-M5; runs on 0.08)* | — | `invented` | respiratory sinus arrhythmia is well established; the depth is uncited and varies strongly with age and state | all |
+| `hr_mean_wake` | 68.3 | 1/min | `fitted` | Median across subjects of mean HR from quality-controlled ECG R-R intervals in 19 scored HMC nights; prep/reference/r2_hmc_cardiac.py. | wake_eo, wake_ec |
+| `hr_mean_n1` | 63.1 | 1/min | `fitted` | Median across subjects of mean HR from quality-controlled ECG R-R intervals in 19 scored HMC nights; prep/reference/r2_hmc_cardiac.py. | n1 |
+| `hr_mean_n2` | 61.6 | 1/min | `fitted` | Median across subjects of mean HR from quality-controlled ECG R-R intervals in 19 scored HMC nights; prep/reference/r2_hmc_cardiac.py. | n2 |
+| `hr_mean_n3` | 62.1 | 1/min | `fitted` | Median across subjects of mean HR from quality-controlled ECG R-R intervals in 19 scored HMC nights; prep/reference/r2_hmc_cardiac.py. | n3 |
+| `hr_mean_rem` | 65.1 | 1/min | `fitted` | Median across subjects of mean HR from quality-controlled ECG R-R intervals in 19 scored HMC nights; prep/reference/r2_hmc_cardiac.py. | rem |
+| `cardiac_subject_hr_cv` | 0.21 | — | `fitted` | One parsimonious lognormal subject-phenotype CV fitted to the 0.19-0.23 cross-subject CV range across five HMC stages; prep/reference/r2_hmc_cardiac.py. | all |
+| `rr_sdnn_wake` | 0.1175 | s | `fitted` | Median per-subject SDNN after ECG QRS detection and local RR quality control in 19 scored HMC nights; prep/reference/r2_hmc_cardiac.py. | wake_eo, wake_ec |
+| `rr_sdnn_n1` | 0.107 | s | `fitted` | Median per-subject SDNN after ECG QRS detection and local RR quality control in 19 scored HMC nights; prep/reference/r2_hmc_cardiac.py. | n1 |
+| `rr_sdnn_n2` | 0.0767 | s | `fitted` | Median per-subject SDNN after ECG QRS detection and local RR quality control in 19 scored HMC nights; prep/reference/r2_hmc_cardiac.py. | n2 |
+| `rr_sdnn_n3` | 0.0613 | s | `fitted` | Median per-subject SDNN after ECG QRS detection and local RR quality control in 19 scored HMC nights; prep/reference/r2_hmc_cardiac.py. | n3 |
+| `rr_sdnn_rem` | 0.0818 | s | `fitted` | Median per-subject SDNN after ECG QRS detection and local RR quality control in 19 scored HMC nights; prep/reference/r2_hmc_cardiac.py. | rem |
+| `rsa_rr_amp_rem` | — *(pending T1-M5; runs on 0.03)* | s | `invented` | HMC has no respiration channel and the literature source supplies relative stage changes rather than an absolute RR amplitude | all |
+| `rsa_relative_wake` | 0.9 | — | `literature` | Penzel et al. 2016, *Frontiers in Physiology 7:460* | wake_eo, wake_ec |
+| `rsa_relative_n1_n2` | 1.33 | — | `literature` | Penzel et al. 2016, *Frontiers in Physiology 7:460* | n1, n2 |
+| `rsa_relative_n3` | 1.37 | — | `literature` | Penzel et al. 2016, *Frontiers in Physiology 7:460* | n3 |
+| `rsa_relative_rem` | 1 | — | `definitional` | Penzel et al. 2016 normalization — REM reference equals one | rem |
+| `rsa_phase_offset` | — *(pending T1-M5; runs on 0)* | rad | `invented` | the sign of RSA is established but its phase course varies by subject and breathing pattern | all |
+| `cardiac_fast_variance_fraction` | — *(pending T1-M5; runs on 0.1)* | — | `invented` | uncalibrated latent variance allocation | all |
+| `cardiac_fast_tau_beats` | — *(pending T1-M5; runs on 2)* | beats | `invented` | uncalibrated AR(1) reduction | all |
+| `cardiac_slow_tau_s` | — *(pending T1-M5; runs on 120)* | s | `invented` | uncalibrated AR(1) reduction | all |
+| `cardiac_rr_min_s` | 0.35 | s | `chosen` | numerical and physiological guard against a negative or implausibly short RR interval under combined latent excursions | all |
 | `ecg_r_amp` | — *(pending T1-M5; runs on 1000)* | uV | `invented` | uncited; amplitude depends entirely on lead placement | all |
 | `ecg_wave_shape` | Five Gaussians (P, Q, R, S, T) on the beat phase. Per wave, (phase in cycles from the R peak, amplitude relative to ecg_r_amp, width in cycles): P (-0.20, +0.12, 0.030), Q (-0.025, -0.16, 0.0060), R (0, +1.00, 0.0075), S (+0.030, -0.28, 0.0090), T (+0.22, +0.31, 0.045). | — | `literature` | McSharry, Clifford, Tarassenko & Smith 2003, *IEEE Transactions on Biomedical Engineering 50(3):289-294* — A dynamical model for generating synthetic electrocardiogram signals. The five-Gaussian PQRST form is theirs; the numbers here are that structure re-expressed in cycles-from-R and normalised to the R peak. | all |
 
-**`hr_mean`.** ONE VALUE FOR EVERY STATE, which is known to be wrong: heart rate falls through NREM and is more variable in REM, exactly as respiration is (resp_rate_* is already state-conditional). Registered as a single row rather than six invented ones so the gap is visible instead of being dressed up as six independent measurements.
+**`hr_mean_wake`.** HMC supplies scored nocturnal wake and cannot separate eyes open from eyes closed. Clinical-referral corpus; IQR 60.2-75.2 bpm.
 
-**`rsa_depth`.** RESPIRATORY SINUS ARRHYTHMIA -- the heart speeds on inspiration and slows on expiration. It is modelled because it is the reason the two new traces belong on the same screen: the ECG is not independent of the respiration belt, and a viewer who watches both should be able to see that. It is driven from the SAME respiratory phase the EEG mechanisms use, so the three cannot drift apart.
+**`hr_mean_n1`.** Clinical-referral corpus; IQR 56.7-72.8 bpm.
+
+**`hr_mean_n2`.** Clinical-referral corpus; IQR 54.8-70.2 bpm.
+
+**`hr_mean_n3`.** Clinical-referral corpus; IQR 54.9-72.2 bpm.
+
+**`hr_mean_rem`.** Clinical-referral corpus; IQR 55.6-70.5 bpm.
+
+**`cardiac_subject_hr_cv`.** A seed keeps this multiplier across states. It captures between-subject rate spread, not beat-to-beat HRV.
+
+**`rr_sdnn_wake`.** IQR 0.0918-0.1374 s; total RR variability including RSA.
+
+**`rr_sdnn_n1`.** IQR 0.0870-0.1344 s; total RR variability including RSA.
+
+**`rr_sdnn_n2`.** IQR 0.0568-0.0969 s; total RR variability including RSA.
+
+**`rr_sdnn_n3`.** IQR 0.0446-0.0767 s; total RR variability including RSA.
+
+**`rr_sdnn_rem`.** IQR 0.0614-0.1102 s; total RR variability including RSA.
+
+**`rsa_relative_wake`.** RSA strength normalized to REM = 1.00 in Penzel et al. Table 1.
+
+**`rsa_relative_n1_n2`.** Light-sleep RSA strength normalized to REM = 1.00.
+
+**`rsa_relative_n3`.** Deep-sleep RSA strength normalized to REM = 1.00.
 
 **`ecg_r_amp`.** ROUGHLY 50x A LARGE EEG DEFLECTION, which is why the ECG cannot share the trace's uV/mm scale and gets its own lane with its own stated scale.
 
 **`ecg_wave_shape`.** THE FORM IS TRANSCRIBED, THE NUMBERS ARE ADAPTED. McSharry et al. specify the five-Gaussian PQRST structure and give angles, amplitudes and widths for a 60 bpm exemplar; the values here are their structure re-expressed in cycles-from-R and normalised to the R peak so that ecg_r_amp carries the scale. Standing is `literature` for the FORM. The individual numbers have not been validated against neurokit2.ecg_simulate or a real recording -- that is the third step of the risk register's mitigation and it is TODO(T1-M5). A procedure row rather than fifteen scalars, because they are one model and fitting them independently would be meaningless.
+
+## 8a. Infra-slow potentials and coupling
+
+| Key | Value | Units | Standing | Source | States |
+|---|---|---|---|---|---|
+| `isf_overview_duration_options` | 120 or 300 or 600 | s | `chosen` | Lazy full-band overview lengths: 120 s makes the mode usable on modest devices, while 300 s and 600 s expose progressively more of the sub-0.1 Hz time scale. These are display choices, not validation-record lengths. | all |
+| `isf_overview_rate` | 2 | Hz | `chosen` | Display-only summary rate: twenty samples per cycle at the 0.1 Hz upper ISF edge, after explicit anti-alias filtering. | all |
+| `isf_overview_antialias_hz` | 0.8 | Hz | `chosen` | Display-only anti-alias cutoff below the 1 Hz Nyquist limit of the 2 Hz overview; it preserves the complete registered 0.008-0.1 Hz band with margin. | all |
+| `isf_spectrum_range` | 0.005–1 *(ui_domain)* | Hz | `chosen` | Log-frequency domain for the full-band interface. The lower axis edge extends below the 0.008 Hz literature band; actual resolvable frequency remains limited by 1 / record duration and is stated in the interface. | all |
+| `isf_comparison_hpf` | 0.1 | Hz | `chosen` | Fixed comparison against the conventional lower edge already used by the ordinary filter panel; the purpose is to reveal what that high-pass removes, not to fit a physiological parameter. | all |
+| `isf_band` | 0.008–0.1 *(band_edges)* | Hz | `literature` | Väyrynen et al. 2023, *Clinical Neurophysiology 156:207-219* | all |
+| `isf1_band` | 0.008–0.05 *(band_edges)* | Hz | `literature` | Väyrynen et al. 2023, *Clinical Neurophysiology 156:207-219* | all |
+| `isf2_band` | 0.05–0.1 *(band_edges)* | Hz | `literature` | Väyrynen et al. 2023, *Clinical Neurophysiology 156:207-219* | all |
+| `isf_probe_record_length` | 1250 | s | `derived` | Ten cycles at the 0.008 Hz lower edge: 10 / 0.008 = 1250 s. The live 15-60 s display is not an infra-slow validation record. | all |
+| `isf_temporal_model` | band_limited_power_law_state_space | — | `chosen` | ISF-1 comparison: the power-law state-space family matched the broad irregular-period prefix and exact chunk continuity without adding a resonance frequency, mixture weight or oscillator-Q parameter. | all |
+| `isf_controller_rate` | 2 | Hz | `chosen` | Numerical controller rate: 20 samples per cycle at the 0.1 Hz upper edge, later interpolated to EEG fs; this is a computation choice, not a physiological frequency. | all |
+| `isf_temporal_exponent` | — *(pending T1-M5; runs on 1)* | — | `invented` | No eligible public full-band record identifies the exponent; one is the parsimonious provisional member of the selected family. | all |
+| `isf_temporal_pole_count` | — *(pending T1-M5; runs on 9)* | — | `invented` | Numerical approximation order pending a formal convergence sweep. | all |
+| `isf_resonance_fraction` | — *(absent)* | — | `absent` | Väyrynen et al. 2023, *Clinical Neurophysiology 156:207-219* | all |
+| `isf_spatial_model` | fsaverage_bem_patch_covariance_modes | — | `chosen` | ISF-2 reuses the existing anatomical forward-model seam: fixed-normal cortical sources in Desikan-Killiany patches, projected by the fsaverage three-shell BEM and represented by covariance eigenmodes. | all |
+| `isf_source_families` | frontomedial_association or sensorimotor or posterior_visual | — | `chosen` | Smallest broad anatomical basis spanning anterior association, central sensorimotor and posterior visual/association systems. Network-specific full-band components reject one global source; no external observation currently requires a fourth family. | all |
+| `isf_lateral_family` | — *(absent)* | — | `absent` | Parsimony stop rule: add a source family only for an external observation the current anatomical basis cannot reproduce, never to tune rank, PC1 variance or channel correlation separately. | all |
+| `isf_modulation_gain_model` | lognormal_unit_mean_square | — | `derived` | For a unit-Gaussian infra-slow driver z and log-amplitude depth m, use g(z) = exp(m z - m^2). Then E[g^2] = exp(-2m^2) E[exp(2mz)] = 1 analytically, so coupling does not become a hidden carrier-power control. | all |
+| `isf_band_variance_fraction` | — *(pending T1-M5; runs on 0.5)* | — | `invented` | No eligible public full-band spectrum identifies the split. | all |
+| `isf_modulation_target_map` | In wake, modulate represented canonical rhythms through the nearest anatomical ISF family: posterior alpha and sensorimotor beta. Aggregate NREM uses one frontomedial controller family for its represented canonical rhythms, matching the reported frontal power emphasis without imposing a channel-space gain. Do not modulate the distributed aperiodic background, channel-local residuals or discrete events: doing so allowed the background alone to satisfy an AASM slow-wave criterion after the named slow-wave sources were attenuated. REM copies the wake anatomical rule as an explicit extrapolation. | — | `chosen` | Smallest source-level map that makes broad fast-rhythm coupling executable while preserving the independent slow-wave null. | all |
+| `isf_pac_preferred_phase` | — *(absent)* | rad | `absent` | Estimate under an explicit external phase convention; do not choose the sign that maximizes recovered coupling. | all |
+| `isf_mechanism_arms` | Matched seed and carrier arms: mechanism off; additive BEM voltage only; source-level mean-square-preserving modulation only; both; and a pi-inverted-driver modulation null. Respiration remains on an independent controller and substream. | — | `chosen` | Separately switchable causal paths and matched nulls are an identifiability requirement, not a fitted physiological quantity. | all |
+| `isf_power_state_contrast` | Compare aggregate NREM (N1-N3) with aggregate wake; require the externally reported direction NREM > wake for infra-slow relative power, broadly distributed with a frontal emphasis. Do not infer an ordering among N1, N2 and N3 from this source. | — | `literature` | Väyrynen et al. 2023, *Clinical Neurophysiology 156:207-219* | wake_eo, wake_ec, n1, n2, n3 |
+| `isf_pac_plv_wake_reference` | 0.178 | — | `literature` | Väyrynen et al. 2023, *Clinical Neurophysiology 156:207-219* | wake_eo, wake_ec |
+| `isf_pac_plv_nrem_reference` | 0.211 | — | `literature` | Väyrynen et al. 2023, *Clinical Neurophysiology 156:207-219* | n1, n2, n3 |
+| `isf_pac_channel_fraction_wake` | 0.05–0.15 *(uncertainty)* | — | `literature` | Väyrynen et al. 2023, *Clinical Neurophysiology 156:207-219* | wake_eo, wake_ec |
+| `isf_pac_channel_fraction_nrem` | 0.05–0.35 *(uncertainty)* | — | `literature` | Väyrynen et al. 2023, *Clinical Neurophysiology 156:207-219* | n1, n2, n3 |
+| `isf_cortical_rms_wake` | — *(pending T1-M5; runs on 2)* | uV_rms | `invented` | Engineering prior; available studies establish the mechanism but do not identify cortical-source RMS. | wake_eo, wake_ec |
+| `isf_cortical_rms_nrem` | — *(pending T1-M5; runs on 3)* | uV_rms | `invented` | Väyrynen et al. 2023, *Clinical Neurophysiology 156:207-219* — Literature anchors the direction and frontal emphasis, not the 1.5x magnitude. | n1, n2, n3 |
+| `isf_cortical_rms_rem` | — *(pending T1-M5; runs on 2)* | uV_rms | `invented` | Väyrynen et al. 2023, *Clinical Neurophysiology 156:207-219* | rem |
+| `isf_shared_source_fraction` | — *(absent)* | — | `absent` | Hiltunen et al. 2014, *Journal of Neuroscience 34:356-362* | all |
+| `isf_source_delay_s` | — *(absent)* | s | `absent` | Must be estimated from full-band multichannel recordings, not selected to make an animation look like a travelling wave. | all |
+| `isf_pac_depth_wake` | — *(pending T1-M5; runs on 0.4)* | — | `invented` | Väyrynen et al. 2023, *Clinical Neurophysiology 156:207-219* | wake_eo, wake_ec |
+| `isf_pac_depth_nrem` | — *(pending T1-M5; runs on 0.3)* | — | `invented` | Väyrynen et al. 2023, *Clinical Neurophysiology 156:207-219* | n1, n2, n3 |
+| `isf_pac_depth_rem` | — *(pending T1-M5; runs on 0.4)* | — | `invented` | No healthy REM anchor; provisional value copies wake rather than inventing a REM contrast. | rem |
+| `electrode_dc_drift_rms` | — *(absent)* | uV_rms | `absent` | Tallgren et al. 2005, *Clinical Neurophysiology 116:799-806* | all |
+| `reference_dc_drift_rms` | — *(absent)* | uV_rms | `absent` | Tallgren et al. 2005, *Clinical Neurophysiology 116:799-806* | all |
+
+**`isf_overview_duration_options`.** The 1250 s validation probe remains separate. At the 0.008 Hz lower edge these choices contain 0.96, 2.4 and 4.8 cycles respectively, so the interface states that none replaces the registered ten-cycle gate record.
+
+**`isf_overview_antialias_hz`.** Applied equally to the raw and 0.1 Hz high-passed overview traces; it is not part of generated data or exported truth.
+
+**`isf_comparison_hpf`.** Zero-phase and the registry filter order, so the comparison is explicit and reproducible.
+
+**`isf_band`.** Full-band EEG definition used for the wake-versus-NREM comparison. This is distinct from the 0.1-1 Hz slow range, the 0.2-2 Hz sleep slow-wave range, and the separately measured respiratory rhythm. A conventional 0.1 Hz high-pass removes most of this direct voltage.
+
+**`isf1_band`.** Primary phase-amplitude-coupling band in the source study; periods span 20-125 s.
+
+**`isf2_band`.** Secondary band reported separately by the source study. The shared 0.05 Hz boundary is an analysis convention; an implementation must not create a line or discontinuity there.
+
+**`isf_temporal_model`.** MODEL FAMILY ONLY. The ISF-1 candidate fixture used representative internal settings to compare forms, but none of those settings is promoted. The selected controller remains unitless and outside composeState until ISF-2 supplies BEM source families.
+
+**`isf_spatial_model`.** This selects a spatial representation, not a voltage amplitude. Every neural infra-slow channel weight is generated by prep/leadfield/make_projection.py. The runtime does not contain an electrode-level infra-slow topography.
+
+**`isf_source_families`.** Atlas membership is fixed in prep/leadfield/make_projection.py before amplitude fitting. The emitted projection IDs are isf_frontomedial, isf_sensorimotor and isf_posterior. The number of modes per family is derived from patch_mode_variance and is not another parameter.
+
+**`isf_modulation_gain_model`.** ISF-3 fixes the gain algebra only. The depth m, target-source map and preferred phase remain absent. A finite record may have realized gain RMS different from one; truth records it.
+
+**`isf_pac_plv_wake_reference`.** Mean ISF1-phase-to-fast-amplitude PLV under the paper's estimator; reported SD 0.014. This is an external reference metric, not a generator modulation depth and not interchangeable with a PLV recovered under another filtering or surrogate pipeline.
+
+**`isf_pac_plv_nrem_reference`.** Aggregate-sleep mean under the paper's estimator; reported SD 0.022. The study does not license separate N1, N2 and N3 values, and contains no REM anchor.
+
+**`isf_pac_channel_fraction_wake`.** IQR across subjects of the fraction of electrodes with significant ISF-fast coupling under time-shifted surrogates.
+
+**`isf_pac_channel_fraction_nrem`.** Aggregate-sleep IQR; supports a wider spatial extent than wake, not a stage-by-stage ordering.
 
 ## 9. Artifacts
 
@@ -384,13 +579,17 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 
 | Key | Value | Units | Standing | Source | States |
 |---|---|---|---|---|---|
+| `hpf_default` | 0.005 | Hz | `chosen` | Opening display edge at the filter control floor: retains 97.7% amplitude at the named 0.008 Hz ISF lower edge under the default fourth-order zero-phase response, while keeping the high-pass visibly enabled as requested. | all |
 | `lpf_default` | 40 | Hz | `chosen` | conventional clinical low-pass, and BELOW both line_freq options so mains is in the stopband at either mains frequency | all |
-| `filter_ui_range` | 0.1–100 *(ui_domain)* | Hz | `chosen` | the draggable frequency domain of the filter panel: from below every clinical high-pass to above every band this project measures, and inside the Nyquist of fs = 256 | all |
+| `filter_ui_range` | 0.005–100 *(ui_domain)* | Hz | `chosen` | the draggable frequency domain of the filter panel: below the 0.008 Hz infra-slow band edge to above every band this project measures, and inside the Nyquist of fs = 256 | all |
 | `filter_order_options` | 2 or 4 or 8 | — | `chosen` | Butterworth orders spanning gentle to steep; even orders only, because the biquad cascade is built from second-order sections | all |
 | `hpf_options` | 0.01 or 0.1 or 0.5 or 1 | Hz | `chosen` | spans clinical and ERP practice | all |
 | `welch_nperseg` | 1024 | samples | `chosen` | 4 s at fs=256; 0.25 Hz resolution | all |
 | `welch_noverlap` | 512 | samples | `chosen` | 50% overlap | all |
 | `welch_window` | hann | — | `chosen` |  | all |
+| `spectrum_low_min_segments` | 4 | segments | `chosen` | Display-estimator variance control: four 50%-overlapped windows produce a usable slow-frequency trend from the 90 s live buffer without presenting a single periodogram as stable physiology. | all |
+| `spectrum_low_smooth_radius_bins` | 2 | bins | `chosen` | Two adjacent bins on each side give a five-bin triangular frequency average after long-window Welch; enough to suppress residual estimator teeth without fitting a parametric curve or erasing broad sub-1-Hz structure. | all |
+| `spectrum_hybrid_blend` | 0.5–1 *(band_edges)* | Hz | `chosen` | Smooth handoff from the long-window slow-frequency estimate to ordinary four-second Welch across the upper slow-wave range. | all |
 | `specparam_peak_width_limits` | 1–12 *(band_edges)* | Hz | `chosen` | specparam algorithm_settings; in 2.0 these moved out of the constructor | all |
 | `specparam_max_n_peaks` | 6 | — | `chosen` | specparam algorithm_settings | all |
 | `specparam_peak_threshold` | 2 | — | `chosen` | specparam algorithm_settings, in SD | all |
@@ -400,9 +599,11 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 | `lz_surrogate` | time_shuffled | — | `chosen` | DECISIONS D1. Destroys the spectrum, so surrogate complexity depends only on length and density — chi-dependence is zero by construction, caching is legal, no characterization needed. | all |
 | `lz_parse` | — *(absent)* | — | `absent` | Decide by which parse the landmark literature used. Settle before citing any published value. | all |
 
+**`hpf_default`.** Where the panel's high-pass handle starts. It equals filter_ui_range.lo so the opening trace retains the released infra-slow mechanism. The reader can raise it to demonstrate loss, and can switch it off to distinguish a very low cutoff from no high-pass at all.
+
 **`lpf_default`.** Where the panel's low-pass handle starts. 40 Hz is the usual clinical choice and it sits below both 50 and 60 Hz, so switching the mains toggle on with the low-pass enabled puts the interference in the stopband either way -- which is the demonstration the two controls make together.
 
-**`filter_ui_range`.** A UI DOMAIN, not a signal parameter -- the accessor is `uiDomain`, which throws if this is read as band edges. It bounds what a reader can drag to, and nothing else. The low end sits below hpf_options' 0.01 Hz setting deliberately: a cutoff a reader cannot reach is a cutoff they cannot compare against, and the panel's whole point is comparison.
+**`filter_ui_range`.** A UI DOMAIN, not a signal parameter -- the accessor is `uiDomain`, which throws if this is read as band edges. It bounds what a reader can drag to, and nothing else. The low end sits below both hpf_options' 0.01 Hz setting and the named 0.008 Hz infra-slow band deliberately: a cutoff a reader cannot reach is a cutoff they cannot compare against, and the panel's whole point is comparison. At finite display lengths, a selectable cutoff does not imply that the live window contains enough cycles to estimate a response at that frequency.
 
 **`filter_order_options`.** ORDER IS THE SECOND AXIS OF THE DEMONSTRATION, beside zero-phase versus causal. A steeper filter rolls off faster AND rings longer, and Demo 3 already shows the ringing -- putting order under the reader's hand lets them see both halves of that trade move together instead of being told about it. Even orders only: `butterworthQs` throws on an odd order because a cascade of second-order sections cannot express one.
 
@@ -411,6 +612,12 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 **`welch_noverlap`.** Added on import.
 
 **`welch_window`.** Added on import.
+
+**`spectrum_low_min_segments`.** At fs=256 and display_buffer_s=90 this selects radix-2 windows of 8192 samples (32 s), giving 0.03125 Hz resolution. It is a display estimator, not a generator parameter.
+
+**`spectrum_low_smooth_radius_bins`.** A display-estimator setting only; frequencies are unchanged and the unresolved region remains explicit. At the 32 s live estimator this is a compact 0.15625 Hz support, with greatest weight at the centre bin.
+
+**`spectrum_hybrid_blend`.** The overlap is blended in log power with smoothstep; neither edge is a physiological boundary.
 
 **`specparam_peak_width_limits`.** Added on import. Seam 7's premise is that an exponent is a (value, band, mode) tuple, but the fit settings shape the recovered value too and were registered nowhere.
 
@@ -483,7 +690,7 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 
 **`gate_g4_criterion`.** TWO ARMS BECAUSE 'appears at f1 and not at f2' IS TWO CLAIMS. Detection alone would pass an estimator that smears a real line across every low frequency; selectivity alone would pass one that reports nothing anywhere, since 0 > 0 is false but so is any comparison on noise. Measured under the fixture: detection 40/40, selectivity 40/40.
 
-**`gate_g4_seed_aggregation`.** REPLACES the exact-binomial-against-5% construction, which D12 measured as false: the per-seed false-exceedance rate of a percentile null is a function of respiration regularity, not of the percentile, and ran 0.317 at N3-like resp_period_cv. Pairing removes the dependency entirely — the seed is its own control, so seed-to-seed variance cancels instead of having to be modelled. THE NULL ARM IS ABSENCE OF EVIDENCE and the report says so: it establishes that leakage is not gross, not that it is zero. Measured, mechanism (a) shifts the f2 line by 0.2% of the null median, far below what a sign test at these n could resolve.
+**`gate_g4_seed_aggregation`.** REPLACES the exact-binomial-against-5% construction, which D12 measured as false: the per-seed false-exceedance rate of a percentile null is a function of respiration regularity, not of the percentile, and ran 0.317 at the provisional resp_period_cv_n3. Pairing removes the dependency entirely — the seed is its own control, so seed-to-seed variance cancels instead of having to be modelled. THE NULL ARM IS ABSENCE OF EVIDENCE and the report says so: it establishes that leakage is not gross, not that it is zero. Measured, mechanism (a) shifts the f2 line by 0.2% of the null median, far below what a sign test at these n could resolve.
 
 **`gate_determinism`.** Build Plan 9 groups G2 with the record-only gates, but bit-identity has no distribution to record and a determinism gate that cannot fail is worthless. It is also the root of the dependency graph. Canonically PASS/FAIL; see Execution-Scheme section 1. RE-STANDED definitional -> chosen on review. It had been sourced to "IEEE 754 binary64", which defines float64 representation and arithmetic but says nothing about one seed producing identical output -- that is a property of OUR implementation and its draw ordering, which is exactly why the Build Plan strikes any cross-implementation clause. That was a re-sourcing by guess, the remedy this registry's own discipline forbids, and it sat on the criterion of a failable gate. No numeric tolerance is invented here, so `chosen` is adequate for a structural criterion -- as it is for gate_topography.
 
@@ -507,10 +714,11 @@ requires an inline `@lit-ok <reason>` (or whole-file `@lit-ok-file`) waiver for 
 
 | Standing | Rows |
 |---|---|
-| `definitional` | 11 |
-| `chosen` | 58 |
-| `literature` | 9 |
-| `derived` | 15 |
-| `invented` | 89 |
-| `absent` | 11 |
-| **total** | **193** |
+| `definitional` | 12 |
+| `chosen` | 78 |
+| `literature` | 34 |
+| `derived` | 21 |
+| `fitted` | 11 |
+| `invented` | 116 |
+| `absent` | 19 |
+| **total** | **291** |

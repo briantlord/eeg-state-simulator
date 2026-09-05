@@ -17,5 +17,5 @@
     "isolatedModules": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src/**/*.ts", "bin/**/*.mts", "test/**/*.ts", "gen/**/*.d.ts"]
+  "include": ["src/**/*.ts", "bin/**/*.mts", "test/**/*.ts", "prep/reference/**/*.mts", "gen/**/*.d.ts", "playwright.config.ts"]
 }

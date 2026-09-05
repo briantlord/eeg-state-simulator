@@ -1,7 +1,7 @@
 """G3 in embryo: does YASA detect the spindles we injected, at the durations we injected?
 
-Class V -- recovery by an external, independently authored, published tool. Tier 0 RECORDS
-the agreement curve and sets no pass band.
+Class V -- recovery by an external, independently authored, published tool. Tier 0 records
+all-event agreement and sets no pass band; random tags are not event-quality labels.
 
 The duration comparison is the point of running this now rather than later. `spindle_dur_min`
 = 0.5 s is a DEFINITIONAL AASM criterion, and a filtered-noise carrier in an 11-16 Hz band has
@@ -10,8 +10,8 @@ were happening, F1 would look like a morphology failure while being nothing of t
 """
 import sys
 import tempfile
-
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import numpy as np
 import yasa
@@ -63,19 +63,7 @@ det = sp.summary()
 detected = list(zip(det['Start'], det['End']))
 print(f"YASA detections: {len(detected)}")
 
-print("\nF1 AS A FUNCTION OF INCLUSION THRESHOLD ON PROMINENCE  (the G3 curve)")
-print(f"  {'thresh':>7} {'n_inj':>6} {'TP':>4} {'FP':>4} {'FN':>4} {'prec':>6} {'rec':>6} {'F1':>6}")
-print("  " + "-" * 52)
-for thr in [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]:
-    inj = [(e['onset'], e['onset'] + e['duration'])
-           for e in injected_all if e['prominence'] >= thr]
-    if not inj:
-        continue
-    tp, fp, fn, _ = match(inj, detected)
-    prec = tp / max(tp + fp, 1)
-    rec = tp / max(tp + fn, 1)
-    f1 = 2 * prec * rec / max(prec + rec, 1e-9)
-    print(f"  {thr:7.1f} {len(inj):6d} {tp:4d} {fp:4d} {fn:4d} {prec:6.3f} {rec:6.3f} {f1:6.3f}")
+print("All-event recovery; arbitrary event tags are not quality scores.")
 
 # --- the duration check, which is why this runs now ------------------------------
 inj_all = [(e['onset'], e['onset'] + e['duration']) for e in injected_all]

@@ -10,7 +10,10 @@ export default defineConfig({
   // the registry and the projection are imported as JSON modules, not fetched, so the running
   // page makes NO network requests and needs no server-side anything.
   build: { target: 'es2022', outDir: 'dist', sourcemap: true },
+  // Research reports and downloaded corpora are not application entries or HMR inputs.
+  optimizeDeps: { entries: ['index.html'] },
   server: {
+    watch: { ignored: ['**/prep/out/**', '**/prep/realdata/**', '**/prep/leadfield/cache/**', '**/.venv*/**', '**/mne_data/**'] },
     // Honour PORT so a harness that assigns one is obeyed. Without this, vite falls back to
     // its own next-free port and the caller watches the wrong address.
     port: process.env['PORT'] ? Number(process.env['PORT']) : 5173,

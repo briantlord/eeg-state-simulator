@@ -1,9 +1,9 @@
 {
-  "schema": 1,
+  "schema": 2,
   "solved": "snr_nominal",
-  "value_db": -2.7559,
+  "value_db": 3.4836158752441406,
   "units": "dB",
-  "procedure": "Bisection on the mix parameter until AASM N3 occupancy reaches gate_aasm_n3_min_fraction on the named fixture seed and epoch, C3-A2.",
+  "procedure": "Bisection on the mix parameter until AASM N3 occupancy reaches gate_aasm_n3_min_fraction on the named fixture seed and epoch, C3-A2, with the mean-square-preserving infra-slow gain held at its neutral arm.",
   "fixture": {
     "seed": 20260728,
     "epoch": 0,
@@ -11,7 +11,26 @@
     "derivation": "C3-A2"
   },
   "target_fraction": 0.2,
-  "achieved_fraction": 0.195703,
-  "generator_version": "0.2.0",
+  "achieved_fraction": 0.20338541666666668,
+  "generator_version": "0.11.0",
+  "profile": "physiology-v1",
+  "scorer_version": "central-halfwave-cascade-v2",
+  "options": {
+    "respirationMode": "natural",
+    "movementArtifact": true,
+    "amplitudeModulation": true,
+    "chiModulation": true,
+    "eventRespirationCoupling": true,
+    "infraSlowCortical": true,
+    "infraSlowModulation": false,
+    "lineNoise": false,
+    "lineFreqHz": 60,
+    "suppressGraphoelements": false
+  },
+  "fingerprint": {
+    "registrySha256": "e3fb57710b6832961359f960644f34e908d518336c10f6188055e7227f1cb13b",
+    "projectionSha256": "0454a32c37f49967036111aaea4650092356796473043736a292f0587f5e3167",
+    "implementationSha256": "fff48a633a6c0035e37beb3d8cf0c37cd2d1d72c49a04217515da8d56fe9d2bf"
+  },
   "warning": "HELD OUT of every G5 evaluation. G5 must run on other seeds and report a pass fraction. Tuning this value until G5 passes would make G5 pass by construction."
 }

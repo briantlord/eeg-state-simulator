@@ -155,6 +155,26 @@ export function bandAmplitudeCoupling(
   bandHi: number,
   fs = scalarValue('fs'),
 ): number {
+  return bandAmplitudeHarmonic(x, respPhase, bandLo, bandHi, fs).depth;
+}
+
+export interface BandAmplitudeHarmonic {
+  /** Fractional envelope modulation depth. */
+  readonly depth: number;
+  /** Respiratory phase at maximum band amplitude, radians. */
+  readonly maxPhase: number;
+  /** Mean running-RMS envelope in signal units. */
+  readonly meanAmplitude: number;
+}
+
+/** Same estimator as `bandAmplitudeCoupling`, retaining the phase and mean-amplitude terms. */
+export function bandAmplitudeHarmonic(
+  x: Float64Array,
+  respPhase: Float64Array,
+  bandLo: number,
+  bandHi: number,
+  fs = scalarValue('fs'),
+): BandAmplitudeHarmonic {
   const n = Math.min(x.length, respPhase.length);
 
   // EXTRACT THE BAND FIRST. An earlier version took the running RMS of the raw signal and
@@ -184,9 +204,15 @@ export function bandAmplitudeCoupling(
     sumIm += env * Math.sin(respPhase[i]!);
   }
   const meanEnv = sumEnv / n;
-  if (meanEnv <= 0) return Number.NaN;
+  if (meanEnv <= 0) {
+    return { depth: Number.NaN, maxPhase: Number.NaN, meanAmplitude: Number.NaN };
+  }
   // Modulation depth: 2|<env e^{i phi}>| / <env> recovers `d` for env = 1 + d cos(phi).
-  return (2 * Math.hypot(sumRe / n, sumIm / n)) / meanEnv;
+  return {
+    depth: (2 * Math.hypot(sumRe / n, sumIm / n)) / meanEnv,
+    maxPhase: Math.atan2(sumIm, sumRe),
+    meanAmplitude: meanEnv,
+  };
 }
 
 /**

@@ -50,9 +50,6 @@ SPEC = GateSpec(
     "criterion. Says nothing about whether our N3 resembles real N3.",
 )
 
-MAX_SEEDS = 3
-
-
 def _pass_fraction(work: Path, seed: int, state: str, snr_db: float, fs: float) -> float:
     run_ = generate(work, seed=seed, state=state, epochs=EPOCHS, snr_db=snr_db)
     sig, ch = run_.concatenated()
@@ -72,7 +69,11 @@ def run(seeds: list[int], params: dict[str, Any]) -> tuple[ScalarMetric, bool, s
     work = Path(params["out_root"]) / "g5_null"
     rmtree_robust(work)
 
-    used = [s for s in seeds if s != cal["fixture"]["seed"]][:MAX_SEEDS]
+    # Use every held-out seed the runner supplies. The former cap at three was a runtime
+    # shortcut that became statistically brittle once N3 was fitted to the real HMC pass-fraction
+    # distribution (median 0.228, not near one): 18 epochs can easily contain zero passes and
+    # turn a correct strict ordering into a tie. The positive arm already pays for all seeds.
+    used = [s for s in seeds if s != cal["fixture"]["seed"]]
     n3, n2, quiet = [], [], []
     for s in used:
         n3.append(_pass_fraction(work / f"n3_{s}", s, "n3", nominal, fs))

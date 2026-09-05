@@ -106,6 +106,7 @@ def depths(work: Path, seed: int, *, chi_mod: bool, movement: bool, freqs: list[
     export = [
         "node", "--experimental-strip-types", "--no-warnings",
         str(_ROOT / "bin" / "eegsim-export.mts"),
+        "--profile", "isolated",
         "--seed", str(seed), "--state", "n3", "--epochs", str(_epochs()),
         "--out", str(work),
         # Mechanism (a) is the confound; mechanism (c)-amplitude is never enabled here.

@@ -159,28 +159,11 @@ export function drawTrace(canvas: HTMLCanvasElement, o: TraceOptions): void {
   ctx.strokeStyle = ink;
   for (let c = 0; c < n; c++) {
     const mid = laneH * (c + 0.5);
-    const data = o.channels[c]!;
-    ctx.beginPath();
-    for (let px = 0; px < plotW; px++) {
-      const i0 = start + Math.floor((px / plotW) * count);
-      const i1 = start + Math.floor(((px + 1) / plotW) * count);
-      let lo = Infinity;
-      let hi = -Infinity;
-      for (let i = i0; i < i1 && i < data.length; i++) {
-        const v = data[i]!;
-        if (v < lo) lo = v;
-        if (v > hi) hi = v;
-      }
-      if (lo === Infinity) continue;
-      // NEGATIVE UP: the clinical convention, applied HERE and only here. The generator works
-      // in standard polarity; inverting in both places would restore the wrong sign silently.
-      const yTop = mid - hi * pxPerUv;
-      const yBot = mid - lo * pxPerUv;
-      const x = left + px + 0.5;
-      ctx.moveTo(x, Math.max(0, Math.min(plotH, yTop)));
-      ctx.lineTo(x, Math.max(0, Math.min(plotH, yBot)));
-    }
-    ctx.stroke();
+    // The filtered trace must use the SAME continuous decimator as the raw overlay. The old
+    // loop drew each pixel column as an independent min/max bar. With a low-pass cutoff near
+    // the slow edge, each bar collapses toward zero height and becomes an invisible point even
+    // though the filtered samples form a perfectly continuous waveform.
+    drawLane(ctx, o.channels[c]!, mid, left, plotW, plotH, start, count, pxPerUv);
 
     // Lane separator and montage label.
     ctx.strokeStyle = rule;
@@ -243,7 +226,25 @@ function drawLane(
   count: number,
   pxPerUv: number,
 ): void {
-  const y = (v: number): number => Math.max(0, Math.min(plotH, mid - v * pxPerUv));
+  // Canvas y increases downward: negative voltage must move upward on EEG lanes.
+  const y = (v: number): number => Math.max(0, Math.min(plotH, mid + v * pxPerUv));
+  drawContinuousSignal(ctx, data, left, plotW, start, count, y);
+}
+
+/**
+ * Draw one continuously sampled signal using either joined samples or a joined min/max envelope.
+ * EEG and auxiliary lanes deliberately share this path: changing units or vertical scaling must
+ * never change whether the pen remains continuous.
+ */
+function drawContinuousSignal(
+  ctx: CanvasRenderingContext2D,
+  data: Float64Array,
+  left: number,
+  plotW: number,
+  start: number,
+  count: number,
+  y: (value: number) => number,
+): void {
   const end = Math.min(start + count, data.length);
   ctx.beginPath();
 
@@ -345,24 +346,16 @@ function drawAux(
     const scale = (laneH * 0.8) / (hi - lo);
 
     ctx.strokeStyle = ink;
-    ctx.beginPath();
-    for (let px = 0; px < plotW; px++) {
-      const i0 = start + Math.floor((px / plotW) * count);
-      const i1 = start + Math.floor(((px + 1) / plotW) * count);
-      let mn = Infinity;
-      let mx = -Infinity;
-      for (let i = i0; i < i1 && i < ch.data.length; i++) {
-        const v = ch.data[i]!;
-        if (v < mn) mn = v;
-        if (v > mx) mx = v;
-      }
-      if (mn === Infinity) continue;
-      const c = (lo + hi) / 2;
-      const x = left + px + 0.5;
-      ctx.moveTo(x, mid - (mx - c) * scale);
-      ctx.lineTo(x, mid - (mn - c) * scale);
-    }
-    ctx.stroke();
+    const center = (lo + hi) / 2;
+    drawContinuousSignal(
+      ctx,
+      ch.data,
+      left,
+      plotW,
+      start,
+      count,
+      (value) => mid - (value - center) * scale,
+    );
 
     if (a > 0) {
       ctx.strokeStyle = rule;

@@ -14,6 +14,10 @@
       #trace { height: 620px; border: 1px solid var(--paper-rule-major); }
       #demo3 { height: 200px; border: 1px solid var(--paper-rule-major); }
       #spectrum { height: 190px; border: 1px solid var(--paper-rule-major); cursor: ew-resize; }
+      #fullband-trace { height: 240px; }
+      #fullband-spectrum { height: 210px; }
+      canvas[hidden] { display: none; }
+      summary { cursor: pointer; font-weight: 600; }
       .filt-row { display: flex; align-items: center; gap: var(--gap-sm); }
       .filt-row label { font-size: var(--size-sm); white-space: nowrap; }
       .filt-row input[type='range'] { flex: 1; min-width: 60px; }
@@ -95,9 +99,25 @@
             its own lane and states its full-scale range, because an ECG R wave is around 1000 µV
             and would be 14 cm tall at the scale above. Watch the heart rate rise on inspiration
             and fall on expiration — that is respiratory sinus arrhythmia, driven from the same
-            respiratory phase that drives the EEG coupling in Demo 1.
+            respiratory phase that also modulates EEG spectral slope and NREM event timing.
           </p>
 
+          <details id="fullband" class="panel">
+            <summary>Continuous full-band view</summary>
+            <p class="note">Explore slow voltage in one continuous record, with a fixed high-pass
+              comparison. This record is generated separately from the scrolling display.</p>
+            <div class="control">
+              <label for="fullband-duration">Duration (seconds)</label>
+              <select id="fullband-duration" class="inline-sel"></select>
+            </div>
+            <div class="control">
+              <label><input id="isf-cortical" type="checkbox" checked /> cortical infra-slow voltage</label>
+              <label><input id="isf-modulation" type="checkbox" checked /> infra-slow source gain</label>
+            </div>
+            <p class="note" id="fullband-status" role="status">Open to generate the continuous view.</p>
+            <canvas id="fullband-trace" aria-label="Continuous Fz voltage and high-pass comparison"></canvas>
+            <canvas id="fullband-spectrum" aria-label="Continuous full-band Fz spectrum"></canvas>
+          </details>
         </div>
 
         <div>
@@ -121,6 +141,26 @@
           </div>
 
           <div class="panel">
+            <h2>Respiration</h2>
+            <div class="control">
+              <div class="seg" id="resp-mode">
+                <button data-v="natural" aria-pressed="true">natural</button>
+                <button data-v="regular" aria-pressed="false">regular</button>
+              </div>
+            </div>
+            <div class="control">
+              <button id="movement-artifact" aria-pressed="true">movement artifact on</button>
+            </div>
+            <p class="note">
+              <strong>Natural</strong> gives each state its registered mean rate plus
+              breath-to-breath timing, depth and shape variability. <strong>Regular</strong>
+              keeps that state mean but removes the variability as a teaching contrast.
+              Movement artifact is electrode motion at the respiratory rate; switching it off
+              does not disable neural coupling or respiratory sinus arrhythmia.
+            </p>
+          </div>
+
+          <div class="panel">
             <h2>Reference montage</h2>
             <div class="control">
               <select id="reference"></select>
@@ -129,7 +169,7 @@
             <p class="note">
               Referencing is a linear operator on the data, not a display preference — average
               reference removes exactly one dimension by construction, and a Laplacian is a
-              spatial high-pass. Watch the effective rank below change as you switch.
+              spatial high-pass. The trace and spectrum both use the selected reference.
             </p>
           </div>
 
@@ -167,7 +207,7 @@
               <strong>Zero-phase runs the cascade twice</strong>, forwards then backwards, so it
               has no phase distortion but the stopband of double the order. Causal is what an
               acquisition system actually does and it distorts phase near the cutoff. A higher
-              order rolls off faster <em>and</em> rings longer — Demo 3 below shows the ringing.
+              order rolls off faster <em>and</em> can produce longer ringing around transients.
             </p>
             <p class="note">
               Alternatives to high-pass filtering exist — <em>robust detrending</em> (de

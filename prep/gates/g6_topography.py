@@ -100,7 +100,11 @@ def collect(work: Path, seed: int) -> tuple[dict[str, list[float]], list[str]]:
     weights: dict[str, list[float]] = {}
     channels: list[str] = []
     for state, gens in by_state.items():
-        run_ = generate(work / f"{state}_s{seed}", seed=seed, state=state, epochs=1)
+        # The sidecar lists generators ACTUALLY used. At the empirically fitted 20% fast-spindle
+        # share, a single 30 s N2 epoch can legitimately contain no fast spindle and therefore no
+        # spindle_fast projection. Use ten minutes so this structural topography fixture exercises
+        # both stochastic spindle systems; the weights themselves remain identical across events.
+        run_ = generate(work / f"{state}_s{seed}", seed=seed, state=state, epochs=20)
         w, ch = weights_from_sidecar(run_.path)
         channels = channels or ch
         for g in gens:
