@@ -19,3 +19,21 @@ prep/leadfield/cache/
 
 # Local dev-harness config (preview server definition), not part of the artifact.
 .claude/
+
+# Machine-local credentials. Sanitized templates may be committed explicitly.
+.env
+.env.*
+!.env.example
+!.env.template
+.npmrc
+.pypirc
+.netrc
+credentials.json
+credentials.*.json
+secrets/
+*.pem
+*.key
+*.pfx
+*.p12
+id_rsa
+id_ed25519

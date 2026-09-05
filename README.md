@@ -9,6 +9,7 @@ mechanism settings so analysis can be compared with known inputs. Those inputs d
 model; they do not establish that its output reproduces human physiology.
 
 Current version: **0.11.0**, using the shared **`physiology-v1`** configuration.
+See [publication privacy](docs/PRIVACY.md) for data boundaries and safeguards.
 See the [current status](docs/STATUS.md) and [stabilization report](docs/Stabilization-0.11.0.md)
 for measured results and remaining limitations.
 

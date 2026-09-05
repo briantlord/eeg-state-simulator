@@ -23,7 +23,9 @@
     "test:browser": "playwright test",
     "validate:holdout": "python -m prep.reference.t1m1_state_realism --cohort holdout",
     "calibration:check": "node --experimental-strip-types --no-warnings bin/eegsim-calibrate.mts --check",
-    "prebuild": "npm run calibration:check"
+    "prebuild": "npm run calibration:check",
+    "privacy:check": "node tools/privacy/check.mjs",
+    "privacy:history": "node tools/privacy/check.mjs --history"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

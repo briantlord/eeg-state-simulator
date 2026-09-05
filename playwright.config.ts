@@ -1,6 +1,7 @@
 import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
+  captureGitInfo: { commit: false, diff: false },
   testDir: './test/browser',
   outputDir: './prep/out/browser-results',
   fullyParallel: false,
