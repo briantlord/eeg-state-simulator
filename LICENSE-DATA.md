@@ -1,8 +1,9 @@
 # Third-party data and attribution
 
-The BSD-3-Clause `LICENSE` covers the code in this repository. Two committed artifacts are derived
-from third-party data and carry additional terms, reproduced here so that they travel with any
-copy.
+The BSD-3-Clause `LICENSE` covers the code in this repository. This file records attribution for
+the anatomy-derived projection weights and the reference recordings used in evaluation. The
+committed data artifacts are reduced projection weights and numerical validation summaries;
+anatomical caches and raw recordings are not redistributed.
 
 **This file is a statement of attribution and compliance, not legal advice.** If this project is
 used commercially or redistributed as part of a product, read the FreeSurfer licence yourself.
@@ -18,9 +19,12 @@ combination of 40 MRI scans.
   20,484 cortical sources, with source coordinates.
 - `prep/leadfield/cache/fsaverage_labels.npz` — Desikan–Killiany (`aparc`) label to source-index
   mapping.
-- `data/projection_10_20.json` — 58 weight vectors of 21 numbers each, being the leading spatial
-  eigenmodes of seven cortical patches. A heavy reduction of the above: it does not permit
-  reconstruction of the head model, the source space, or any anatomical image.
+- `data/projection_10_20.json` — reduced projection vectors over 21 electrodes for cortical
+  rhythms, background, respiratory modulation, infra-slow sources, and coupling fixtures. It
+  also includes a separately defined electrode-space movement-artifact vector. The cortical
+  vectors are a heavy reduction of the lead field and do not permit reconstruction of the
+  head model, the source space, or any anatomical image. The `.npz` files above are local caches,
+  not committed artifacts.
 
 The FreeSurfer licence grants the right to copy, modify and make derivative works, including for
 commercial purposes, provided that the terms travel with any redistributed copy and that
@@ -44,11 +48,18 @@ interest*, NeuroImage 31(3).
 
 ## Recordings — not redistributed
 
-`prep/realdata/` is **gitignored**. The PhysioNet recordings used for fitting — [EEG During Mental
+`prep/realdata/` is **gitignored**. Reference recordings come from PhysioNet's [EEG During Mental
 Arithmetic Tasks](https://physionet.org/content/eegmat/) and the [Haaglanden Medisch Centrum sleep
-staging database](https://physionet.org/content/hmc-sleep-staging/) — are fetched by
-`prep/realdata/fetch_hmc.sh` and are governed by PhysioNet's own terms. No recording, and no
-per-subject derivative of one, is committed here.
+staging database](https://physionet.org/content/hmc-sleep-staging/). No raw recording is committed.
+The maintained [reserved-cohort downloader](prep/reference/fetch_hmc_holdout.py) fetches only
+the five protocol-listed HMC nights and verifies the publisher's checksums; it does not fetch
+the older development corpus.
+
+[The 0.11.0 validation archive](docs/validation/0.11.0/README.md) contains numerical summaries,
+including per-subject measurements, public anonymized recording identifiers, and input hashes.
+Those HMC-derived summaries use Alvarez-Estevez and Rijsman (2022), *Haaglanden Medisch Centrum
+sleep staging database*, [version 1.1](https://doi.org/10.13026/t79q-fr32), PhysioNet, CC BY 4.0.
+The archive records the processing protocol and tool versions; it does not include EEG waveforms.
 
 ## The lead field is not in this repository
 
